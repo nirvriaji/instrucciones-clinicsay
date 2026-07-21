@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "sede": "aureo",
+    "mode": "tasks-only",
+    "timestamp": "2026-07-20T23:37:47.015Z",
+    "inputFiles": [
+      "aureo-original.json",
+      "aureo-original.md"
+    ],
+    "inputFilesCount": 2,
+    "combinedTextLength": 61358
+  },
+  "summary": {
+    "total": 0,
+    "errors": 0,
+    "warnings": 0,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 0,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 0
+  },
+  "gaps": []
+}

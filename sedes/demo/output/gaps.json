@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "sede": "sede-demo",
+    "mode": "full",
+    "timestamp": "2026-07-18T17:03:59.938Z",
+    "anotacionesLength": 4552
+  },
+  "summary": {
+    "total": 5,
+    "errors": 4,
+    "warnings": 1,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 5,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 0
+  },
+  "gaps": [
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Primera visita de información general.\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Primera visita de información general.",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"primera_visita_de_informacin_general_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Primera visita de información general.\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Valoración de arrugas de expresión, bótox o neuromoduladores.\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Valoración de arrugas de expresión, bótox o neuromoduladores.",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"valoracin_de_arrugas_de_expresin_btox_o_neuromoduladores_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Valoración de arrugas de expresión, bótox o neuromoduladores.\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Valoración de láser CO2 facial.\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Valoración de láser CO2 facial.",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"valoracin_de_lser_co2_facial_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Valoración de láser CO2 facial.\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Valoración de aumento e hidratación de labios.\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Valoración de aumento e hidratación de labios.",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"valoracin_de_aumento_e_hidratacin_de_labios_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Valoración de aumento e hidratación de labios.\"?"
+    },
+    {
+      "severity": "warning",
+      "category": "missing_contact",
+      "description": "Horario mencionado en anotaciones pero faltante en identity.openingHours",
+      "anotacion_ref": "de atención:\n  - Lunes a viernes: 09:00 a 14:00 y 16:00 a 19:00.\n  - Sábados, domingos y festivos: a",
+      "json_path": "identity.openingHours",
+      "suggestion": "Copiar horario de anotaciones a identity.openingHours",
+      "question_for_advisor": null
+    }
+  ]
+}

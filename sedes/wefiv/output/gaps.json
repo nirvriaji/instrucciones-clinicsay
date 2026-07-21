@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "sede": "sede-wefiv",
+    "mode": "tasks-only",
+    "timestamp": "2026-07-20T23:56:34.650Z",
+    "inputFiles": [
+      "wefiv-original.json",
+      "wefiv-original.md"
+    ],
+    "inputFilesCount": 2,
+    "combinedTextLength": 54362
+  },
+  "summary": {
+    "total": 1,
+    "errors": 0,
+    "warnings": 1,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 0,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 0
+  },
+  "gaps": [
+    {
+      "severity": "warning",
+      "category": "missing_contact",
+      "description": "Dirección mencionada en anotaciones pero faltante en identity.address",
+      "anotacion_ref": "física exacta:** No especificada en las anotaciones.",
+      "json_path": "identity.address",
+      "suggestion": "Copiar dirección de anotaciones a identity.address",
+      "question_for_advisor": null
+    }
+  ]
+}

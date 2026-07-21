@@ -1,0 +1,1008 @@
+{
+  "mode": "TASKS_ONLY",
+  "rules": [
+    {
+      "id": "ask_about_existing_appointment",
+      "note": "El backend inyecta las citas del paciente en el system prompt mediante ASSOCIATED_PATIENTS. El bot responde sin llamar tools si la información está disponible en el contexto.",
+      "action": "allow",
+      "intent": "appointment_inquiry",
+      "description": "El paciente consulta información sobre citas que ya tiene reservadas, como horarios, fechas, sede o tratamientos programados."
+    },
+    {
+      "id": "confirm_existing_appointment",
+      "note": "Permitir continuar para ejecutar manage_schedule_block_status con estado CONFIRMADA. La confirmación no requiere tarea de seguimiento.",
+      "action": "allow",
+      "intent": "appointment_confirmation",
+      "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio."
+    },
+    {
+      "id": "cancel_existing_appointment",
+      "note": "Permitir continuar para ejecutar el flow de cancelación. Tras cancelar la cita se crea una tarea de seguimiento humano, incluyendo motivo si el paciente lo menciona.",
+      "action": "allow",
+      "intent": "appointment_cancellation",
+      "description": "El paciente solicita cancelar una o más citas existentes, o responde a un recordatorio indicando que no asistirá."
+    },
+    {
+      "id": "scheduling_request_to_task",
+      "note": "El bot no ejecuta scheduling directamente. Debe recopilar tratamiento, fechas u horarios preferidos, profesional si aplica, y crear una tarea para el equipo humano.",
+      "action": "allow",
+      "intent": "scheduling_request",
+      "description": "El paciente solicita una nueva valoración, cita o disponibilidad de huecos."
+    },
+    {
+      "id": "appointment_modification_to_task",
+      "note": "El bot no reprograma directamente. Debe recopilar cita actual si consta, nueva preferencia y crear una tarea para el equipo humano.",
+      "action": "allow",
+      "intent": "appointment_modification",
+      "description": "El paciente solicita reprogramar una cita existente, moverla de día u hora, adelantarla o atrasarla."
+    },
+    {
+      "id": "general_inquiry",
+      "note": "Responder directamente con la información del contexto y las instrucciones. Si la información no está disponible o requiere validación humana, crear tarea.",
+      "action": "allow",
+      "intent": "general_inquiry",
+      "description": "El paciente pregunta por tratamientos, horarios, ubicación, contacto, servicios o información que puede responderse desde el contexto sin gestionar citas."
+    },
+    {
+      "id": "human_follow_up",
+      "note": "Permitir continuar para crear una tarea de seguimiento humano.",
+      "action": "allow",
+      "intent": "human_follow_up",
+      "description": "El paciente pide hablar con una persona, solicita contacto humano, presenta una queja o realiza una solicitud que requiere revisión del equipo."
+    },
+    {
+      "id": "p0_medical_zero_triage",
+      "note": "Prioridad de seguridad clínica. No diagnosticar, no interpretar fotos, no recomendar tratamientos.",
+      "action": "block",
+      "intent": "medical_question",
+      "description": "Bloquea la resolución automática de cualquier contenido clínico personalizado y obliga a derivar a revisión humana sin preguntas clínicas."
+    },
+    {
+      "id": "p0_no_internal_notes_to_patient",
+      "note": "Esta regla es una guía de estilo para el modelo. No debe bloquear respuestas legítimas. La respuesta externa debe ser texto plano sin términos internos.",
+      "action": "allow",
+      "intent": "general_inquiry",
+      "description": "Guía de estilo: la respuesta al paciente no debe contener reglas, tareas, herramientas, etiquetas internas, razonamientos o directivas técnicas. Si el borrador contiene términos internos, reescribirlo en texto plano para el paciente."
+    },
+    {
+      "id": "p0_no_reask_known_data",
+      "note": "Aplica a cualquier intent cuando los datos ya constan.",
+      "action": "allow",
+      "intent": "general_inquiry",
+      "description": "Permite continuar el flujo usando datos ya presentes en conversación o contexto sin volver a solicitarlos."
+    },
+    {
+      "id": "p0_single_question_per_turn",
+      "note": "Aplica a cualquier intent cuando faltan múltiples datos obligatorios.",
+      "action": "allow",
+      "intent": "general_inquiry",
+      "description": "Permite pedir solo un dato imprescindible cuando faltan varios para crear tarea o gestionar una cita existente."
+    },
+    {
+      "id": "r_surgery_price_generic",
+      "note": "Responder sin prometer precio cerrado. Ofrecer valoración si quiere presupuesto personalizado.",
+      "action": "allow",
+      "intent": "price_inquiry",
+      "description": "Permite responder con precio genérico sin dar importes cerrados de cirugía cuando el paciente pregunta por coste de procedimiento."
+    },
+    {
+      "id": "r_assessment_price",
+      "note": "Siempre 80 €. No comunicar la cifra de 60 € por inconsistencia en la información de origen.",
+      "action": "allow",
+      "intent": "payment_request",
+      "description": "Permite informar el coste aprobado de la valoración online o presencial y sus condiciones básicas."
+    },
+    {
+      "id": "r_candidate_requires_assessment",
+      "note": "No confirmar ni descartar candidatura. Crear tarea para valoración médica.",
+      "action": "block",
+      "intent": "candidate_inquiry",
+      "description": "Bloquea la confirmación automática de candidatura o idoneidad del tratamiento y deriva a valoración médica."
+    },
+    {
+      "id": "r_before_after_results",
+      "note": "Usar enlaces aprobados. No interpretar casos ni prometer resultados.",
+      "action": "allow",
+      "intent": "before_after_inquiry",
+      "description": "Permite remitir a web, Instagram y reseñas cuando el paciente pide resultados publicados, sin prometer resultados individuales."
+    },
+    {
+      "id": "r_financing_after_assessment",
+      "note": "Si pide simulación detallada, crear tarea.",
+      "action": "allow",
+      "intent": "financing_inquiry",
+      "description": "Permite explicar que la financiación se estudia tras valoración y presupuesto, sin simular cuotas ni condiciones concretas."
+    },
+    {
+      "id": "r_payment_receipt_review",
+      "note": "El bot no confirma pagos. Crear tarea para validación humana.",
+      "action": "block",
+      "intent": "payment_request",
+      "description": "Bloquea la validación automática de justificantes, transferencias o pagos y obliga a revisión humana."
+    },
+    {
+      "id": "r_no_60_online_price",
+      "note": "Usar siempre 80 € para online y presencial salvo confirmación expresa del equipo.",
+      "action": "block",
+      "intent": "payment_request",
+      "description": "Bloquea comunicar el precio de 60 € para valoración online por inconsistencia en la información de origen."
+    },
+    {
+      "id": "r_medical_emergency_safe_response",
+      "note": "Responder derivando a servicios de emergencia o contacto telefónico con la clínica.",
+      "action": "block",
+      "intent": "medical_question",
+      "description": "Bloquea triaje y recomienda contacto médico o urgencias ante señales de urgencia sin valorar gravedad."
+    },
+    {
+      "id": "r_human_contact_request",
+      "note": "Recoger datos mínimos y crear tarea de llamada.",
+      "action": "allow",
+      "intent": "human_follow_up",
+      "description": "Permite crear tarea cuando el paciente pide llamada, hablar con una persona o contacto del equipo."
+    },
+    {
+      "id": "r_no_stock_confirmation",
+      "note": "No confirmar stock. Crear tarea para que el equipo verifique.",
+      "action": "block",
+      "intent": "product_stock_inquiry",
+      "description": "Bloquea confirmar stock, modelos, unidades o disponibilidad de productos físicos y deriva a tarea administrativa."
+    },
+    {
+      "id": "r_dr_operates_days",
+      "note": "Responder siempre que el Dr. Romeo opera de lunes a viernes.",
+      "action": "allow",
+      "intent": "dr_operates_days",
+      "description": "Permite responder con el protocolo de días de operación del Dr. Romeo."
+    },
+    {
+      "id": "r_dr_patients_per_day",
+      "note": "Responder siempre que el Dr. Romeo atiende a un solo paciente quirúrgico por día.",
+      "action": "allow",
+      "intent": "dr_patients_per_day",
+      "description": "Permite responder con el protocolo de exclusividad de un solo paciente quirúrgico por día."
+    },
+    {
+      "id": "r_dr_personal_surgery",
+      "note": "Responder siempre que la cirugía la realiza el Dr. Marco Romeo personalmente.",
+      "action": "allow",
+      "intent": "dr_personal_surgery",
+      "description": "Permite responder confirmando que el Dr. Romeo realiza personalmente la intervención como cirujano principal."
+    },
+    {
+      "id": "r_dr_consultation_schedule",
+      "note": "Responder con lunes 16:00-21:00, jueves 10:00-14:00, excepcionalmente miércoles 10:00-14:00. Distinguir del horario de atención general.",
+      "action": "allow",
+      "intent": "dr_consultation_schedule",
+      "description": "Permite responder con el horario específico de consulta del Dr. Romeo."
+    }
+  ],
+  "intents": {
+    "price_inquiry": {
+      "examples": [
+        "¿cuánto cuesta la rinoplastia?",
+        "¿qué precio tiene la operación?",
+        "presupuesto"
+      ],
+      "description": "El paciente pregunta por el precio de una cirugía o tratamiento concreto."
+    },
+    "general_inquiry": {
+      "examples": [
+        "¿qué horario tenéis?",
+        "¿dónde estáis?",
+        "¿qué tratamientos tienen?",
+        "¿aceptan tarjeta?"
+      ],
+      "description": "El paciente hace preguntas generales sobre la clínica, horarios, ubicación, contacto, servicios, métodos de pago, tratamientos o información que puede responderse desde el contexto sin gestionar citas."
+    },
+    "human_follow_up": {
+      "examples": [
+        "quiero hablar con una persona",
+        "tengo una queja",
+        "necesito que me llame alguien",
+        "quiero que me contacten"
+      ],
+      "description": "Cualquier solicitud que requiere seguimiento humano y no encaja claramente en los intents anteriores."
+    },
+    "payment_request": {
+      "examples": [
+        "quiero pagar",
+        "¿dónde pago?",
+        "te envío el justificante",
+        "he hecho la transferencia"
+      ],
+      "description": "El paciente pide instrucciones de pago, envía justificante o informa de una incidencia de pago."
+    },
+    "dr_operates_days": {
+      "examples": [
+        "¿opera todos los días?",
+        "¿qué días opera el Dr. Romeo?",
+        "¿opera los fines de semana?",
+        "¿los sábados opera?"
+      ],
+      "description": "El paciente pregunta si el Dr. Romeo opera todos los días, qué días opera o si opera fines de semana."
+    },
+    "medical_question": {
+      "examples": [
+        "tengo dolor",
+        "¿es normal esta cicatriz?",
+        "¿soy candidato?",
+        "¿qué riesgos tiene?",
+        "¿me puedo tomar este medicamento?"
+      ],
+      "description": "El paciente plantea una duda médica personalizada, síntoma, complicación, riesgo, recuperación, anestesia, cicatriz, medicación, candidatura o valoración de imágenes."
+    },
+    "candidate_inquiry": {
+      "examples": [
+        "¿soy candidato?",
+        "¿me puedo operar?",
+        "¿me vendría bien?",
+        "¿puedo hacerme esto?"
+      ],
+      "description": "El paciente pregunta si es candidato o apto para un tratamiento o cirugía."
+    },
+    "financing_inquiry": {
+      "examples": [
+        "¿hay financiación?",
+        "¿se puede pagar a plazos?",
+        "cuotas"
+      ],
+      "description": "El paciente pregunta por opciones de financiación o pago a plazos."
+    },
+    "scheduling_request": {
+      "examples": [
+        "quiero pedir cita",
+        "¿tenéis hueco el viernes?",
+        "quiero una cita para rinoplastia",
+        "quiero valoración online"
+      ],
+      "description": "El paciente quiere reservar una nueva valoración o cita, o preguntar por disponibilidad de huecos. El bot no ejecuta scheduling directamente: recopila los datos necesarios y crea una tarea para que el equipo humano gestione."
+    },
+    "appointment_inquiry": {
+      "examples": [
+        "¿cuándo es mi cita?",
+        "¿tengo cita esta semana?",
+        "¿a qué hora era mi cita?",
+        "¿qué cita tengo mañana?"
+      ],
+      "description": "El paciente pregunta por citas que ya tiene reservadas, como horarios, fechas, tratamientos o sede. La información ya está en el contexto."
+    },
+    "dr_patients_per_day": {
+      "examples": [
+        "¿cuántos pacientes opera por día?",
+        "¿operáis a más de uno por día?",
+        "¿habrá más pacientes ese día?",
+        "¿será exclusivo para mí?"
+      ],
+      "description": "El paciente pregunta cuántos pacientes opera el Dr. Romeo por día, si hay más pacientes el mismo día o si es exclusivo."
+    },
+    "dr_personal_surgery": {
+      "examples": [
+        "¿me operará el Dr. Romeo?",
+        "¿la operación la hace el doctor?",
+        "¿quién me va a operar?",
+        "¿es él el cirujano?"
+      ],
+      "description": "El paciente pregunta si la cirugía la realiza el Dr. Romeo personalmente o si hay otro cirujano."
+    },
+    "before_after_inquiry": {
+      "examples": [
+        "¿tienes antes y después?",
+        "casos reales",
+        "resultados",
+        "reseñas"
+      ],
+      "description": "El paciente pregunta por resultados, antes y después, casos reales o reseñas."
+    },
+    "product_stock_inquiry": {
+      "examples": [
+        "¿tenéis este producto?",
+        "stock",
+        "unidades disponibles",
+        "modelo"
+      ],
+      "description": "El paciente pregunta por productos físicos, stock, modelos o unidades disponibles."
+    },
+    "appointment_cancellation": {
+      "examples": [
+        "no puedo ir, cancélala",
+        "no asistiré mañana",
+        "quiero cancelar mi cita",
+        "no podré asistir"
+      ],
+      "description": "El paciente cancela una cita existente o indica que no podrá asistir."
+    },
+    "appointment_confirmation": {
+      "examples": [
+        "confirmo",
+        "ahí estaré",
+        "sí, asistiré",
+        "ok",
+        "vale, voy",
+        "de acuerdo"
+      ],
+      "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio con un afirmativo breve."
+    },
+    "appointment_modification": {
+      "examples": [
+        "quiero cambiar mi cita de día",
+        "¿podéis adelantarla una hora?",
+        "quiero reprogramar",
+        "mover mi cita a otro día"
+      ],
+      "description": "El paciente quiere reprogramar una cita existente, moverla de día u hora, adelantarla o atrasarla."
+    },
+    "dr_consultation_schedule": {
+      "examples": [
+        "¿qué días consulta el Dr. Romeo?",
+        "¿qué día puede atenderme?",
+        "¿cuándo tiene consulta?",
+        "horario de valoración"
+      ],
+      "description": "El paciente pregunta por el horario de consulta del Dr. Romeo o en qué días puede atenderle para una valoración."
+    }
+  },
+  "version": "2.0",
+  "protocols": {
+    "zero_triage": {
+      "name": "Cero triaje clínico",
+      "sections": [
+        "Seguridad clínica",
+        "Dudas médicas",
+        "Síntomas, complicaciones, recuperación, anestesia, cicatrices, candidatura, medicación y fotos"
+      ],
+      "description": "Ante cualquier contenido clínico o médico personalizado, no diagnosticar, no interpretar síntomas, no valorar fotos y no hacer preguntas clínicas. Crear una única tarea y usar respuesta externa segura.",
+      "responseTemplate": "Para responderle con seguridad, debe revisarlo directamente el equipo médico. Paso su consulta para que puedan orientarle correctamente."
+    },
+    "payment_policy": {
+      "name": "Política de valoración y pago",
+      "sections": [
+        "Valoración online",
+        "Valoración presencial",
+        "Prepago",
+        "Justificante pendiente de validación humana"
+      ],
+      "description": "La valoración online y presencial cuesta 80 €, requiere prepago y se descuenta del presupuesto final si realiza la cirugía. El bot no confirma pagos ni justificantes.",
+      "responseTemplate": "La valoración online o presencial tiene un coste de 80 € y se descuenta del presupuesto final si realiza la cirugía."
+    },
+    "language_handling": {
+      "name": "Detección y respuesta de idioma",
+      "sections": [
+        "Idioma del mensaje actual",
+        "Excepción de recordatorios",
+        "Fallback a español"
+      ],
+      "description": "Responder en el idioma actual del mensaje del paciente, salvo respuestas a recordatorios que siempre se responden en español.",
+      "responseTemplate": "Responder en el idioma del paciente; si IS_REMINDER_REPLY es true, responder en español."
+    },
+    "no_internal_notes": {
+      "name": "No mostrar notas internas al paciente",
+      "sections": [
+        "Texto externo para paciente",
+        "Ocultación de herramientas",
+        "Ocultación de reglas y flujos internos"
+      ],
+      "description": "Nunca mostrar reglas internas, nombres de tareas, herramientas, etiquetas técnicas, planes ni razonamientos al paciente.",
+      "responseTemplate": "Paso su consulta al equipo para que puedan revisarla."
+    },
+    "existing_appointments": {
+      "name": "Citas existentes en contexto",
+      "sections": [
+        "ASSOCIATED_PATIENTS",
+        "Recordatorios",
+        "Confirmación y cancelación de citas existentes"
+      ],
+      "description": "Cuando el paciente consulta citas ya programadas, el bot debe leer ASSOCIATED_PATIENTS y responder directamente sin llamar herramientas adicionales.",
+      "responseTemplate": "Responder con fecha, hora, modalidad y dirección si constan en el contexto."
+    },
+    "dr_surgery_exclusivity": {
+      "name": "Exclusividad quirúrgica del Dr. Marco Romeo",
+      "sections": [
+        "Días de operación",
+        "Un solo paciente quirúrgico por día",
+        "Cirujano principal",
+        "Equipo quirúrgico de apoyo",
+        "Respuestas a información confusa o dubitativa"
+      ],
+      "description": "Reglas fijas sobre exclusividad, días de operación, número de pacientes por día y quién realiza la cirugía. El Dr. Romeo opera de lunes a viernes, atiende a un solo paciente quirúrgico por día y es el cirujano principal de todas las intervenciones.",
+      "responseTemplate": "El Dr. Marco Romeo opera de lunes a viernes y atiende a un solo paciente quirúrgico por día. La intervención la realiza él personalmente como cirujano principal."
+    },
+    "dr_consultation_schedule": {
+      "name": "Horario de consulta del Dr. Marco Romeo",
+      "sections": [
+        "Lunes tarde",
+        "Jueves mañana",
+        "Miércoles excepcional",
+        "Diferencia con horario de atención de la clínica"
+      ],
+      "description": "El Dr. Romeo pasa consulta los lunes de 16:00 a 21:00 y los jueves de 10:00 a 14:00. Excepcionalmente, según disponibilidad, puede haber consulta algún miércoles de 10:00 a 14:00. Esto es distinto del horario de atención general de la clínica.",
+      "responseTemplate": "El Dr. Romeo pasa consulta los lunes de 16:00 a 21:00 y los jueves de 10:00 a 14:00. Excepcionalmente, según disponibilidad, también puede haber consulta algún miércoles de 10:00 a 14:00."
+    }
+  },
+  "capabilities": {
+    "products": false,
+    "shipping": false,
+    "protocols": true,
+    "reminders": true,
+    "scheduling": false,
+    "sensitiveSituations": true
+  },
+  "errorCategories": [
+    {
+      "id": "medical_or_triage_risk",
+      "description": "El mensaje contiene síntomas, riesgo, complicación, recuperación, anestesia, cicatriz, fotos, diagnóstico, medicación o candidatura.",
+      "suggestions": [
+        "Crear tarea médica única.",
+        "No hacer preguntas clínicas.",
+        "Responder con derivación segura."
+      ]
+    },
+    {
+      "id": "internal_note_leak",
+      "description": "La respuesta contiene herramientas, nombres de reglas, etiquetas internas o razonamiento técnico.",
+      "suggestions": [
+        "Eliminar términos internos.",
+        "Sustituir por respuesta externa segura.",
+        "Mantener texto plano para WhatsApp."
+      ]
+    },
+    {
+      "id": "missing_required_data",
+      "description": "Falta un dato imprescindible para crear tarea o gestionar una cita existente.",
+      "suggestions": [
+        "Pedir un solo dato por turno.",
+        "No repetir datos ya conocidos.",
+        "Mantener continuidad del flujo activo."
+      ]
+    },
+    {
+      "id": "price_or_policy_conflict",
+      "description": "Hay conflicto o falta de confirmación sobre precio, financiación o condiciones.",
+      "suggestions": [
+        "Usar solo precio de valoración confirmado de 80 €.",
+        "No dar precios de cirugía.",
+        "Crear tarea si requiere presupuesto o financiación detallada."
+      ]
+    },
+    {
+      "id": "tool_or_availability_uncertainty",
+      "description": "El bot pretende confirmar disponibilidad, pago, stock o agenda sin verificación.",
+      "suggestions": [
+        "No buscar ni confirmar disponibilidad en TASKS_ONLY.",
+        "No confirmar pagos.",
+        "Crear tarea para disponibilidad, stock o validaciones manuales."
+      ]
+    },
+    {
+      "id": "existing_appointment_context_miss",
+      "description": "El bot ignora una cita existente disponible en ASSOCIATED_PATIENTS o llama una herramienta innecesaria para consultarla.",
+      "suggestions": [
+        "Leer ASSOCIATED_PATIENTS antes de actuar.",
+        "Responder directamente si la cita está en contexto.",
+        "Usar herramientas solo para confirmar o cancelar citas existentes."
+      ]
+    },
+    {
+      "id": "exclusivity_confusion",
+      "description": "El bot responde de forma dubitativa o incorrecta sobre la exclusividad del Dr. Romeo, el número de pacientes por día o quién realiza la cirugía.",
+      "suggestions": [
+        "Usar siempre el protocolo dr_surgery_exclusivity.",
+        "No decir que el número de pacientes varía.",
+        "No decir que puede haber varios pacientes el mismo día.",
+        "Confirmar que el Dr. Romeo es el cirujano principal."
+      ]
+    },
+    {
+      "id": "consultation_schedule_confusion",
+      "description": "El bot confunde el horario de atención general de la clínica con el horario de consulta del Dr. Romeo.",
+      "suggestions": [
+        "Usar el protocolo dr_consultation_schedule para consultas de valoración.",
+        "Distinguir entre horario de atención general y horario de consulta del Dr.",
+        "No mencionar viernes por la mañana si no está confirmado."
+      ]
+    }
+  ],
+  "toolOrchestration": {
+    "flows": {
+      "product_stock_task": {
+        "steps": [
+          {
+            "note": "Crear tarea administrativa. No confirmar stock, modelos ni disponibilidad.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "product_stock_inquiry",
+        "trigger": "patient_asks_physical_product_stock_or_availability",
+        "description": "El paciente pregunta por productos físicos, stock, modelos o unidades disponibles.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Paso su consulta al equipo para que puedan confirmarlo correctamente."
+      },
+      "appointment_inquiry": {
+        "steps": [
+          {
+            "note": "No se necesita tool. El bot debe leer las citas del contexto ASSOCIATED_PATIENTS y responder directamente. Si no hay citas, indicar que no constan citas programadas.",
+            "step": 1,
+            "tools": [],
+            "parallel": false
+          }
+        ],
+        "intent": "appointment_inquiry",
+        "trigger": "patient_asks_about_existing_appointment",
+        "description": "El paciente consulta información sobre citas que ya tiene reservadas, como horario, fecha, modalidad, dirección o tratamiento programado.",
+        "allowedTools": [],
+        "responseTemplate": "Debe responder directamente con la información de cita disponible en el contexto."
+      },
+      "before_after_results": {
+        "steps": [
+          {
+            "note": "Consultar protocolo con enlaces aprobados. No prometer resultados individuales.",
+            "step": 1,
+            "tools": [
+              "query_protocol"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Crear tarea si el paciente quiere avanzar hacia valoración personalizada.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [],
+            "condition": "patient_wants_personalized_assessment"
+          }
+        ],
+        "intent": "before_after_inquiry",
+        "trigger": "patient_asks_public_results_or_reviews",
+        "description": "El paciente pide resultados publicados, casos reales, antes y después o reseñas.",
+        "allowedTools": [
+          "query_protocol",
+          "create_task"
+        ],
+        "responseTemplate": "Puede consultar casos publicados en la web del Dr. Marco Romeo, su Instagram y las reseñas disponibles, sin que eso suponga una promesa de resultado individual."
+      },
+      "surgery_price_inquiry": {
+        "steps": [
+          {
+            "note": "Consultar protocolo de precios si existe. No dar precios cerrados.",
+            "step": 1,
+            "tools": [
+              "query_protocol"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Crear tarea si el paciente quiere avanzar hacia valoración o presupuesto personalizado.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [],
+            "condition": "patient_wants_personalized_budget_or_assessment"
+          }
+        ],
+        "intent": "price_inquiry",
+        "trigger": "patient_asks_surgery_or_procedure_price",
+        "description": "El paciente pregunta por el precio de una cirugía o tratamiento concreto. El bot no da importes cerrados.",
+        "allowedTools": [
+          "query_protocol",
+          "create_task"
+        ],
+        "responseTemplate": "El precio final depende de cada caso y debe definirse tras valoración médica con el Dr. Romeo."
+      },
+      "medical_zero_triage_task": {
+        "steps": [
+          {
+            "note": "Crear una única tarea médica o de revisión humana. No hacer preguntas clínicas ni interpretar fotos.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "medical_question",
+        "trigger": "message_contains_medical_question_symptom_risk_complication_recovery_anesthesia_scar_medication_candidate_or_photo",
+        "description": "El paciente plantea una duda médica personalizada o aporta contenido clínico que no debe resolverse por IA.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Para responderle con seguridad, debe revisarlo directamente el equipo médico. Paso su consulta para que puedan orientarle correctamente."
+      },
+      "dr_operates_days_response": {
+        "steps": [
+          {
+            "note": "Consultar protocolo de exclusividad y días de operación del Dr. Romeo.",
+            "step": 1,
+            "tools": [
+              "query_protocol"
+            ],
+            "parallel": false,
+            "required": []
+          }
+        ],
+        "intent": "dr_operates_days",
+        "trigger": "patient_asks_what_days_dr_operates",
+        "description": "El paciente pregunta si el Dr. Romeo opera todos los días, qué días opera o si opera fines de semana.",
+        "allowedTools": [
+          "query_protocol"
+        ],
+        "responseTemplate": "El Dr. Romeo opera de lunes a viernes."
+      },
+      "payment_or_receipt_review": {
+        "steps": [
+          {
+            "note": "Buscar paciente si procede, sin bloquear información general de pago.",
+            "step": 1,
+            "tools": [
+              "lookup_patient"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Crear tarea para validación humana del justificante o incidencia. El bot no confirma pagos.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "payment_request",
+        "trigger": "patient_requests_payment_link_sends_receipt_or_reports_payment_issue",
+        "description": "El paciente pide instrucciones de pago, envía justificante o comunica una incidencia de pago de la valoración.",
+        "allowedTools": [
+          "create_task",
+          "lookup_patient"
+        ],
+        "responseTemplate": "La valoración tiene un coste de 80 € y puede formalizarla en el enlace aprobado o por transferencia. Cuando envíe el justificante, el equipo podrá validarlo."
+      },
+      "any_new_scheduling_request": {
+        "steps": [
+          {
+            "note": "Buscar paciente si hay teléfono, nombre o contexto suficiente. No crear paciente ni pedir datos ya conocidos.",
+            "step": 1,
+            "tools": [
+              "lookup_patient"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Crear tarea con modalidad, procedimiento, ciudad/país, fecha o franja preferida, datos de contacto y profesional mencionado si existe.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "scheduling_request",
+        "trigger": "patient_requests_new_assessment_booking_or_availability",
+        "description": "El paciente quiere una nueva valoración, pide huecos, disponibilidad o reservar una primera visita. El bot no agenda en modo TASKS_ONLY; recopila los datos relevantes y crea tarea administrativa.",
+        "allowedTools": [
+          "create_task",
+          "lookup_patient"
+        ],
+        "responseTemplate": "Paso su solicitud al equipo para que puedan revisar disponibilidad y contactarle."
+      },
+      "financing_after_assessment": {
+        "steps": [
+          {
+            "note": "Consultar protocolo general. No simular cuotas ni condiciones concretas.",
+            "step": 1,
+            "tools": [
+              "query_protocol"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Crear tarea si el paciente quiere una simulación de financiación personalizada.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [],
+            "condition": "patient_wants_detailed_simulation"
+          }
+        ],
+        "intent": "financing_inquiry",
+        "trigger": "patient_asks_financing_general_information",
+        "description": "El paciente pregunta por opciones de financiación o pago a plazos.",
+        "allowedTools": [
+          "query_protocol",
+          "create_task"
+        ],
+        "responseTemplate": "Las opciones de financiación se estudian después de la valoración médica y con un presupuesto personalizado."
+      },
+      "cancel_existing_appointment": {
+        "steps": [
+          {
+            "note": "Localizar paciente o cita solo si no está clara en ASSOCIATED_PATIENTS.",
+            "step": 1,
+            "tools": [
+              "lookup_patient"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Cancelar una única cita existente si está identificada de forma segura.",
+            "step": 2,
+            "tools": [
+              "manage_schedule_block_status"
+            ],
+            "parallel": false,
+            "required": [],
+            "condition": "single_existing_appointment_is_identified"
+          },
+          {
+            "note": "Cancelar todas las citas de una fecha específica solo si el paciente lo pide claramente.",
+            "step": 3,
+            "tools": [
+              "manage_all_schedule_blocks_for_date"
+            ],
+            "parallel": false,
+            "required": [],
+            "condition": "patient_requests_cancel_all_appointments_on_specific_date"
+          },
+          {
+            "note": "Crear tarea de seguimiento tras la cancelación. Si no se pudo identificar la cita, crear tarea de revisión humana. Incluir motivo si el paciente lo menciona.",
+            "step": 4,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "appointment_cancellation",
+        "trigger": "patient_requests_cancellation_of_an_existing_appointment",
+        "description": "El paciente pide cancelar una cita existente identificable en el contexto o por datos del paciente. Tras la cancelación se genera una tarea de seguimiento.",
+        "allowedTools": [
+          "manage_schedule_block_status",
+          "manage_all_schedule_blocks_for_date",
+          "lookup_patient",
+          "create_task"
+        ],
+        "responseTemplate": "Su cita ha sido cancelada. Si desea reprogramar, podemos ayudarle."
+      },
+      "candidate_assessment_inquiry": {
+        "steps": [
+          {
+            "note": "Crear tarea para valoración médica. No confirmar ni descartar candidatura.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "candidate_inquiry",
+        "trigger": "patient_asks_if_candidate_or_suitable",
+        "description": "El paciente pregunta si es candidato para un procedimiento. Se bloquea la respuesta automática y se deriva a valoración médica.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Para saber si es candidato, es necesaria una valoración médica personalizada con el Dr. Romeo."
+      },
+      "confirm_existing_appointment": {
+        "steps": [
+          {
+            "note": "Usar solo si hace falta identificar la cita; si ASSOCIATED_PATIENTS ya identifica la cita, no buscar de nuevo.",
+            "step": 1,
+            "tools": [
+              "lookup_patient"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Confirmar solo una cita existente identificada. No usar para reservar citas nuevas. No crear tarea.",
+            "step": 2,
+            "tools": [
+              "manage_schedule_block_status"
+            ],
+            "parallel": false,
+            "required": [
+              "manage_schedule_block_status"
+            ]
+          }
+        ],
+        "intent": "appointment_confirmation",
+        "trigger": "patient_confirms_attendance_to_existing_appointment_or_reminder",
+        "description": "El paciente confirma asistencia a una cita existente o responde a un recordatorio de la clínica.",
+        "allowedTools": [
+          "manage_schedule_block_status",
+          "lookup_patient"
+        ],
+        "responseTemplate": "Gracias, su cita queda confirmada."
+      },
+      "dr_patients_per_day_response": {
+        "steps": [
+          {
+            "note": "Consultar protocolo de exclusividad del Dr. Romeo.",
+            "step": 1,
+            "tools": [
+              "query_protocol"
+            ],
+            "parallel": false,
+            "required": []
+          }
+        ],
+        "intent": "dr_patients_per_day",
+        "trigger": "patient_asks_how_many_patients_dr_operates_per_day",
+        "description": "El paciente pregunta cuántos pacientes opera el Dr. Romeo por día, si hay más pacientes el mismo día o si es exclusivo.",
+        "allowedTools": [
+          "query_protocol"
+        ],
+        "responseTemplate": "Solo a uno. El Dr. Romeo trabaja con un solo paciente quirúrgico por día."
+      },
+      "dr_personal_surgery_response": {
+        "steps": [
+          {
+            "note": "Consultar protocolo de exclusividad del Dr. Romeo.",
+            "step": 1,
+            "tools": [
+              "query_protocol"
+            ],
+            "parallel": false,
+            "required": []
+          }
+        ],
+        "intent": "dr_personal_surgery",
+        "trigger": "patient_asks_if_dr_operates_personally",
+        "description": "El paciente pregunta si la cirugía la realiza el Dr. Romeo personalmente o si hay otro cirujano.",
+        "allowedTools": [
+          "query_protocol"
+        ],
+        "responseTemplate": "Sí, la intervención la realiza el Dr. Marco Romeo personalmente como cirujano principal, acompañado de su equipo quirúrgico."
+      },
+      "human_contact_or_call_request": {
+        "steps": [
+          {
+            "note": "Buscar paciente si hay teléfono o datos suficientes. No repetir datos ya aportados.",
+            "step": 1,
+            "tools": [
+              "lookup_patient"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Crear tarea de llamada con nombre, teléfono, procedimiento, ciudad y disponibilidad orientativa si consta.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "human_follow_up",
+        "trigger": "patient_requests_human_contact_phone_call_or_team_follow_up",
+        "description": "El paciente pide que le llame una persona, hablar con el equipo o recibir seguimiento humano.",
+        "allowedTools": [
+          "create_task",
+          "lookup_patient"
+        ],
+        "responseTemplate": "Paso sus datos al equipo para que puedan contactarle."
+      },
+      "protocol_or_general_information": {
+        "steps": [
+          {
+            "note": "Consultar protocolo si la respuesta aprobada no está ya explícita en el prompt.",
+            "step": 1,
+            "tools": [
+              "query_protocol"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Crear tarea si la información no está definida, hay conflicto o requiere confirmación humana.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [],
+            "condition": "requested_information_is_not_defined_or_requires_team_confirmation"
+          }
+        ],
+        "intent": "general_inquiry",
+        "trigger": "patient_asks_general_administrative_or_approved_protocol_question",
+        "description": "El paciente pide información general aprobada sobre dirección, horario, valoración, pago, financiación general, resultados publicados o reseñas.",
+        "allowedTools": [
+          "query_protocol",
+          "create_task"
+        ],
+        "responseTemplate": "Responder con la información aprobada de forma breve y sin cerrar con pregunta comercial."
+      },
+      "dr_consultation_schedule_response": {
+        "steps": [
+          {
+            "note": "Consultar protocolo de horario de consulta del Dr. Romeo.",
+            "step": 1,
+            "tools": [
+              "query_protocol"
+            ],
+            "parallel": false,
+            "required": []
+          }
+        ],
+        "intent": "dr_consultation_schedule",
+        "trigger": "patient_asks_dr_consultation_schedule",
+        "description": "El paciente pregunta por el horario de consulta del Dr. Romeo o en qué días puede atenderle para una valoración.",
+        "allowedTools": [
+          "query_protocol"
+        ],
+        "responseTemplate": "El Dr. Romeo pasa consulta los lunes de 16:00 a 21:00 y los jueves de 10:00 a 14:00. Excepcionalmente, según disponibilidad, también puede haber consulta algún miércoles de 10:00 a 14:00."
+      },
+      "reschedule_existing_appointment_request": {
+        "steps": [
+          {
+            "note": "Buscar paciente y citas asociadas si hay datos suficientes. No pedir datos ya presentes en ASSOCIATED_PATIENTS.",
+            "step": 1,
+            "tools": [
+              "lookup_patient"
+            ],
+            "parallel": false,
+            "required": []
+          },
+          {
+            "note": "Crear tarea con cita actual si consta, nueva fecha o franja preferida y cualquier motivo aportado espontáneamente.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "appointment_modification",
+        "trigger": "patient_requests_rescheduling_or_moving_an_existing_assessment",
+        "description": "El paciente pide cambiar una cita o valoración ya prevista. El bot no busca huecos ni reprograma directamente; recopila preferencia y crea tarea para el equipo.",
+        "allowedTools": [
+          "create_task",
+          "lookup_patient"
+        ],
+        "responseTemplate": "Paso la solicitud al equipo para que puedan revisar el cambio de cita."
+      }
+    }
+  }
+}

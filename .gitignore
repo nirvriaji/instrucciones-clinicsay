@@ -1,0 +1,20 @@
+# Generated outputs (ignore in git)
+*/output/*.json
+
+# Node modules (if installed locally)
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "sede": "sede-andrea",
+    "mode": "tasks-only",
+    "timestamp": "2026-07-20T22:19:11.641Z",
+    "inputFiles": [
+      "andrea-original.json",
+      "andrea-original.md"
+    ],
+    "inputFilesCount": 2,
+    "combinedTextLength": 32784
+  },
+  "summary": {
+    "total": 0,
+    "errors": 0,
+    "warnings": 0,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 0,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 0
+  },
+  "gaps": []
+}

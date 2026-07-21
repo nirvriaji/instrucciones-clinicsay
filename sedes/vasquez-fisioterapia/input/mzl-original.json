@@ -1,0 +1,432 @@
+{
+  "rules": [
+    {
+      "id": "ask_about_existing_appointment",
+      "note": "El backend inyecta las citas del paciente en el system prompt mediante ASSOCIATED_PATIENTS. El bot responde sin llamar tools si la información está disponible en el contexto.",
+      "action": "allow",
+      "intent": "appointment_inquiry",
+      "description": "El paciente consulta información sobre citas que ya tiene reservadas, como horarios, fechas, sede o tratamientos programados."
+    },
+    {
+      "id": "confirm_existing_appointment",
+      "note": "Permitir continuar para ejecutar manage_schedule_block_status con estado CONFIRMADA. La confirmación no requiere tarea de seguimiento.",
+      "action": "allow",
+      "intent": "appointment_confirmation",
+      "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio."
+    },
+    {
+      "id": "cancel_existing_appointment",
+      "note": "La cancelación es previa y obligatoria. Si el paciente indica que no puede asistir, no asistirá o quiere cancelar, se ejecuta el flow de cancelación antes de cualquier otra acción. No mostrar al paciente datos técnicos, JSON, block_id, status ni respuesta cruda de tools. Después de cancelar, establecer el contexto de conversación como last_action: 'cancelled_appointment' y ofrecer una sola vez buscar una nueva cita. Si la clínica requiere seguimiento o el paciente desea reprogramar, crear tarea en el step 2 opcional.",
+      "action": "allow",
+      "intent": "appointment_cancellation",
+      "description": "El paciente indica que no puede asistir, no asistirá, quiere cancelar una o más citas existentes, o responde negativamente a un recordatorio. La cancelación se ejecuta de forma previa y obligatoria."
+    },
+    {
+      "id": "scheduling_request_to_task",
+      "note": "El bot no ejecuta scheduling directamente. Debe recopilar motivo de consulta, fechas, horarios, profesional si aplica, convenio/bono y crear una tarea para el equipo humano. La primera pregunta debe ser '¿Qué te ocurre?'. Si el contexto indica last_action: 'cancelled_appointment', la primera pregunta debe ser '¿Qué día y horario te vendría bien?' en lugar de '¿Qué te ocurre?'. No listar ni nombrar tratamientos específicos al paciente; para él todo es sesión de fisioterapia. Si el paciente dice 'modificar mi cita por retraso' o 'voy X minutos tarde', no es scheduling_request; clasificar como patient_running_late.",
+      "action": "allow",
+      "intent": "scheduling_request",
+      "description": "El paciente solicita una nueva cita, reprogramar una cita existente, mover una cita dentro del mismo día o preguntar por disponibilidad de huecos. No incluye avisos de retraso."
+    },
+    {
+      "id": "general_inquiry",
+      "note": "Responder directamente con la información del contexto y las instrucciones. Si el paciente pregunta por algo distinto a sesión de fisioterapia general, no dar precio y crear tarea. Si la información no está disponible o requiere validación humana, crear tarea.",
+      "action": "allow",
+      "intent": "general_inquiry",
+      "description": "El paciente pregunta por precios fijos, médicos, contacto, horarios, ubicación, servicios o métodos de pago que no requieren agendar ni gestionar citas. Si pregunta por tratamientos, no listar nombres de tratamientos; para el paciente todo es sesión de fisioterapia."
+    },
+    {
+      "id": "human_follow_up",
+      "note": "Crear una tarea administrativa con el motivo del paciente y datos de contacto disponibles.",
+      "action": "allow",
+      "intent": "human_follow_up",
+      "description": "El paciente pide hablar con una persona, solicita contacto humano, presenta una queja o realiza una solicitud que requiere revisión del equipo."
+    },
+    {
+      "id": "patient_running_late",
+      "note": "Interpretar 'modificar mi cita por retraso' como aviso de retraso, no como reprogramación. Marcar EN_CAMINO si la herramienta lo permite. Si el retraso es de 5 minutos o más, crear tarea obligatoriamente para avisar al equipo. Si el retraso es de 15 minutos o más, crear tarea para que recepción valore si pueden atenderle o si es mejor reprogramar. El mensaje 'Lo paso a recepción...' solo debe emitirse si se ha ejecutado create_task.",
+      "action": "allow",
+      "intent": "patient_running_late",
+      "description": "El paciente indica que está en camino, llegará tarde o avisa de un retraso para una cita existente. Incluye frases como 'modificar mi cita por retraso' o 'voy X minutos tarde'."
+    },
+    {
+      "id": "special_treatment_to_task",
+      "note": "El bot no agenda ni gestiona estos casos directamente. Debe recopilar datos y crear tarea para recepción o administración. No listar ni nombrar tratamientos específicos al paciente; para él todo es sesión de fisioterapia. Si el paciente ya mencionó el tratamiento, se puede reconocer brevemente, pero no promoverlo.",
+      "action": "allow",
+      "intent": "special_treatment_request",
+      "description": "El paciente solicita o pregunta por tratamientos especiales que siempre requieren gestión humana: Indiba, fisioestética, ondas de choque, presoterapia, SIS, suelo pélvico, bebés, cita con Alejandro o ATC Alex/Cris."
+    },
+    {
+      "id": "post_treatment_follow_up_to_task",
+      "note": "Crear tarea para que el equipo revise el caso con criterio profesional. No diagnosticar ni dar pautas clínicas.",
+      "action": "allow",
+      "intent": "post_treatment_follow_up",
+      "description": "El paciente reporta molestias, dolor o síntomas tras una sesión, o pregunta si es normal sentir más dolor después del tratamiento."
+    },
+    {
+      "id": "payment_inquiry",
+      "note": "Responder con la información autorizada si está disponible. El precio de 40 € solo aplica a sesión de fisioterapia general. Si el paciente pregunta por algo distinto a sesión de fisioterapia general, no dar precio y crear tarea. Si pregunta por bonos no definidos, convenios no detectados o precios personalizados, crear tarea.",
+      "action": "allow",
+      "intent": "payment_inquiry",
+      "description": "El paciente pregunta por formas de pago, bonos, precios autorizados o condiciones de pago."
+    },
+    {
+      "id": "location_contact_inquiry",
+      "note": "Responder directamente con los datos de contacto y ubicación disponibles en el contexto.",
+      "action": "allow",
+      "intent": "location_contact_inquiry",
+      "description": "El paciente pregunta por la ubicación, dirección, parking, transporte, teléfono, email o redes sociales de la clínica."
+    }
+  ],
+  "intents": {
+    "general_inquiry": {
+      "examples": [
+        "¿qué horario tenéis?",
+        "¿dónde estáis?",
+        "¿cuánto cuesta una sesión?",
+        "¿qué tratamientos tienen?",
+        "¿aceptan tarjeta?"
+      ],
+      "description": "El paciente hace preguntas generales sobre la clínica, horarios, ubicación, contacto, precios fijos, servicios, métodos de pago o información que puede responderse desde el contexto sin gestionar citas. Si el paciente pregunta por tratamientos específicos, el bot debe responder sin listar nombres de tratamientos: todo es sesión de fisioterapia."
+    },
+    "human_follow_up": {
+      "examples": [
+        "quiero hablar con una persona",
+        "tengo una queja",
+        "necesito que me llame alguien",
+        "quiero que me contacten"
+      ],
+      "description": "Cualquier solicitud que requiere seguimiento humano y no encaja claramente en los intents anteriores."
+    },
+    "payment_inquiry": {
+      "examples": [
+        "¿aceptáis tarjeta?",
+        "¿tenéis bonos?",
+        "¿puedo pagar a plazos?",
+        "¿cuánto cuesta una sesión?"
+      ],
+      "description": "El paciente pregunta por formas de pago, bonos, financiación, precios autorizados o condiciones de pago."
+    },
+    "scheduling_request": {
+      "examples": [
+        "quiero pedir cita",
+        "¿tenéis hueco el viernes?",
+        "quiero cambiar mi cita de día",
+        "¿podéis adelantarla una hora?",
+        "quiero reprogramar",
+        "quiero una cita para fisioterapia"
+      ],
+      "description": "El paciente quiere reservar una nueva cita, reprogramar una cita existente, mover una cita dentro del mismo día, adelantar o atrasar una cita, o preguntar por disponibilidad. NO incluye avisos de retraso como 'modificar mi cita por retraso' o 'voy X minutos tarde'. NO incluye mensajes de imposibilidad de asistir como 'no puedo ir', 'no asistiré' o 'tengo que cancelar', que deben clasificarse como appointment_cancellation. El bot no ejecuta scheduling directamente: recopila los datos necesarios y crea una tarea para que el equipo humano gestione el agendamiento."
+    },
+    "appointment_inquiry": {
+      "examples": [
+        "¿cuándo es mi cita?",
+        "¿tengo cita esta semana?",
+        "¿a qué hora era mi cita?",
+        "¿qué cita tengo mañana?"
+      ],
+      "description": "El paciente pregunta por citas que ya tiene reservadas, como horarios, fechas, tratamientos o sede. La información ya está en el contexto."
+    },
+    "patient_running_late": {
+      "examples": [
+        "voy con retraso",
+        "llego en 10 minutos",
+        "estoy en camino",
+        "me retrasaré 15 minutos",
+        "modificar mi cita 15 minutos por retraso",
+        "voy 20 minutos tarde a mi cita",
+        "llegaré un poco más tarde"
+      ],
+      "description": "El paciente indica que está en camino, llegará tarde o avisa de un retraso para una cita existente. Incluye frases como 'modificar mi cita por retraso' o 'voy 15 minutos tarde'."
+    },
+    "appointment_cancellation": {
+      "examples": [
+        "no puedo ir, cancélala",
+        "no asistiré mañana",
+        "quiero cancelar mi cita",
+        "no podré asistir",
+        "no puedo ir mañana",
+        "no voy a poder ir",
+        "no asistiré",
+        "tengo que cancelar",
+        "cancela la cita",
+        "no podré ir a la cita",
+        "no puedo asistir"
+      ],
+      "description": "El paciente cancela una cita existente o indica que no podrá asistir. Incluye frases como 'no puedo ir', 'no asistiré' o 'tengo que cancelar'."
+    },
+    "appointment_confirmation": {
+      "examples": [
+        "confirmo",
+        "ahí estaré",
+        "sí, asistiré",
+        "ok",
+        "vale, voy",
+        "de acuerdo"
+      ],
+      "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio con un afirmativo breve."
+    },
+    "location_contact_inquiry": {
+      "examples": [
+        "¿dónde estáis?",
+        "¿cómo llego?",
+        "¿cuál es el teléfono?",
+        "¿tenéis parking?"
+      ],
+      "description": "El paciente pregunta por la ubicación, dirección, parking, transporte, teléfono, email o redes sociales de la clínica."
+    },
+    "post_treatment_follow_up": {
+      "examples": [
+        "me duele más después de la sesión",
+        "tengo molestias tras el tratamiento",
+        "¿es normal doler más después?",
+        "después de la fisioterapia me duele"
+      ],
+      "description": "El paciente reporta molestias, dolor o síntomas después de una sesión, o pregunta si es normal sentir más dolor tras el tratamiento."
+    },
+    "special_treatment_request": {
+      "examples": [
+        "quiero Indiba",
+        "¿hacéis fisioestética?",
+        "ondas de choque",
+        "presoterapia",
+        "SIS",
+        "suelo pélvico",
+        "cita con Alejandro",
+        "ATC Alex",
+        "ATC Cris"
+      ],
+      "description": "El paciente solicita o pregunta por tratamientos especiales que siempre requieren gestión humana: Indiba, fisioestética, ondas de choque, presoterapia, SIS, suelo pélvico, bebés, cita con Alejandro o ATC Alex/Cris."
+    }
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "scheduling": false
+  },
+  "toolOrchestration": {
+    "flows": {
+      "general_inquiry": {
+        "steps": [
+          {
+            "note": "Responder directamente con la información disponible en el contexto. Si el paciente pregunta por algo distinto a sesión de fisioterapia general, no dar precio y crear tarea. Si la respuesta depende de disponibilidad, criterio profesional, presupuesto personalizado o validación humana, crear tarea usando el flow de seguimiento humano.",
+            "step": 1,
+            "tools": [],
+            "parallel": false
+          }
+        ],
+        "intent": "general_inquiry",
+        "description": "El paciente hace una pregunta general sobre la clínica, precios fijos, horarios, ubicación, servicios o métodos de pago. Si pregunta por tratamientos específicos, no listar nombres de tratamientos; para el paciente todo es sesión de fisioterapia.",
+        "allowedTools": []
+      },
+      "human_follow_up": {
+        "steps": [
+          {
+            "note": "Crear una tarea administrativa con el motivo del paciente, datos de contacto disponibles y resumen claro de la solicitud.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "human_follow_up",
+        "description": "El paciente pide hablar con una persona, solicita contacto humano, presenta una queja o realiza una solicitud que requiere revisión del equipo.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Hemos tomado nota de tu solicitud. Un miembro de nuestro equipo la revisará y se pondrá en contacto contigo."
+      },
+      "payment_inquiry": {
+        "steps": [
+          {
+            "note": "Responder con la información autorizada disponible: sesión de fisioterapia general 40 €, pacientes antiguos con tarifa detectada 35 €, bono de 3 sesiones 110 €, cumpleaños 30 € si cumple condiciones, efectivo/tarjeta/Bizum/transferencia. El precio de 40 € solo aplica a sesión de fisioterapia general. Si el paciente pregunta por algo distinto a sesión de fisioterapia general, no dar precio y crear tarea. Si pregunta por bonos no definidos, convenios no detectados o precios personalizados, crear tarea.",
+            "step": 1,
+            "tools": [],
+            "parallel": false
+          }
+        ],
+        "intent": "payment_inquiry",
+        "description": "El paciente pregunta por formas de pago, bonos, precios autorizados o condiciones de pago.",
+        "allowedTools": []
+      },
+      "appointment_inquiry": {
+        "steps": [
+          {
+            "note": "Usar el contexto ASSOCIATED_PATIENTS para responder. Si no hay citas, indicar que no aparecen citas programadas y ofrecer ayuda.",
+            "step": 1,
+            "tools": [],
+            "parallel": false
+          }
+        ],
+        "intent": "appointment_inquiry",
+        "description": "El paciente consulta información sobre citas que ya tiene reservadas, como horarios, fechas, sede o tratamientos.",
+        "allowedTools": []
+      },
+      "patient_running_late": {
+        "steps": [
+          {
+            "note": "Preguntar cuánto tiempo se retrasará si el paciente no lo ha dicho. Marcar la cita como EN_CAMINO si la herramienta lo permite. Si el paciente ya indica el tiempo de retraso en su mensaje, no repetir la pregunta.",
+            "step": 1,
+            "tools": [
+              "manage_schedule_block_status"
+            ],
+            "parallel": false,
+            "required": [
+              "manage_schedule_block_status"
+            ]
+          },
+          {
+            "note": "Si el retraso es de 5 minutos o más, crear tarea obligatoriamente para avisar al equipo. Si el retraso es de 15 minutos o más, crear tarea para que recepción valore si pueden atenderle o si es mejor reprogramar. Incluir el tiempo de retraso, la cita afectada, el teléfono y un resumen breve. El mensaje 'Lo paso a recepción...' solo debe emitirse si create_task se ejecuta correctamente.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "patient_running_late",
+        "description": "El paciente indica que está en camino o llegará tarde a una cita existente. Incluye frases como 'modificar mi cita por retraso' o 'voy X minutos tarde'. No es reprogramación de hora ni cambio de fecha.",
+        "allowedTools": [
+          "manage_schedule_block_status",
+          "create_task"
+        ],
+        "responseTemplate": "Gracias por avisar. Lo paso a recepción para que revisen si pueden atenderte o si es mejor reprogramar la cita."
+      },
+      "any_scheduling_request": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, apellidos, teléfono, motivo de consulta (preguntar exactamente '¿Qué te ocurre?'), fechas u horarios preferidos, profesional si aplica, si es paciente nuevo o antiguo, convenio/bono/promoción, cómo nos ha conocido, recomendación y si ha venido antes. Anotar si gestiona la cita para otra persona. Si el contexto indica last_action: 'cancelled_appointment' y el paciente está buscando una nueva cita tras cancelar, no preguntar '¿Qué te ocurre?'; comenzar directamente con '¿Qué día y horario te vendría bien?'. No listar ni nombrar tratamientos específicos al paciente; para él todo es sesión de fisioterapia. Si el paciente dice 'modificar mi cita por retraso' o 'voy tarde', no es scheduling_request; debe ir al flow de patient_running_late. El bot no consulta agenda ni muestra huecos disponibles.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "scheduling_request",
+        "description": "El paciente solicita agendar una nueva cita, reprogramar, adelantar o atrasar una cita existente, moverla dentro del mismo día o consultar disponibilidad de huecos.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Lo paso a recepción para que puedan revisarlo y contactar contigo lo antes posible."
+      },
+      "location_contact_inquiry": {
+        "steps": [
+          {
+            "note": "Responder directamente con la dirección, referencias de llegada, parking, transporte, teléfono/WhatsApp, email, web y redes sociales disponibles en el contexto.",
+            "step": 1,
+            "tools": [],
+            "parallel": false
+          }
+        ],
+        "intent": "location_contact_inquiry",
+        "description": "El paciente pregunta por la ubicación, dirección, parking, transporte, teléfono, email o redes sociales de la clínica.",
+        "allowedTools": []
+      },
+      "special_treatment_to_task": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, apellidos, teléfono, motivo de consulta, día y hora preferidos si aplica, y profesional solicitado. Si es cita con Alejandro, ofrecer amablemente si quiere ver opciones con otro fisioterapeuta o esperar. Crear tarea para recepción o administración. No agendar directamente. No listar ni nombrar tratamientos específicos al paciente; para él todo es sesión de fisioterapia. Si el paciente ya mencionó el tratamiento, se puede reconocer brevemente, pero no promoverlo.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "special_treatment_request",
+        "description": "El paciente solicita o pregunta por tratamientos especiales que siempre requieren gestión humana: Indiba, fisioestética, ondas de choque, presoterapia, SIS, suelo pélvico, bebés, cita con Alejandro o ATC Alex/Cris.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Lo paso a recepción para que puedan revisarlo y contactar contigo lo antes posible."
+      },
+      "cancel_existing_appointment": {
+        "steps": [
+          {
+            "note": "Cancelación previa y obligatoria. Si solo hay una cita activa asociada al número, cancelarla directamente sin preguntar por identidad. Una sola cita: usar manage_schedule_block_status(CANCELADA). Varias citas el mismo día: usar manage_all_schedule_blocks_for_date. No mostrar al paciente la respuesta cruda de la tool (JSON, block_id, status). Tras cancelar, establecer el contexto de conversación como last_action: 'cancelled_appointment' para que el siguiente turno sepa que el paciente viene de una cancelación.",
+            "step": 1,
+            "tools": [
+              "manage_schedule_block_status",
+              "manage_all_schedule_blocks_for_date"
+            ],
+            "parallel": false,
+            "required": [
+              "manage_schedule_block_status"
+            ]
+          },
+          {
+            "note": "Opcional: crear tarea si la clínica requiere seguimiento tras la cancelación, si hay múltiples citas canceladas o si el paciente solicita reprogramar. No es obligatorio para cancelaciones simples. Incluir motivo si el paciente lo menciona.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false
+          }
+        ],
+        "intent": "appointment_cancellation",
+        "description": "El paciente indica que no puede asistir, no asistirá, quiere cancelar una o más citas existentes, o responde negativamente a un recordatorio. La cancelación se ejecuta de forma previa y obligatoria.",
+        "allowedTools": [
+          "manage_schedule_block_status",
+          "manage_all_schedule_blocks_for_date",
+          "create_task"
+        ],
+        "responseTemplate": "He cancelado tu cita. Si quieres, podemos buscar una nueva cita. ¿Qué día y horario te vendría bien?"
+      },
+      "confirm_existing_appointment": {
+        "steps": [
+          {
+            "note": "Marcar CONFIRMADA cada cita aplicable. Si el mensaje responde a un recordatorio inequívoco, confirmar sin preguntar cuál. No crear tarea. No nombrar tratamientos en la respuesta salvo que la clínica lo pida explícitamente.",
+            "step": 1,
+            "tools": [
+              "manage_schedule_block_status"
+            ],
+            "parallel": false,
+            "required": [
+              "manage_schedule_block_status"
+            ]
+          }
+        ],
+        "intent": "appointment_confirmation",
+        "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
+        "allowedTools": [
+          "manage_schedule_block_status"
+        ],
+        "responseTemplate": "¡Muchas gracias!"
+      },
+      "post_treatment_follow_up_to_task": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, teléfono, motivo de la consulta, síntomas descritos por el paciente y cita relacionada si está disponible. Crear tarea para que el equipo revise el caso con criterio profesional. No diagnosticar ni dar pautas clínicas.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "post_treatment_follow_up",
+        "description": "El paciente reporta molestias, dolor o síntomas tras una sesión, o pregunta si es normal sentir más dolor después del tratamiento.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Para orientarte bien, voy a pasar tu caso al equipo para que puedan revisarlo con criterio profesional."
+      }
+    }
+  }
+}

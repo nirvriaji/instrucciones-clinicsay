@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "capabilities": {
+    "scheduling": false,
+    "products": false,
+    "shipping": false,
+    "sensitiveSituations": false,
+    "protocols": false,
+    "reminders": false
+  },
+  "intents": {
+    "appointment_confirmation": {
+      "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
+      "examples": [
+        "confirmo",
+        "ahí estaré"
+      ]
+    },
+    "appointment_cancellation": {
+      "description": "El paciente cancela una cita existente o indica que no podrá asistir.",
+      "examples": [
+        "cancela mi cita",
+        "no puedo ir mañana"
+      ]
+    },
+    "appointment_inquiry": {
+      "description": "El paciente pregunta por citas que ya tiene reservadas (horarios, fechas). La información ya está en el contexto.",
+      "examples": [
+        "¿cuándo es mi cita?"
+      ]
+    },
+    "scheduling_request": {
+      "description": "El paciente quiere reservar una NUEVA cita o consultar disponibilidad.",
+      "examples": [
+        "quiero pedir cita",
+        "¿tenéis hueco el viernes?"
+      ]
+    },
+    "general_inquiry": {
+      "description": "Preguntas generales sobre la clínica: horarios, ubicación, contacto, precios fijos.",
+      "examples": [
+        "¿qué horario tenéis?"
+      ]
+    },
+    "human_follow_up": {
+      "description": "Solicitudes que requieren seguimiento humano y no encajan en lo anterior.",
+      "examples": [
+        "quiero hablar con una persona"
+      ]
+    }
+  },
+  "toolOrchestration": {
+    "flows": {}
+  },
+  "rules": []
+}

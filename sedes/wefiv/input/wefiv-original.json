@@ -1,0 +1,492 @@
+{
+  "rules": [
+    {
+      "id": "ask_about_existing_appointment",
+      "note": "El backend inyecta las citas del paciente en el system prompt mediante ASSOCIATED_PATIENTS. El bot responde sin llamar tools si la información está disponible en el contexto.",
+      "action": "allow",
+      "intent": "appointment_inquiry",
+      "description": "El paciente consulta información sobre citas que ya tiene reservadas, como horarios, fechas, sede o tratamientos programados."
+    },
+    {
+      "id": "confirm_existing_appointment",
+      "note": "Permitir continuar para ejecutar manage_schedule_block_status con estado CONFIRMADA. La confirmación no requiere tarea de seguimiento.",
+      "action": "allow",
+      "intent": "appointment_confirmation",
+      "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio."
+    },
+    {
+      "id": "cancel_existing_appointment",
+      "note": "La clínica WeFIV establece que cancelaciones, reagendamientos y modificaciones de citas deben gestionarse mediante tarea administrativa. No ejecutar manage_schedule_block_status directamente; crear tarea para el equipo.",
+      "action": "allow",
+      "intent": "appointment_cancellation",
+      "description": "El paciente solicita cancelar, reagendar o modificar una cita existente, o responde a un recordatorio indicando que no asistirá."
+    },
+    {
+      "id": "scheduling_request_to_task",
+      "note": "El bot no ejecuta scheduling directamente. Debe recopilar tratamiento, fechas u horarios preferidos, profesional si aplica, y crear una tarea para el equipo humano.",
+      "action": "allow",
+      "intent": "scheduling_request",
+      "description": "El paciente solicita una nueva cita, una primera visita o pregunta por disponibilidad de huecos."
+    },
+    {
+      "id": "general_inquiry",
+      "note": "Responder directamente con la información del contexto y las instrucciones. Si aún no se conoce el nombre del paciente tras el saludo, preguntarlo antes de continuar. Si la respuesta depende de disponibilidad, criterio profesional, presupuesto personalizado o validación humana, crear tarea. El bot no envía mensajes espontáneos.",
+      "action": "allow",
+      "intent": "general_inquiry",
+      "description": "El paciente pregunta por tratamientos, servicios, horarios, ubicación, contacto o información general que no requiera agendar ni gestionar citas."
+    },
+    {
+      "id": "human_follow_up_to_task",
+      "note": "Crear tarea administrativa con el motivo, datos de contacto y resumen claro de la solicitud.",
+      "action": "allow",
+      "intent": "human_follow_up",
+      "description": "El paciente pide hablar con una persona, presenta una queja o solicita contacto humano."
+    },
+    {
+      "id": "price_inquiry_to_task",
+      "note": "Ceres no debe dar precios cerrados. Crear tarea para que el equipo económico o de atención al paciente contacte al interesado.",
+      "action": "allow",
+      "intent": "price_inquiry",
+      "description": "El paciente pregunta por precios, presupuestos, financiación o formas de pago."
+    },
+    {
+      "id": "fertility_preservation_to_task",
+      "note": "Ofrecer información general breve y crear tarea para primera valoración médica. No indicar edad límite, pruebas, medicación, tiempos ni probabilidad de éxito.",
+      "action": "allow",
+      "intent": "fertility_preservation",
+      "description": "El paciente quiere preservar fertilidad o congelar óvulos."
+    },
+    {
+      "id": "ovum_donation_to_task",
+      "note": "Agradecer y crear tarea para el equipo especializado de WeBank / EVA con los datos disponibles.",
+      "action": "allow",
+      "intent": "ovum_donation",
+      "description": "El paciente quiere donar óvulos."
+    },
+    {
+      "id": "existing_patient_to_task",
+      "note": "No responder clínicamente. Crear tarea para que el equipo médico o de atención al paciente revise la consulta.",
+      "action": "allow",
+      "intent": "existing_patient",
+      "description": "El paciente ya está en tratamiento en WeFIV y tiene una consulta clínica o de seguimiento."
+    },
+    {
+      "id": "sensitive_case_to_task",
+      "note": "Crear tarea prioritaria. Si es una urgencia médica grave, indicar contacto con emergencias o con la clínica por teléfono.",
+      "action": "allow",
+      "intent": "sensitive_case",
+      "description": "El paciente menciona una situación sensible, urgente o emocionalmente delicada."
+    },
+    {
+      "id": "second_opinion_to_task",
+      "note": "Crear tarea para que el equipo correspondiente revise el caso y contacte al paciente.",
+      "action": "allow",
+      "intent": "second_opinion",
+      "description": "El paciente solicita una segunda opinión médica."
+    },
+    {
+      "id": "international_patient_to_task",
+      "note": "Crear tarea con país, ciudad, motivo y datos de contacto para que el equipo indique cómo organizar la primera orientación.",
+      "action": "allow",
+      "intent": "international_patient",
+      "description": "El paciente vive fuera de Argentina o pregunta por atención internacional."
+    }
+  ],
+  "intents": {
+    "ovum_donation": {
+      "examples": [
+        "quiero donar óvulos",
+        "me interesa la donación de óvulos",
+        "cómo dono óvulos",
+        "donar óvulos"
+      ],
+      "description": "El paciente expresa interés en donar óvulos. El bot agradece y crea una tarea para el equipo especializado de WeBank / EVA."
+    },
+    "price_inquiry": {
+      "examples": [
+        "¿cuánto cuesta un tratamiento?",
+        "¿cuál es el precio de la primera visita?",
+        "¿hay financiación?",
+        "¿qué presupuesto necesito?",
+        "¿aceptan prepagas?"
+      ],
+      "description": "El paciente pregunta por precios, presupuestos, financiación, formas de pago o acuerdos con prepagas. El bot no da cifras: crea una tarea."
+    },
+    "second_opinion": {
+      "examples": [
+        "quiero una segunda opinión",
+        "me gustaría una segunda opinión",
+        "quiero que revisen mi caso"
+      ],
+      "description": "El paciente solicita una segunda opinión médica sobre su caso. El bot recopila datos y crea una tarea."
+    },
+    "sensitive_case": {
+      "examples": [
+        "tengo dolor",
+        "tengo sangrado",
+        "tengo mucha ansiedad",
+        "estoy muy asustada",
+        "tengo una queja",
+        "no me han tratado bien",
+        "me duele mucho"
+      ],
+      "description": "El paciente menciona una situación sensible, urgente o emocionalmente delicada: dolor, sangrado, ansiedad intensa, queja, enfado o pérdida. El bot crea una tarea prioritaria."
+    },
+    "general_inquiry": {
+      "examples": [
+        "¿qué horario tenéis?",
+        "¿dónde están?",
+        "¿qué tratamientos tienen?",
+        "¿qué es la fecundación in vitro?",
+        "¿aceptan tarjeta?",
+        "¿cuál es el email de la clínica?"
+      ],
+      "description": "El paciente hace preguntas generales sobre la clínica, horarios, ubicación, contacto, servicios, tratamientos o información que puede responderse desde el contexto sin gestionar citas. Tras el saludo inicial, si no se conoce el nombre del paciente, debe preguntarse antes de continuar. El bot no envía mensajes espontáneos."
+    },
+    "human_follow_up": {
+      "examples": [
+        "quiero hablar con una persona",
+        "tengo una queja",
+        "necesito que me llame alguien",
+        "quiero que me contacten",
+        "puedo hablar con el doctor"
+      ],
+      "description": "Cualquier solicitud que requiere seguimiento humano y no encaja claramente en los intents anteriores."
+    },
+    "existing_patient": {
+      "examples": [
+        "ya soy paciente",
+        "estoy en tratamiento",
+        "tengo una duda sobre mi medicación",
+        "estoy en betaespera",
+        "tengo sangrado"
+      ],
+      "description": "El paciente indica que ya está en tratamiento en WeFIV y tiene una consulta clínica, médica o de seguimiento. El bot no responde clínicamente: crea una tarea."
+    },
+    "scheduling_request": {
+      "examples": [
+        "quiero pedir cita",
+        "¿tenéis hueco el viernes?",
+        "quiero una primera visita",
+        "quiero una cita para revisión",
+        "quiero agendar",
+        "solicitar turno"
+      ],
+      "description": "El paciente quiere reservar una nueva cita, consultar disponibilidad, solicitar una primera visita o preguntar por huecos. El bot no ejecuta scheduling directamente: recopila datos y crea una tarea."
+    },
+    "appointment_inquiry": {
+      "examples": [
+        "¿cuándo es mi cita?",
+        "¿tengo cita esta semana?",
+        "¿a qué hora era mi cita?",
+        "¿qué cita tengo mañana?"
+      ],
+      "description": "El paciente pregunta por citas que ya tiene reservadas, como horarios, fechas, tratamientos o sede. La información ya está en el contexto."
+    },
+    "international_patient": {
+      "examples": [
+        "vivo en el exterior",
+        "soy de otro país",
+        "¿atienden pacientes internacionales?",
+        "vivo en España"
+      ],
+      "description": "El paciente vive fuera de Argentina o pregunta si WeFIV atiende pacientes internacionales. El bot crea una tarea para que el equipo revise el caso."
+    },
+    "fertility_preservation": {
+      "examples": [
+        "quiero preservar mi fertilidad",
+        "quiero congelar óvulos",
+        "me interesa congelar óvulos",
+        "preservar fertilidad"
+      ],
+      "description": "El paciente expresa interés en preservar su fertilidad o congelar óvulos. El bot da información general breve y crea una tarea para valoración médica."
+    },
+    "appointment_cancellation": {
+      "examples": [
+        "no puedo ir, cancélala",
+        "no asistiré mañana",
+        "quiero cancelar mi cita",
+        "no podré asistir",
+        "quiero reagendar",
+        "quiero modificar mi cita"
+      ],
+      "description": "El paciente solicita cancelar, reagendar o modificar una cita existente, o responde a un recordatorio indicando que no asistirá."
+    },
+    "appointment_confirmation": {
+      "examples": [
+        "confirmo",
+        "ahí estaré",
+        "sí, asistiré",
+        "ok",
+        "vale, voy",
+        "de acuerdo"
+      ],
+      "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio con un afirmativo breve."
+    }
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "scheduling": false
+  },
+  "toolOrchestration": {
+    "flows": {
+      "ovum_donation": {
+        "steps": [
+          {
+            "note": "Presentar WeBank: 'En WeFIV trabajamos con un equipo especializado para acompañarte en todo el proceso de donación de óvulos. De hecho, contamos con nuestro propio banco de óvulos llamado WeBank.' A partir de ese momento, toda referencia a la clínica en esta conversación es WeBank. Crear tarea para el equipo especializado de WeBank / EVA. Recopilar nombre, apellidos, teléfono, edad solo si se ofrece o el flujo lo requiere, ciudad/zona, preferencia de contacto (llamada o WhatsApp) y observaciones relevantes. No hacer cribado médico completo desde Ceres.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "ovum_donation",
+        "description": "El paciente expresa interés en donar óvulos. Tras confirmar la intención, el bot presenta WeBank como el banco de óvulos propio de WeFIV y cambia la referencia a WeBank para todo el tema de donación.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "En WeFIV trabajamos con un equipo especializado para acompañarte en todo el proceso de donación de óvulos. De hecho, contamos con nuestro propio banco de óvulos llamado WeBank. Gracias, [Nombre]. Voy a dejar tu solicitud registrada para que el equipo especializado de WeBank se ponga en contacto contigo y te explique el proceso paso a paso."
+      },
+      "price_inquiry": {
+        "steps": [
+          {
+            "note": "No dar precios cerrados. Recopilar nombre, apellidos, teléfono, tratamiento mencionado, preferencia de contacto (llamada o WhatsApp) y franja horaria. Crear tarea para que el equipo de WeFIV contacte al interesado.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "price_inquiry",
+        "description": "El paciente pregunta por precios, presupuestos, financiación o formas de pago.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "En reproducción asistida, el presupuesto depende del caso, las pruebas necesarias y el tratamiento indicado. Tras la primera visita de valoración, el equipo podrá explicarle las opciones y preparar un presupuesto adaptado. Si quiere, dejo solicitado que una persona la contacte para informarle."
+      },
+      "second_opinion": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, apellidos, teléfono, motivo de la segunda opinión, preferencia de contacto y franja horaria. Crear tarea para el equipo correspondiente.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "second_opinion",
+        "description": "El paciente solicita una segunda opinión médica sobre su caso.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Gracias, [Nombre]. Dejo registrada su solicitud de segunda opinión para que el equipo correspondiente pueda revisarla y contactarla."
+      },
+      "sensitive_case": {
+        "steps": [
+          {
+            "note": "Crear tarea administrativa prioritaria. Recopilar nombre, teléfono, motivo, preferencia de contacto y observaciones. Si se trata de una urgencia médica grave, indicar que contacte emergencias o a la clínica por teléfono. No diagnosticar ni dar indicaciones médicas.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "sensitive_case",
+        "description": "El paciente menciona una situación sensible, urgente o emocionalmente delicada.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Entiendo su preocupación. Para responderle con seguridad y sin darle una información incompleta, lo mejor es que lo revise una persona del equipo. ¿Prefiere que la contacten por llamada o por WhatsApp?"
+      },
+      "general_inquiry": {
+        "steps": [
+          {
+            "note": "Responder directamente con la información disponible en el contexto. Si no se conoce el nombre del paciente, preguntarlo antes de continuar. Si la respuesta depende de disponibilidad, criterio profesional, presupuesto personalizado o validación humana, derivar al flow de create_task correspondiente.",
+            "step": 1,
+            "tools": [],
+            "parallel": false
+          }
+        ],
+        "intent": "general_inquiry",
+        "description": "El paciente hace una pregunta general sobre la clínica, tratamientos, servicios, horarios, ubicación, contacto o métodos de pago. El bot no envía mensajes espontáneos y debe conocer el nombre del paciente tras el saludo.",
+        "allowedTools": []
+      },
+      "human_follow_up": {
+        "steps": [
+          {
+            "note": "Crear una tarea administrativa con el motivo del paciente, datos de contacto disponibles y resumen claro de la solicitud.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "human_follow_up",
+        "description": "El paciente pide hablar con una persona, solicita contacto humano, presenta una queja o realiza una solicitud que requiere revisión del equipo.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Hemos tomado nota de tu solicitud. Un miembro de nuestro equipo la revisará y se pondrá en contacto contigo."
+      },
+      "existing_patient": {
+        "steps": [
+          {
+            "note": "No responder clínicamente. Crear tarea para el equipo médico o de atención al paciente con el motivo, datos de contacto y resumen de la consulta.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "existing_patient",
+        "description": "El paciente indica que ya está en tratamiento en WeFIV y tiene una consulta clínica o de seguimiento.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Al tratarse de una consulta relacionada con su tratamiento, es importante que la revise directamente el equipo de WeFIV. Dejo una tarea para que puedan contactarla."
+      },
+      "appointment_inquiry": {
+        "steps": [
+          {
+            "note": "Usar el contexto ASSOCIATED_PATIENTS para responder. Si no hay citas, indicar que no aparecen citas programadas y ofrecer ayuda. No crear tarea para una consulta simple.",
+            "step": 1,
+            "tools": [],
+            "parallel": false
+          }
+        ],
+        "intent": "appointment_inquiry",
+        "description": "El paciente consulta información sobre citas que ya tiene reservadas, como horarios, fechas, sede o tratamientos.",
+        "allowedTools": []
+      },
+      "international_patient": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, apellidos, teléfono, país, ciudad, motivo, preferencia de contacto y franja horaria. Crear tarea para que el equipo indique cómo organizar la primera orientación.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "international_patient",
+        "description": "El paciente vive fuera de Argentina o pregunta por atención internacional.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "WeFIV puede atender consultas en español e inglés. Si vive fuera de Argentina, lo adecuado es crear una tarea para que el equipo revise su caso y le indique cómo organizar la primera orientación."
+      },
+      "any_scheduling_request": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, apellidos, teléfono, tratamiento deseado, fechas u horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento. El bot no consulta agenda ni muestra huecos disponibles.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "scheduling_request",
+        "description": "El paciente solicita agendar una nueva cita, una primera visita o consultar disponibilidad de huecos.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al teléfono de la clínica."
+      },
+      "fertility_preservation": {
+        "steps": [
+          {
+            "note": "Ofrecer información general breve y crear tarea para primera valoración médica. Recopilar nombre, apellidos, teléfono, motivo, preferencia de contacto y franja horaria. No indicar edad límite, pruebas necesarias, medicación, tiempos ni probabilidad de éxito.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "fertility_preservation",
+        "description": "El paciente expresa interés en preservar su fertilidad o congelar óvulos.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Preservar la fertilidad puede ser una opción para quienes desean posponer la maternidad y valorar sus posibilidades a futuro. Para orientarla correctamente, lo ideal es una primera valoración con el equipo médico. ¿Desea que una persona de WeFIV la contacte?"
+      },
+      "cancel_existing_appointment": {
+        "steps": [
+          {
+            "note": "La clínica WeFIV requiere que cancelaciones, reagendamientos y modificaciones se gestionen mediante tarea administrativa. No ejecutar manage_schedule_block_status. Recopilar nombre, apellidos, teléfono, motivo, franja horaria de contacto y detalles de la cita si los hay. Incluir el motivo de cancelación o modificación si el paciente lo menciona.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "appointment_cancellation",
+        "description": "El paciente solicita cancelar, reagendar o modificar una cita existente, o responde a un recordatorio indicando que no asistirá.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "De acuerdo. Dejo registrada la solicitud para que el equipo pueda gestionarlo. Si desea reprogramarla, también puede indicarme qué días o franjas le vendrían mejor."
+      },
+      "confirm_existing_appointment": {
+        "steps": [
+          {
+            "note": "Marcar CONFIRMADA cada cita aplicable. Si el mensaje responde a un recordatorio inequívoco, confirmar sin preguntar cuál. No crear tarea. No nombrar tratamientos en la respuesta salvo que la clínica lo pida explícitamente.",
+            "step": 1,
+            "tools": [
+              "manage_schedule_block_status"
+            ],
+            "parallel": false,
+            "required": [
+              "manage_schedule_block_status"
+            ]
+          }
+        ],
+        "intent": "appointment_confirmation",
+        "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
+        "allowedTools": [
+          "manage_schedule_block_status"
+        ],
+        "responseTemplate": "Perfecto, la cita está confirmada. Muchas gracias."
+      }
+    }
+  }
+}

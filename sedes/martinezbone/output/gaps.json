@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "sede": "sede-martinezbone",
+    "mode": "tasks-only",
+    "timestamp": "2026-07-20T22:58:36.937Z",
+    "inputFiles": [
+      "martinezbone-original.json",
+      "martinezbone-original.md"
+    ],
+    "inputFilesCount": 2,
+    "combinedTextLength": 52001
+  },
+  "summary": {
+    "total": 7,
+    "errors": 0,
+    "warnings": 7,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 0,
+    "professionalsFound": 4,
+    "signalsFound": 7,
+    "faqFound": 3
+  },
+  "gaps": [
+    {
+      "severity": "warning",
+      "category": "missing_signal",
+      "description": "Señal de 150€ mencionada en anotaciones pero no hay treatmentPolicyHint",
+      "anotacion_ref": "señal de 150 €",
+      "json_path": "treatmentPolicyHints",
+      "suggestion": "Agregar treatmentPolicyHint para la señal de 150€",
+      "question_for_advisor": "¿La señal de 150€ aplica a todos los pacientes o solo a pacientes nuevos?"
+    },
+    {
+      "severity": "warning",
+      "category": "missing_signal",
+      "description": "Señal de 30€ mencionada en anotaciones pero no hay treatmentPolicyHint",
+      "anotacion_ref": "señal de 30 €",
+      "json_path": "treatmentPolicyHints",
+      "suggestion": "Agregar treatmentPolicyHint para la señal de 30€",
+      "question_for_advisor": "¿La señal de 30€ aplica a todos los pacientes o solo a pacientes nuevos?"
+    },
+    {
+      "severity": "warning",
+      "category": "missing_signal",
+      "description": "Señal de 150€ mencionada en anotaciones pero no hay treatmentPolicyHint",
+      "anotacion_ref": "señal de 150 €",
+      "json_path": "treatmentPolicyHints",
+      "suggestion": "Agregar treatmentPolicyHint para la señal de 150€",
+      "question_for_advisor": "¿La señal de 150€ aplica a todos los pacientes o solo a pacientes nuevos?"
+    },
+    {
+      "severity": "warning",
+      "category": "missing_signal",
+      "description": "Señal de 30€ mencionada en anotaciones pero no hay treatmentPolicyHint",
+      "anotacion_ref": "señal de 30 €",
+      "json_path": "treatmentPolicyHints",
+      "suggestion": "Agregar treatmentPolicyHint para la señal de 30€",
+      "question_for_advisor": "¿La señal de 30€ aplica a todos los pacientes o solo a pacientes nuevos?"
+    },
+    {
+      "severity": "warning",
+      "category": "missing_signal",
+      "description": "Señal de 150€ mencionada en anotaciones pero no hay treatmentPolicyHint",
+      "anotacion_ref": "señal de 150 €",
+      "json_path": "treatmentPolicyHints",
+      "suggestion": "Agregar treatmentPolicyHint para la señal de 150€",
+      "question_for_advisor": "¿La señal de 150€ aplica a todos los pacientes o solo a pacientes nuevos?"
+    },
+    {
+      "severity": "warning",
+      "category": "missing_signal",
+      "description": "Señal de 150€ mencionada en anotaciones pero no hay treatmentPolicyHint",
+      "anotacion_ref": "señal de 150 €",
+      "json_path": "treatmentPolicyHints",
+      "suggestion": "Agregar treatmentPolicyHint para la señal de 150€",
+      "question_for_advisor": "¿La señal de 150€ aplica a todos los pacientes o solo a pacientes nuevos?"
+    },
+    {
+      "severity": "warning",
+      "category": "missing_signal",
+      "description": "Señal de 30€ mencionada en anotaciones pero no hay treatmentPolicyHint",
+      "anotacion_ref": "señal de 30 €",
+      "json_path": "treatmentPolicyHints",
+      "suggestion": "Agregar treatmentPolicyHint para la señal de 30€",
+      "question_for_advisor": "¿La señal de 30€ aplica a todos los pacientes o solo a pacientes nuevos?"
+    }
+  ]
+}

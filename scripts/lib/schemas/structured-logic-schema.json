@@ -1,0 +1,295 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StructuredLogic",
+  "description": "Standalone JSON Schema for clinic chatbot structuredLogic (runtime map format). Independent from backend.",
+  "type": "object",
+  "properties": {
+    "version": { "type": "string" },
+    "capabilities": {
+      "type": "object",
+      "properties": {
+        "scheduling": { "type": "boolean" },
+        "sensitiveSituations": { "type": "boolean" },
+        "protocols": { "type": "boolean" },
+        "reminders": { "type": "boolean" }
+      },
+      "required": ["sensitiveSituations", "protocols"]
+    },
+    "intents": {
+      "type": "object",
+      "description": "Semantic intent catalog. Every intent referenced by flows and rules MUST be declared here.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": { "type": "string" },
+          "examples": { "type": ["array", "null"], "items": { "type": "string" } }
+        },
+        "required": ["description"]
+      }
+    },
+    "toolOrchestration": {
+      "type": "object",
+      "properties": {
+        "flows": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "intent": { "type": "string" },
+              "description": { "type": ["string", "null"] },
+              "selection": {
+                "type": ["object", "null"],
+                "properties": {
+                  "requiredCapabilities": { "type": ["array", "null"], "items": { "type": "string" } },
+                  "excludedCapabilities": { "type": ["array", "null"], "items": { "type": "string" } }
+                }
+              },
+              "steps": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "step": { "type": "number" },
+                    "tools": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "check_availability",
+                          "resolve_availability_query",
+                          "schedule_block",
+                          "manage_schedule_block_status",
+                          "manage_all_schedule_blocks_for_date",
+                          "create_task",
+                          "resolve_patient",
+                          "resolve_professional",
+                          "resolve_treatment",
+                          "lookup_patient",
+                          "query_protocol",
+                          "query_knowledge_base"
+                        ]
+                      }
+                    },
+                    "parallel": { "type": "boolean" },
+                    "required": { "type": ["array", "null"], "items": { "type": "string" } },
+                    "note": { "type": ["string", "null"] }
+                  },
+                  "required": ["step", "tools", "parallel"]
+                }
+              },
+              "responseTemplate": { "type": ["string", "null"] },
+              "responseTemplateMode": { "type": ["string", "null"], "enum": ["literal", "model"] },
+              "allowedTools": {
+                "type": ["array", "null"],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "check_availability",
+                    "resolve_availability_query",
+                    "schedule_block",
+                    "manage_schedule_block_status",
+                    "manage_all_schedule_blocks_for_date",
+                    "create_task",
+                    "resolve_patient",
+                    "resolve_professional",
+                    "resolve_treatment",
+                    "lookup_patient",
+                    "query_protocol",
+                    "query_knowledge_base"
+                  ]
+                }
+              }
+            },
+            "required": ["intent", "description", "steps"]
+          }
+        }
+      },
+      "required": ["flows"]
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": ["string", "null"] },
+          "intent": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "action": { "type": "string", "enum": ["allow", "block"] },
+          "conditionLogic": { "type": ["string", "null"], "enum": ["and", "or"] },
+          "conditions": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": { "type": "string" },
+                "operator": { "type": "string", "enum": ["equals", "in", "not_in", "gt", "lt", "gte", "lte", "contains", "exists"] },
+                "value": {},
+                "negated": { "type": ["boolean", "null"] },
+                "note": { "type": ["string", "null"] }
+              },
+              "required": ["field", "operator", "value"]
+            }
+          },
+          "reason": { "type": ["string", "null"] },
+          "message": { "type": ["string", "null"] },
+          "protocolId": { "type": ["string", "null"] },
+          "requiredFields": { "type": ["array", "null"], "items": { "type": "string" } },
+          "note": { "type": ["string", "null"] },
+          "priority": { "type": "number" },
+          "hidePrice": { "type": ["boolean", "null"] },
+          "redirectToTask": { "type": ["boolean", "null"] },
+          "informOnly": { "type": ["boolean", "null"] }
+        },
+        "required": ["id", "intent", "description", "action"]
+      }
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "botName": { "type": ["string", "null"] },
+        "clinicName": { "type": ["string", "null"] },
+        "address": { "type": ["string", "null"] },
+        "phone": { "type": ["string", "null"] },
+        "email": { "type": ["string", "null"] },
+        "website": { "type": ["string", "null"] },
+        "openingHours": { "type": ["string", "null"] },
+        "language": { "type": ["string", "null"] },
+        "persona": { "type": ["string", "null"] },
+        "tone": { "type": ["string", "null"] },
+        "welcomeMessage": { "type": ["string", "null"] },
+        "farewellMessage": { "type": ["string", "null"] },
+        "escalationMessage": { "type": ["string", "null"] },
+        "socialLinks": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "properties": {
+              "platform": { "type": "string" },
+              "url": { "type": "string" }
+            },
+            "required": ["platform", "url"]
+          }
+        },
+        "additionalContacts": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "value": { "type": "string" },
+              "label": { "type": ["string", "null"] }
+            },
+            "required": ["type", "value"]
+          }
+        }
+      }
+    },
+    "styleRules": {
+      "type": "object",
+      "properties": {
+        "brevity": { "type": ["string", "null"] },
+        "format": { "type": ["string", "null"] },
+        "tone": { "type": ["string", "null"] },
+        "emojiPolicy": { "type": ["string", "null"], "enum": ["allowed", "forbidden", "contextual"] },
+        "languagePolicy": { "type": ["string", "null"] },
+        "noMedicalDiagnosis": { "type": ["boolean", "null"] },
+        "noAsterisks": { "type": ["boolean", "null"] },
+        "noMarkdown": { "type": ["boolean", "null"] },
+        "maxSentences": { "type": ["number", "null"] },
+        "maxWordsPerSentence": { "type": ["number", "null"] },
+        "avoidPhrases": { "type": ["array", "null"], "items": { "type": "string" } },
+        "mandatoryPhrases": { "type": ["array", "null"], "items": { "type": "string" } },
+        "additionalRules": { "type": ["array", "null"], "items": { "type": "string" } },
+        "mustGreet": { "type": ["boolean", "null"] },
+        "mustOfferHumanHandoff": { "type": ["boolean", "null"] }
+      }
+    },
+    "responseTemplates": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "text": { "type": ["string", "null"] },
+          "mode": { "type": ["string", "null"], "enum": ["literal", "model"] }
+        },
+        "required": ["text"]
+      }
+    },
+    "faq": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string" },
+          "answer": { "type": "string" },
+          "condition": { "type": ["string", "null"] }
+        },
+        "required": ["question", "answer"]
+      }
+    },
+    "protocols": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "responseTemplate": { "type": ["string", "null"] },
+          "sections": { "type": ["array", "null"], "items": { "type": "string" } }
+        },
+        "required": ["name", "description", "responseTemplate"]
+      }
+    },
+    "errorCategories": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "keywords": { "type": ["array", "null"], "items": { "type": "string" } },
+          "suggestions": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["id", "description", "suggestions"]
+      }
+    },
+    "treatmentPolicyHints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "treatmentId": { "type": ["string", "null"] },
+          "treatmentName": { "type": ["string", "null"] },
+          "categoryId": { "type": ["string", "null"] },
+          "categoryName": { "type": ["string", "null"] },
+          "reason": { "type": "string" },
+          "recommendedPolicies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string", "enum": ["allowed_days", "allowed_hours", "allowed_professionals", "min_notice", "start_minutes"] },
+                "description": { "type": "string" },
+                "whyNotInStructuredLogic": { "type": "string" }
+              },
+              "required": ["type", "description", "whyNotInStructuredLogic"]
+            }
+          }
+        },
+        "required": ["reason", "recommendedPolicies"]
+      }
+    },
+    "systemPromptInstructions": {
+      "type": "object",
+      "properties": {
+        "notesForAdvisor": { "type": "array", "items": { "type": "string" } },
+        "knownGaps": { "type": "array", "items": { "type": "string" } },
+        "recommendedNextSteps": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["notesForAdvisor", "knownGaps", "recommendedNextSteps"]
+    }
+  },
+  "required": ["version", "capabilities", "intents", "toolOrchestration", "rules"]
+}

@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "sede": "sede-ecobaby-granada",
+    "mode": "tasks-only",
+    "timestamp": "2026-07-20T21:05:46.088Z",
+    "inputFiles": [
+      "anotaciones.md",
+      "ecobaby-granada-original.json",
+      "ecobaby-granada-original.md"
+    ],
+    "inputFilesCount": 3,
+    "combinedTextLength": 120077
+  },
+  "summary": {
+    "total": 0,
+    "errors": 0,
+    "warnings": 0,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 0,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 0
+  },
+  "gaps": []
+}

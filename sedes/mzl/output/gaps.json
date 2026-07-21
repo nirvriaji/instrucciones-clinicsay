@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "sede": "sede-mzl",
+    "mode": "tasks-only",
+    "timestamp": "2026-07-20T18:55:22.016Z",
+    "inputFiles": [
+      "mzl-original.json",
+      "mzl-original.md"
+    ],
+    "inputFilesCount": 2,
+    "combinedTextLength": 78228
+  },
+  "summary": {
+    "total": 0,
+    "errors": 0,
+    "warnings": 0,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 0,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 0
+  },
+  "gaps": []
+}

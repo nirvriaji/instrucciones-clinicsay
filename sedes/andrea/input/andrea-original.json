@@ -1,0 +1,489 @@
+{
+  "rules": [
+    {
+      "id": "ask_about_existing_appointment",
+      "note": "El backend inyecta las citas del paciente en el system prompt. El bot responde sin llamar tools.",
+      "action": "allow",
+      "intent": "appointment_inquiry",
+      "description": "El paciente consulta informacion sobre citas que ya tiene reservadas, como horarios, fechas o tratamientos programados."
+    },
+    {
+      "id": "confirm_existing_appointment",
+      "note": "Permitir continuar para ejecutar manage_schedule_block_status (CONFIRMADA). La confirmacion no requiere tarea de seguimiento.",
+      "action": "allow",
+      "intent": "appointment_confirmation",
+      "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio."
+    },
+    {
+      "id": "cancel_existing_appointment",
+      "note": "Permitir continuar para ejecutar el flow de cancelacion.",
+      "action": "allow",
+      "intent": "appointment_cancellation",
+      "description": "El paciente solicita cancelar una o mas citas existentes, o responde a un recordatorio indicando que no asistira."
+    },
+    {
+      "id": "scheduling_request_to_task",
+      "note": "El bot no ejecuta scheduling directamente. Recopilar datos y crear una tarea para el equipo humano.",
+      "action": "allow",
+      "intent": "scheduling_request",
+      "description": "El paciente solicita una nueva cita, reprogramar una cita existente, mover una cita dentro del mismo dia, o preguntar por disponibilidad de huecos."
+    },
+    {
+      "id": "general_inquiry",
+      "note": "Responder directamente con la informacion del contexto y las instrucciones.",
+      "action": "allow",
+      "intent": "general_inquiry",
+      "description": "El paciente pregunta por tratamientos, precios fijos comunicables, medicos, contacto, horarios o servicios que no requieren agendar ni gestionar citas."
+    },
+    {
+      "id": "human_follow_up",
+      "note": "Recopilar datos y crear una tarea para el equipo humano.",
+      "action": "allow",
+      "intent": "human_follow_up",
+      "description": "El paciente presenta una solicitud administrativa compleja, queja, incidencia o cualquier caso que requiera intervencion humana."
+    },
+    {
+      "id": "patient_running_late",
+      "note": "Permitir marcar la cita como EN_CAMINO.",
+      "action": "allow",
+      "intent": "patient_running_late",
+      "description": "El paciente avisa que va con retraso o esta en camino hacia una cita individual reservada."
+    },
+    {
+      "id": "pilates_request_to_task",
+      "note": "El bot no agenda Pilates. Recopilar datos y crear una tarea.",
+      "action": "allow",
+      "intent": "pilates_request",
+      "description": "El paciente solicita informacion o reserva relacionada con Pilates, que requiere gestion humana."
+    },
+    {
+      "id": "home_visit_request_to_task",
+      "note": "El bot no agenda domicilios. Recopilar datos y crear una tarea.",
+      "action": "allow",
+      "intent": "home_visit_request",
+      "description": "El paciente solicita una visita o sesion a domicilio."
+    },
+    {
+      "id": "price_inquiry",
+      "note": "Si el precio es de fisioterapia (40 euros), responder directamente. Si es de cualquier otro servicio, crear tarea.",
+      "action": "allow",
+      "intent": "price_inquiry",
+      "description": "El paciente pregunta por el precio o presupuesto de un tratamiento o servicio."
+    },
+    {
+      "id": "sensitive_clinical_request_to_task",
+      "note": "Crear una tarea para el equipo clinico. No hacer triaje ni dar consejos.",
+      "action": "allow",
+      "intent": "sensitive_clinical_request",
+      "description": "El paciente menciona dolor, sintomas, lesion o pide consejo clinico, lo que requiere derivacion a un profesional."
+    },
+    {
+      "id": "sensitive_emotional_request_to_task",
+      "note": "Crear una tarea para el equipo humano. No actuar como terapeuta.",
+      "action": "allow",
+      "intent": "sensitive_emotional_request",
+      "description": "El paciente expresa malestar emocional, desahogo o informacion intima sin contenido clinico."
+    }
+  ],
+  "intents": {
+    "price_inquiry": {
+      "examples": [
+        "cuanto cuesta la fisioterapia?",
+        "que precio tiene el suelo pelvico?",
+        "presupuesto para INDIBA",
+        "cuanto vale una sesion?"
+      ],
+      "description": "El paciente pregunta por el precio o presupuesto de un tratamiento o servicio."
+    },
+    "general_inquiry": {
+      "examples": [
+        "que horario teneis?",
+        "donde estais?",
+        "cuanto cuesta la fisioterapia?",
+        "haceis Pilates?"
+      ],
+      "description": "Preguntas generales sobre la clinica: horarios, ubicacion, contacto, precios fijos, servicios o metodos de pago."
+    },
+    "human_follow_up": {
+      "examples": [
+        "quiero hablar con una persona",
+        "tengo una queja",
+        "me podeis hacer una factura?",
+        "quiero comprar un bono"
+      ],
+      "description": "Cualquier solicitud administrativa que requiera seguimiento humano y no encaje en los intents anteriores: quejas, incidencias, facturas, recibos, descuentos, bonos, regalos o condiciones no definidas."
+    },
+    "pilates_request": {
+      "examples": [
+        "quiero apuntarme a Pilates",
+        "teneis Pilates terapeutico?",
+        "como son las clases de Pilates?",
+        "quiero cambiar de clase de Pilates"
+      ],
+      "description": "El paciente solicita informacion o reserva relacionada con Pilates: maquina, terapeutico, grupal, clases o grupos de Sonia."
+    },
+    "home_visit_request": {
+      "examples": [
+        "haceis domicilio?",
+        "podeis venir a casa",
+        "necesito fisioterapia a domicilio",
+        "visita a domicilio"
+      ],
+      "description": "El paciente solicita una visita o sesion a domicilio."
+    },
+    "scheduling_request": {
+      "examples": [
+        "quiero pedir cita",
+        "teneis hueco el viernes?",
+        "quiero cambiar mi cita de dia",
+        "podeis adelantarla una hora?",
+        "hay disponibilidad para la semana que viene?"
+      ],
+      "description": "El paciente quiere reservar una nueva cita, reprogramar una cita existente, mover una cita dentro del mismo dia, o preguntar por disponibilidad de huecos."
+    },
+    "appointment_inquiry": {
+      "examples": [
+        "cuando es mi cita?",
+        "tengo cita esta semana?",
+        "a que hora tengo reservado?",
+        "que dia es mi proxima cita?"
+      ],
+      "description": "El paciente pregunta por citas que ya tiene reservadas, como horarios, fechas o tratamientos programados."
+    },
+    "patient_running_late": {
+      "examples": [
+        "voy llegando",
+        "voy con cinco minutos de retraso",
+        "llego tarde",
+        "estoy en camino"
+      ],
+      "description": "El paciente avisa que va con retraso o que esta en camino hacia una cita individual ya reservada."
+    },
+    "appointment_cancellation": {
+      "examples": [
+        "no puedo ir, cancelala",
+        "no asistire manana",
+        "anula mi cita",
+        "cancelo la cita del martes"
+      ],
+      "description": "El paciente cancela una cita existente o indica que no podra asistir."
+    },
+    "appointment_confirmation": {
+      "examples": [
+        "confirmo",
+        "ahi estare",
+        "si, asistire",
+        "perfecto",
+        "vale"
+      ],
+      "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio con un afirmativo breve."
+    },
+    "sensitive_clinical_request": {
+      "examples": [
+        "me duele el cuello",
+        "tengo una molestia",
+        "que puede ser este dolor?",
+        "me he hecho un esguince",
+        "tengo sintomas raros"
+      ],
+      "description": "El paciente menciona dolor, molestias, sintomas, lesion, esguince, torcedura o pide diagnostico o consejo clinico. Requiere derivacion a profesional."
+    },
+    "sensitive_emotional_request": {
+      "examples": [
+        "lo estoy pasando muy mal",
+        "no paro de llorar",
+        "estoy muy agobiada",
+        "necesito desahogarme",
+        "me siento fatal"
+      ],
+      "description": "El paciente expresa desahogo, malestar emocional, llanto, ansiedad o informacion intima sin dolor ni sintomas fisicos."
+    }
+  },
+  "version": "1.0",
+  "capabilities": {
+    "products": false,
+    "shipping": false,
+    "protocols": false,
+    "reminders": true,
+    "scheduling": false,
+    "sensitiveSituations": true
+  },
+  "errorCategories": [
+    {
+      "id": "duplicate_response_or_task",
+      "description": "Se ha enviado mas de una respuesta o creado mas de una tarea por el mismo mensaje del paciente.",
+      "suggestions": [
+        "Aplicar bloqueo de duplicados antes de cualquier create_task.",
+        "No repetir respuesta si el mensaje ya fue procesado.",
+        "No ejecutar flows adicionales tras una tarea sensible."
+      ]
+    },
+    {
+      "id": "wrong_sensitive_response",
+      "description": "Se ha usado un mensaje generico en lugar de la plantilla clinica o emocional correspondiente.",
+      "suggestions": [
+        "Priorizar las plantillas especificas de sensitive_clinical_request y sensitive_emotional_request.",
+        "No usar mensajes genericos de contacto en casos sensibles."
+      ]
+    },
+    {
+      "id": "non_patient_event_processed",
+      "description": "El sistema ha respondido a un marcador, estado o evento tecnico sin texto real del paciente.",
+      "suggestions": [
+        "Filtrar eventos no conversacionales antes de evaluar intents.",
+        "No crear respuesta ni tarea ante estados de lectura o reintentos."
+      ]
+    }
+  ],
+  "toolOrchestration": {
+    "flows": {
+      "price_inquiry": {
+        "steps": [
+          {
+            "note": "Si la pregunta es por el precio de la sesion de fisioterapia (40 euros), responder directamente sin usar tools. Si es por cualquier otro tratamiento, servicio, bono, descuento o presupuesto personalizado, crear una tarea para que el equipo humano responda.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false
+          }
+        ],
+        "intent": "price_inquiry",
+        "description": "El paciente pregunta por el precio o presupuesto de un tratamiento o servicio.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Claro que si. Dejo tu consulta de precio pasada al equipo para que puedan responderla con detalle."
+      },
+      "general_inquiry": {
+        "steps": [
+          {
+            "note": "Responder directamente con la informacion del contexto y las instrucciones. Si pregunta por un precio no autorizado o no comunicable, indicar que el equipo se pondra en contacto.",
+            "step": 1,
+            "tools": [],
+            "parallel": false
+          }
+        ],
+        "intent": "general_inquiry",
+        "description": "El paciente pregunta por tratamientos, precios fijos, medicos, contacto, horarios o servicios que no requieren agendar ni gestionar citas.",
+        "allowedTools": []
+      },
+      "human_follow_up": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, apellidos, telefono, motivo y cualquier dato relevante, y crear una tarea para que el equipo humano gestione la solicitud.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "human_follow_up",
+        "description": "El paciente presenta una solicitud administrativa compleja, queja, incidencia o caso que no encaja en otros intents.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Claro que si. Dejo tu solicitud pasada al equipo para que puedan revisarlo y contactarte."
+      },
+      "pilates_request": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, apellidos, telefono, edad, experiencia previa, horarios de preferencia y motivo u objetivo, y crear una tarea para que el equipo humano gestione la solicitud.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "pilates_request",
+        "description": "El paciente solicita informacion o reserva relacionada con Pilates, que siempre requiere gestion humana.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Claro que si. Dejo tu solicitud de Pilates pasada al equipo para que puedan revisar horarios y contactarte."
+      },
+      "home_visit_request": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, apellidos, telefono, direccion, motivo de consulta, dia y franja preferidos, y crear una tarea para que el equipo humano gestione la solicitud.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "home_visit_request",
+        "description": "El paciente solicita una visita o sesion a domicilio.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Claro que si. Dejo tu solicitud de visita a domicilio pasada al equipo para que puedan revisarla y contactarte."
+      },
+      "appointment_inquiry": {
+        "steps": [
+          {
+            "note": "Usa el contexto ASSOCIATED_PATIENTS para responder. Si no hay citas, indica que no hay citas programadas y ofrece ayuda. No mencionar profesional, sala, gabinete ni espacio.",
+            "step": 1,
+            "tools": [],
+            "parallel": false
+          }
+        ],
+        "intent": "appointment_inquiry",
+        "description": "El paciente consulta informacion sobre citas que ya tiene reservadas, como horarios, fechas o tratamientos.",
+        "allowedTools": []
+      },
+      "patient_running_late": {
+        "steps": [
+          {
+            "note": "Identificar la cita activa y marcar EN_CAMINO solo si no es clase de Pilates.",
+            "step": 1,
+            "tools": [
+              "manage_schedule_block_status"
+            ],
+            "parallel": false,
+            "required": [
+              "manage_schedule_block_status"
+            ]
+          }
+        ],
+        "intent": "patient_running_late",
+        "description": "El paciente avisa que va con retraso o esta en camino hacia una cita individual reservada.",
+        "allowedTools": [
+          "manage_schedule_block_status"
+        ],
+        "responseTemplate": "No te preocupes, ven con cuidado. Aprovecharemos el tiempo de la sesion lo mejor posible."
+      },
+      "any_scheduling_request": {
+        "steps": [
+          {
+            "note": "Recopilar nombre, apellidos, telefono, tratamiento deseado, fechas y horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento. El bot no consulta la agenda ni muestra huecos disponibles.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "scheduling_request",
+        "description": "El paciente solicita agendar una nueva cita, reprogramar, adelantar o atrasar una cita existente, o consultar disponibilidad de huecos.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Un miembro de nuestro equipo se pondra en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al telefono de la clinica."
+      },
+      "sensitive_clinical_request": {
+        "steps": [
+          {
+            "note": "Crear una tarea clinica con el mensaje literal del paciente. No hacer triaje, no dar ejercicios ni recomendaciones. Incluir motivo y sintomas mencionados.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "sensitive_clinical_request",
+        "description": "El paciente menciona dolor, molestias, sintomas, lesion o pide consejo clinico, lo que requiere derivacion a un profesional.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Para orientarte bien, prefiero que lo revise nuestro equipo especializado. Les paso tu caso ahora mismo y te contactan."
+      },
+      "cancel_existing_appointment": {
+        "steps": [
+          {
+            "note": "Una sola cita: manage_schedule_block_status(CANCELADA). Varias el mismo dia: manage_all_schedule_blocks_for_date (una llamada por cita).",
+            "step": 1,
+            "tools": [
+              "manage_schedule_block_status",
+              "manage_all_schedule_blocks_for_date"
+            ],
+            "parallel": false,
+            "required": [
+              "manage_schedule_block_status"
+            ]
+          },
+          {
+            "note": "Crear TAREA por la cancelacion para seguimiento humano. Incluir motivo si el paciente lo menciona.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "appointment_cancellation",
+        "description": "El paciente solicita cancelar una o mas citas existentes, o responde a un recordatorio indicando que no asistira.",
+        "allowedTools": [
+          "manage_schedule_block_status",
+          "manage_all_schedule_blocks_for_date",
+          "create_task"
+        ],
+        "responseTemplate": "Gracias por avisarnos con antelacion. Ya he cancelado tu cita. Si necesitas una nueva cita o reprogramar, te paso la solicitud al equipo."
+      },
+      "sensitive_emotional_request": {
+        "steps": [
+          {
+            "note": "Crear una tarea emocional con el mensaje literal del paciente. No actuar como terapeuta, no mencionar citas ni horarios.",
+            "step": 1,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "create_task"
+            ]
+          }
+        ],
+        "intent": "sensitive_emotional_request",
+        "description": "El paciente expresa malestar emocional, desahogo o informacion intima sin contenido clinico.",
+        "allowedTools": [
+          "create_task"
+        ],
+        "responseTemplate": "Gracias por contarmelo. Voy a pasarlo al equipo para que puedan acompanarte y revisarlo con cuidado."
+      },
+      "confirm_existing_appointment": {
+        "steps": [
+          {
+            "note": "Marcar CONFIRMADA cada cita del dia (una llamada por cita). Confirmar todas las citas de ese dia sin preguntar cual; no nombrar tratamientos en la respuesta.",
+            "step": 1,
+            "tools": [
+              "manage_schedule_block_status"
+            ],
+            "parallel": false,
+            "required": [
+              "manage_schedule_block_status"
+            ]
+          }
+        ],
+        "intent": "appointment_confirmation",
+        "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
+        "allowedTools": [
+          "manage_schedule_block_status"
+        ],
+        "responseTemplate": "Tu cita ha quedado confirmada. Te esperamos."
+      }
+    }
+  }
+}
