@@ -515,7 +515,7 @@ function main() {
   const jsonPath = getActiveJsonPath(paths);
   if (!fs.existsSync(jsonPath)) {
     logger.error(`JSON not found: ${jsonPath}`);
-    logger.info('Generate the JSON first. The agent creates it by reading anotaciones.md and prompts.');
+    logger.info('Generate the JSON first. The agent creates it by reading all files in input/ and prompts.');
     process.exit(1);
   }
 

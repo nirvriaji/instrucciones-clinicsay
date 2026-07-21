@@ -14,7 +14,7 @@ function getSedePaths(sede) {
     root: sedeDir,
     inputDir: path.join(sedeDir, 'input'),
     outputDir: path.join(sedeDir, 'output'),
-    anotaciones: path.join(sedeDir, 'input', 'anotaciones.md'),
+    // Note: the agent reads ALL files in input/ (.md, .json, .txt)
     analysis: path.join(sedeDir, 'output', 'analysis.json'),
     draft: path.join(sedeDir, 'output', 'structured-logic.draft.json'),
     final: path.join(sedeDir, 'output', 'structured-logic.json'),

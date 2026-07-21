@@ -125,12 +125,23 @@ Crea la carpeta para tu clínica dentro del repo:
 C:\Users\<TuUsuario>\Documents\instrucciones-clinicsay\sedes\mi-clinica\input\
 ```
 
-Escribe tus notas en:
+Coloca ahí tus archivos de notas. Puedes incluir:
+- **Uno o varios archivos** `.md` (Markdown) con la información de la clínica
+- **Archivos `.json`** con lógica estructurada previa (si la tienes)
+- **Archivos `.txt`** con notas adicionales
+- **Cualquier combinación** de los anteriores
+
+El agente leerá **todos** los archivos de la carpeta `input/` automáticamente.
+
+**Ejemplo:**
 ```
-sedes\mi-clinica\input\anotaciones.md
+sedes\mi-clinica\input\
+├── notas-principales.md   ← Notas principales
+├── servicios.md           ← Info extra
+└── logic-previa.json      ← JSON anterior (opcional)
 ```
 
-Usa `sedes\demo\input\anotaciones.md` como plantilla.
+Usa `sedes\demo\input\` como ejemplo de cómo organizar las notas.
 
 ### Paso 2: Inicia la conversación con el agente
 
@@ -138,7 +149,7 @@ Dile al agente:
 > "Hola, quiero generar instrucciones para mi-clinica"
 
 El agente hará:
-1. **Leer** tus notas (`anotaciones.md`)
+1. **Leer** todos tus archivos de `input/` (`.md`, `.json`, `.txt`)
 2. **Leer** la documentación de referencia (templates + prompts)
 3. **Generar** el JSON completo paso a paso
 4. **Validar** estructura y cross-references
@@ -174,9 +185,11 @@ sedes\mi-clinica\output\structured-logic.json
 
 ---
 
-## 📝 Cómo escribir `anotaciones.md`
+## 📝 Cómo escribir tus notas
 
-Tu archivo de notas debe incluir estas secciones (usa `#` headers):
+Puedes usar **uno o varios archivos** en la carpeta `input/`. Cada archivo puede tener el nombre que quieras y extensión `.md`, `.txt` o `.json`.
+
+Usa `#` headers para organizar la información. Estas son las secciones recomendadas:
 
 ### `# Identidad`
 - Nombre del bot, nombre de la clínica, tono, personalidad
@@ -225,7 +238,7 @@ Tu archivo de notas debe incluir estas secciones (usa `#` headers):
 ```
 Agente (LLM)                   Scripts (Node.js)
 ────────────────────────────────────────────────────
-Lee anotaciones.md             validate-and-save.js
+Lee archivos input/*.md          validate-and-save.js
 Lee prompts/*.md               → valida schema
 Genera JSON                    → checkea cross-references
 Edita JSON directamente        → checkea modo
@@ -270,11 +283,11 @@ instrucciones-clinicsay/
 └── sedes/
     ├── demo/
     │   ├── input/
-    │   │   └── anotaciones.md      ← Ejemplo de notas
+    │   │   └── *.md / *.json / *.txt ← Ejemplo de notas
     │   └── output/                 ← Archivos generados aquí
     └── <tu-clinica>/
         ├── input/
-        │   └── anotaciones.md      ← Tus notas (tú creas esto)
+        │   └── *.md / *.json / *.txt  ← Tus notas (tú creas esto)
         └── output/
             ├── structured-logic.json  ← Output final (agente genera esto)
             └── gaps.json              ← Reporte de gaps (scripts generan esto)
