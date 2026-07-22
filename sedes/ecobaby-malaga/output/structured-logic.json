@@ -877,8 +877,6 @@
         ],
         "intent": "general_inquiry",
         "description": "La paciente pregunta por horarios, ubicación, contacto, servicios, precios fijos o catálogo de tratamientos.",
-        "responseTemplate": "greeting",
-        "responseTemplateMode": "literal",
         "allowedTools": [
           "query_knowledge_base"
         ]

@@ -269,8 +269,6 @@
         ],
         "intent": "general_inquiry",
         "description": "El paciente hace una pregunta general sobre la clínica, precios fijos, horarios, ubicación, servicios o métodos de pago. Si pregunta por tratamientos específicos, no listar nombres de tratamientos; para el paciente todo es sesión de fisioterapia.",
-        "responseTemplate": "greeting",
-        "responseTemplateMode": "literal",
         "allowedTools": ["query_knowledge_base"]
       },
       "human_follow_up": {

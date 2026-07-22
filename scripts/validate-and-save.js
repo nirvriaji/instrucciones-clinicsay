@@ -161,6 +161,11 @@ function validateSchema(data, errors) {
               }
             }
           }
+          // Backend requires a patient-facing responseTemplate when a flow mutates schedule blocks
+          const usesScheduleBlockTool = (flow.steps || []).some(s => Array.isArray(s.tools) && s.tools.some(t => ['manage_schedule_block_status', 'manage_all_schedule_blocks_for_date'].includes(t)));
+          if (usesScheduleBlockTool && (!flow.responseTemplate || String(flow.responseTemplate).trim() === '')) {
+            errors.push({ category: 'business', message: `Flow '${name}' uses 'manage_schedule_block_status' but has no 'responseTemplate'. The backend will use a generic fallback. Consider adding a custom responseTemplate for better patient experience.` });
+          }
         }
       }
     } else {
@@ -183,6 +188,14 @@ function validateSchema(data, errors) {
         validateType(rule.action, 'string', `rules[${i}].action`, errors);
         if (rule.action && !['allow', 'block'].includes(rule.action)) {
           errors.push({ category: 'business', message: `Rule ${i} has invalid action: "${rule.action}" (must be "allow" or "block")` });
+        }
+        // Backend requires block rules to include a patient-facing message
+        if (rule.action === 'block') {
+          if (!('message' in rule) || rule.message === null || rule.message === undefined) {
+            errors.push({ category: 'business', message: `Rule ${i} (${rule.id || 'unknown'}) has action='block' and must include a 'message' for the patient.` });
+          } else if (typeof rule.message !== 'string' || rule.message.trim() === '') {
+            errors.push({ category: 'business', message: `Rule ${i} (${rule.id || 'unknown'}) has action='block' and 'message' must be a non-empty string.` });
+          }
         }
       }
     }
@@ -515,7 +528,7 @@ function main() {
   const jsonPath = getActiveJsonPath(paths);
   if (!fs.existsSync(jsonPath)) {
     logger.error(`JSON not found: ${jsonPath}`);
-    logger.info('Generate the JSON first. The agent creates it by reading all files in input/ and prompts.');
+    logger.info('Generate the JSON first. The agent creates it by reading anotaciones.md and prompts.');
     process.exit(1);
   }
 

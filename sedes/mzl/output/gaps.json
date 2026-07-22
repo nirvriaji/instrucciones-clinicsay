@@ -1,8 +1,8 @@
 {
   "meta": {
-    "sede": "sede-mzl",
+    "sede": "mzl",
     "mode": "tasks-only",
-    "timestamp": "2026-07-20T18:55:22.016Z",
+    "timestamp": "2026-07-22T06:55:20.686Z",
     "inputFiles": [
       "mzl-original.json",
       "mzl-original.md"

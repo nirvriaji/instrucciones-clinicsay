@@ -1,8 +1,8 @@
 {
   "meta": {
-    "sede": "sede-wefiv",
+    "sede": "wefiv",
     "mode": "tasks-only",
-    "timestamp": "2026-07-20T23:56:34.650Z",
+    "timestamp": "2026-07-22T06:35:22.918Z",
     "inputFiles": [
       "wefiv-original.json",
       "wefiv-original.md"

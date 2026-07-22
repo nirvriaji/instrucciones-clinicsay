@@ -125,8 +125,6 @@
         "steps": [
           { "step": 1, "tools": ["query_knowledge_base"], "parallel": false, "required": [], "note": "Responder directamente si la información ya está en el contexto. Si no está, usar query_knowledge_base para buscar en protocols, FAQ, responseTemplates y rules antes de responder." }
         ],
-        "responseTemplate": "greeting",
-        "responseTemplateMode": "literal",
         "allowedTools": ["query_knowledge_base"]
       },
       "human_follow_up": {

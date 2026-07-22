@@ -269,8 +269,6 @@
         ],
         "intent": "general_inquiry",
         "description": "El paciente pregunta por tratamientos, precios fijos, médicos, contacto, horarios o servicios que no requieren agendar ni gestionar citas.",
-        "responseTemplate": "greeting",
-        "responseTemplateMode": "literal",
         "allowedTools": ["query_knowledge_base"]
       },
       "human_follow_up": {

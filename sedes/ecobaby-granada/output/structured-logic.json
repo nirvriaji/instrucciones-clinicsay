@@ -683,8 +683,6 @@
         ],
         "intent": "general_inquiry",
         "description": "La paciente pregunta por horarios, ubicación, contacto, servicios o precios fijos.",
-        "responseTemplate": "greeting",
-        "responseTemplateMode": "literal",
         "allowedTools": ["query_knowledge_base"]
       },
       "human_follow_up": {

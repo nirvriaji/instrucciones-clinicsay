@@ -269,6 +269,8 @@
             "note": "Condición: solo si el retraso es superior a 10 minutos. Crear TAREA para que recepción valore si hay que cambiar la cita. Incluir nombre, teléfono y minutos de retraso."
           }
         ],
+        "responseTemplate": "De acuerdo, he marcado tu cita como en camino. Si el retraso supera los 10 minutos, nuestro equipo recibirá una notificación para valorar si es necesario ajustar la cita.",
+        "responseTemplateMode": "literal",
         "allowedTools": ["manage_schedule_block_status", "create_task"]
       },
       "urgency_report": {
