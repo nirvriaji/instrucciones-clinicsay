@@ -40,7 +40,8 @@
       "note": "En modo tasks-only, recopilar semanas de gestación o fecha de última regla, sesión/pack deseado, datos de contacto y crear tarea. Cuando la solicitud es sobre el sexo, usar el protocolo pack_two_moments_promotion como mensaje promocional autorizado.",
       "action": "allow",
       "intent": "scheduling_request",
-      "description": "La paciente solicita una nueva ecografía, sesión, pack o consulta."
+      "description": "La paciente solicita una nueva ecografía, sesión, pack o consulta.",
+      "redirectToTask": true
     },
     {
       "id": "general_inquiry",
@@ -519,7 +520,7 @@
     "scheduling": false,
     "sensitiveSituations": true,
     "protocols": true,
-    "reminders": true
+    "reminders": false
   },
   "errorCategories": [
     {
@@ -676,14 +677,18 @@
           {
             "note": "Responder directamente si la información ya está en el contexto. Si no está, usar query_knowledge_base para buscar en protocols, FAQ, responseTemplates y rules antes de responder.",
             "step": 1,
-            "tools": ["query_knowledge_base"],
+            "tools": [
+              "query_knowledge_base"
+            ],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "general_inquiry",
         "description": "La paciente pregunta por horarios, ubicación, contacto, servicios o precios fijos.",
-        "allowedTools": ["query_knowledge_base"]
+        "allowedTools": [
+          "query_knowledge_base"
+        ]
       },
       "human_follow_up": {
         "steps": [

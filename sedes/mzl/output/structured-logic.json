@@ -4,7 +4,7 @@
     "scheduling": false,
     "sensitiveSituations": true,
     "protocols": true,
-    "reminders": true
+    "reminders": false
   },
   "identity": {
     "botName": "Vera",
@@ -21,14 +21,36 @@
     "farewellMessage": null,
     "escalationMessage": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al 871 172 766.",
     "socialLinks": [
-      { "platform": "instagram", "url": "https://www.instagram.com/clinicamzl/" },
-      { "platform": "facebook", "url": "https://www.facebook.com/clinicamzl" }
+      {
+        "platform": "instagram",
+        "url": "https://www.instagram.com/clinicamzl/"
+      },
+      {
+        "platform": "facebook",
+        "url": "https://www.facebook.com/clinicamzl"
+      }
     ],
     "additionalContacts": [
-      { "type": "whatsapp", "value": "622 897 067", "label": "WhatsApp de la clínica" },
-      { "type": "phone", "value": "622 611 069", "label": "Teléfono de urgencias" },
-      { "type": "address_reference", "value": "A 5 minutos a pie del Corte Inglés de Avenidas. Parking: Sa Gerreria justo debajo (https://maps.app.goo.gl/ZtGCbeYMrAewaDeV8). Autobús: Àrea d'intercanvi Sindicat.", "label": "Referencias de ubicación" },
-      { "type": "brand", "value": "Clínica MZL", "label": "Nombre comercial" }
+      {
+        "type": "whatsapp",
+        "value": "622 897 067",
+        "label": "WhatsApp de la clínica"
+      },
+      {
+        "type": "phone",
+        "value": "622 611 069",
+        "label": "Teléfono de urgencias"
+      },
+      {
+        "type": "address_reference",
+        "value": "A 5 minutos a pie del Corte Inglés de Avenidas. Parking: Sa Gerreria justo debajo (https://maps.app.goo.gl/ZtGCbeYMrAewaDeV8). Autobús: Àrea d'intercanvi Sindicat.",
+        "label": "Referencias de ubicación"
+      },
+      {
+        "type": "brand",
+        "value": "Clínica MZL",
+        "label": "Nombre comercial"
+      }
     ]
   },
   "styleRules": {
@@ -42,7 +64,12 @@
     "noMarkdown": true,
     "maxSentences": 2,
     "maxWordsPerSentence": 30,
-    "avoidPhrases": ["No sé", "No puedo ayudarte con eso", "No inventar información", "No meta-razonamiento"],
+    "avoidPhrases": [
+      "No sé",
+      "No puedo ayudarte con eso",
+      "No inventar información",
+      "No meta-razonamiento"
+    ],
     "mandatoryPhrases": [],
     "additionalRules": [
       "Siempre tratar al paciente de usted.",
@@ -75,43 +102,114 @@
   "intents": {
     "urgency_report": {
       "description": "El paciente describe síntomas de urgencia dental como dolor intenso, sangrado continuo, traumatismos, supuración, inflamación severa o piezas rotas con riesgo.",
-      "examples": ["tengo mucho dolor", "sangro mucho", "me he roto una pieza", "tengo inflamación severa", "es urgente"]
+      "examples": [
+        "tengo mucho dolor",
+        "sangro mucho",
+        "me he roto una pieza",
+        "tengo inflamación severa",
+        "es urgente"
+      ]
     },
     "general_inquiry": {
       "description": "El paciente hace preguntas generales sobre la clínica, horarios, ubicación, contacto, precios fijos, servicios, métodos de pago, IVA, blanqueamiento en situaciones especiales o información que puede responderse desde el contexto sin gestionar citas.",
-      "examples": ["¿qué horario tenéis?", "¿dónde estáis?", "¿cuánto cuesta una limpieza?", "¿qué tratamientos tienen?", "¿aceptan tarjeta?", "¿puedo blanquearme los dientes durante la lactancia?", "¿llevan IVA los tratamientos?"]
+      "examples": [
+        "¿qué horario tenéis?",
+        "¿dónde estáis?",
+        "¿cuánto cuesta una limpieza?",
+        "¿qué tratamientos tienen?",
+        "¿aceptan tarjeta?",
+        "¿puedo blanquearme los dientes durante la lactancia?",
+        "¿llevan IVA los tratamientos?"
+      ]
     },
     "human_follow_up": {
       "description": "Cualquier solicitud que requiere seguimiento humano y no encaja claramente en los intents anteriores.",
-      "examples": ["quiero hablar con una persona", "tengo una queja", "necesito que me llame alguien", "quiero que me contacten"]
+      "examples": [
+        "quiero hablar con una persona",
+        "tengo una queja",
+        "necesito que me llame alguien",
+        "quiero que me contacten"
+      ]
     },
     "medication_inquiry": {
       "description": "El paciente consulta sobre pastillas, medicación, recetas, dosis farmacológicas o cualquier tema relacionado con prescripción médica.",
-      "examples": ["necesito receta", "¿puedo tomar ibuprofeno?", "tengo dudas con la medicación", "¿me pueden renovar la receta?"]
+      "examples": [
+        "necesito receta",
+        "¿puedo tomar ibuprofeno?",
+        "tengo dudas con la medicación",
+        "¿me pueden renovar la receta?"
+      ]
     },
     "scheduling_request": {
       "description": "El paciente quiere reservar una NUEVA cita, reprogramar una cita existente, mover una cita dentro del mismo día, o preguntar por disponibilidad de huecos. El bot no ejecuta scheduling directamente: recopila los datos necesarios y crea una tarea para que el equipo humano gestione el agendamiento.",
-      "examples": ["quiero pedir cita", "¿tenéis hueco el viernes?", "quiero una cita para limpieza", "quiero una primera visita de implantes", "¿podéis darme cita?", "quiero cambiar mi cita de día", "¿podéis adelantarla una hora?"]
+      "examples": [
+        "quiero pedir cita",
+        "¿tenéis hueco el viernes?",
+        "quiero una cita para limpieza",
+        "quiero una primera visita de implantes",
+        "¿podéis darme cita?",
+        "quiero cambiar mi cita de día",
+        "¿podéis adelantarla una hora?"
+      ]
     },
     "appointment_inquiry": {
       "description": "El paciente pregunta por citas que ya tiene reservadas, como horarios, fechas, tratamientos o sede. La información ya está en el contexto.",
-      "examples": ["¿cuándo es mi cita?", "¿tengo cita esta semana?", "¿a qué hora era mi cita?", "¿qué cita tengo mañana?"]
+      "examples": [
+        "¿cuándo es mi cita?",
+        "¿tengo cita esta semana?",
+        "¿a qué hora era mi cita?",
+        "¿qué cita tengo mañana?"
+      ]
     },
     "patient_running_late": {
       "description": "El paciente indica que llegará tarde o que va de camino a una cita existente.",
-      "examples": ["llego tarde", "voy de camino", "me retraso", "no llego a la hora", "estoy llegando"]
+      "examples": [
+        "llego tarde",
+        "voy de camino",
+        "me retraso",
+        "no llego a la hora",
+        "estoy llegando"
+      ]
     },
     "appointment_cancellation": {
       "description": "El paciente cancela una cita existente, indica que no podrá asistir, o solicita cambiar, reprogramar, adelantar o atrasar una cita existente. En todos estos casos se cancela primero la cita (o citas) y se crea tarea para seguimiento.",
-      "examples": ["no puedo ir, cancélala", "no asistiré mañana", "quiero cancelar mi cita", "no podré asistir", "necesito cambiar la cita", "me ha surgido algo", "quiero cambiar la cita", "¿podéis cambiarme la cita?", "no puedo venir", "quiero reprogramar", "¿podéis adelantarla una hora?", "quiero cambiar mi cita de día"]
+      "examples": [
+        "no puedo ir, cancélala",
+        "no asistiré mañana",
+        "quiero cancelar mi cita",
+        "no podré asistir",
+        "necesito cambiar la cita",
+        "me ha surgido algo",
+        "quiero cambiar la cita",
+        "¿podéis cambiarme la cita?",
+        "no puedo venir",
+        "quiero reprogramar",
+        "¿podéis adelantarla una hora?",
+        "quiero cambiar mi cita de día"
+      ]
     },
     "appointment_confirmation": {
       "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio con un afirmativo breve.",
-      "examples": ["confirmo", "ahí estaré", "sí, asistiré", "ok", "vale, voy", "de acuerdo"]
+      "examples": [
+        "confirmo",
+        "ahí estaré",
+        "sí, asistiré",
+        "ok",
+        "vale, voy",
+        "de acuerdo"
+      ]
     },
     "signature_protocol_inquiry": {
       "description": "El paciente pregunta información general sobre el Protocolo Signature de implantes, implantes guiados, sedación, cirugía guiada o implantes premium, sin solicitar valoración de su caso ni precio cerrado.",
-      "examples": ["¿qué es el Protocolo Signature?", "¿hacéis implantes guiados?", "¿qué es la cirugía guiada?", "¿salgo el mismo día con dientes fijos?", "tengo miedo a la cirugía de implantes", "¿hablan alemán en la clínica?", "¿atienen pacientes de Alemania?"]
+      "examples": [
+        "¿qué es el Protocolo Signature?",
+        "¿hacéis implantes guiados?",
+        "¿qué es la cirugía guiada?",
+        "¿salgo el mismo día con dientes fijos?",
+        "tengo miedo a la cirugía de implantes",
+        "¿hablan alemán en la clínica?",
+        "¿atienen pacientes de Alemania?"
+      ]
     }
   },
   "toolOrchestration": {
@@ -122,7 +220,9 @@
         "steps": [
           {
             "step": 1,
-            "tools": ["create_task"],
+            "tools": [
+              "create_task"
+            ],
             "parallel": false,
             "required": [],
             "note": "Crear tarea urgente con nombre, apellidos, teléfono, descripción detallada de síntomas (dolor, sangrado, traumatismo, pieza rota, inflamación). No hacer triaje clínico. Indicar el teléfono de urgencias 622 611 069."
@@ -130,7 +230,9 @@
         ],
         "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al 871 172 766.",
         "responseTemplateMode": "literal",
-        "allowedTools": ["create_task"]
+        "allowedTools": [
+          "create_task"
+        ]
       },
       "general_inquiry": {
         "intent": "general_inquiry",
@@ -138,13 +240,17 @@
         "steps": [
           {
             "step": 1,
-            "tools": ["query_knowledge_base"],
+            "tools": [
+              "query_knowledge_base"
+            ],
             "parallel": false,
             "required": [],
             "note": "Responder directamente si la información ya está en el contexto. Si no está, usar query_knowledge_base para buscar en protocols, FAQ, responseTemplates y rules antes de responder."
           }
         ],
-        "allowedTools": ["query_knowledge_base"]
+        "allowedTools": [
+          "query_knowledge_base"
+        ]
       },
       "human_follow_up": {
         "intent": "human_follow_up",
@@ -152,7 +258,9 @@
         "steps": [
           {
             "step": 1,
-            "tools": ["create_task"],
+            "tools": [
+              "create_task"
+            ],
             "parallel": false,
             "required": [],
             "note": "Crear una tarea administrativa con el motivo del paciente, datos de contacto disponibles y resumen claro de la solicitud. Si el paciente había cancelado una cita pero luego decide acudir, crear TAREA directamente. El bot no puede restablecer citas canceladas por sí mismo."
@@ -160,7 +268,9 @@
         ],
         "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al 871 172 766.",
         "responseTemplateMode": "literal",
-        "allowedTools": ["create_task"]
+        "allowedTools": [
+          "create_task"
+        ]
       },
       "medication_inquiry": {
         "intent": "medication_inquiry",
@@ -168,7 +278,9 @@
         "steps": [
           {
             "step": 1,
-            "tools": ["create_task"],
+            "tools": [
+              "create_task"
+            ],
             "parallel": false,
             "required": [],
             "note": "Crear tarea. Recopilar nombre, apellidos, teléfono, nombre del medicamento, dosis actual y duda específica. No indicar que la clínica no lo gestiona; la clínica sí emite recetas."
@@ -176,7 +288,9 @@
         ],
         "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al 871 172 766.",
         "responseTemplateMode": "literal",
-        "allowedTools": ["create_task"]
+        "allowedTools": [
+          "create_task"
+        ]
       },
       "appointment_inquiry": {
         "intent": "appointment_inquiry",
@@ -198,14 +312,18 @@
         "steps": [
           {
             "step": 1,
-            "tools": ["manage_schedule_block_status"],
+            "tools": [
+              "manage_schedule_block_status"
+            ],
             "parallel": false,
             "required": [],
             "note": "Marcar la cita existente como EN_CAMINO cuando esté identificada en el contexto. No cancelar la cita automáticamente. No ofrecer horarios a menos que el paciente lo pida."
           },
           {
             "step": 2,
-            "tools": ["create_task"],
+            "tools": [
+              "create_task"
+            ],
             "parallel": false,
             "required": [],
             "note": "Crear TAREA para seguimiento. Incluir hora estimada de llegada si la menciona. No cancelar la cita automáticamente."
@@ -213,7 +331,10 @@
         ],
         "responseTemplate": "No se preocupe, si viene con un poco de retraso le ajustamos la cita para poder atenderle. Si prevé que el retraso va a ser superior, por favor, avísenos para cambiarle la cita.",
         "responseTemplateMode": "literal",
-        "allowedTools": ["manage_schedule_block_status", "create_task"]
+        "allowedTools": [
+          "manage_schedule_block_status",
+          "create_task"
+        ]
       },
       "any_scheduling_request": {
         "intent": "scheduling_request",
@@ -221,7 +342,9 @@
         "steps": [
           {
             "step": 1,
-            "tools": ["create_task"],
+            "tools": [
+              "create_task"
+            ],
             "parallel": false,
             "required": [],
             "note": "Recopilar nombre, apellidos, teléfono, tratamiento deseado, fechas/horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento. El bot no consulta la agenda ni muestra huecos disponibles. No preguntar día ni hora ni sugerir franjas. IMPORTANTE: si existe una conversación reciente sobre tratamiento, precio o cita, y la paciente escribe solo un día, hora o franja, interpretar que continúa el flujo de agendamiento. Recopilar los datos que falten y crear tarea, sin responder frases vacías ni crear tareas duplicadas. Si el paciente lleva más de 6 meses sin venir y solicita valoración, anotar en la tarea la propuesta de MANTENIMIENTO PERIODONTAL primero (ya que si no se tiene la limpieza hecha, no se puede evaluar bien). Si no quieren limpieza, anotar que se propone VALORACIÓN."
@@ -229,7 +352,9 @@
         ],
         "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al 871 172 766.",
         "responseTemplateMode": "literal",
-        "allowedTools": ["create_task"]
+        "allowedTools": [
+          "create_task"
+        ]
       },
       "cancel_existing_appointment": {
         "intent": "appointment_cancellation",
@@ -237,14 +362,19 @@
         "steps": [
           {
             "step": 1,
-            "tools": ["manage_schedule_block_status", "manage_all_schedule_blocks_for_date"],
+            "tools": [
+              "manage_schedule_block_status",
+              "manage_all_schedule_blocks_for_date"
+            ],
             "parallel": false,
             "required": [],
             "note": "Una sola cita: manage_schedule_block_status(CANCELADA). Varias citas el mismo día: manage_all_schedule_blocks_for_date (una llamada por cita). No explicar normativas internas ni pedir motivo. No mencionar el nombre del tratamiento salvo que el paciente lo haya dicho."
           },
           {
             "step": 2,
-            "tools": ["create_task"],
+            "tools": [
+              "create_task"
+            ],
             "parallel": false,
             "required": [],
             "note": "Crear tarea obligatoriamente tras cualquier cancelación, ya sea de una única cita o de varias en el mismo día. La tarea debe incluir la cancelación y, si aplica, la solicitud de reprogramación/cambio sin preguntar día ni hora. Si el paciente menciona una preferencia, anotarla, pero no sugerir horario."
@@ -252,7 +382,11 @@
         ],
         "responseTemplate": "Su cita ha sido cancelada. Un miembro de nuestro equipo se pondrá en contacto para gestionar la nueva fecha si lo necesita.",
         "responseTemplateMode": "literal",
-        "allowedTools": ["manage_schedule_block_status", "manage_all_schedule_blocks_for_date", "create_task"]
+        "allowedTools": [
+          "manage_schedule_block_status",
+          "manage_all_schedule_blocks_for_date",
+          "create_task"
+        ]
       },
       "confirm_existing_appointment": {
         "intent": "appointment_confirmation",
@@ -260,7 +394,9 @@
         "steps": [
           {
             "step": 1,
-            "tools": ["manage_schedule_block_status"],
+            "tools": [
+              "manage_schedule_block_status"
+            ],
             "parallel": false,
             "required": [],
             "note": "Marcar CONFIRMADA cada cita del día. Si hay varias citas, ejecutar una llamada por cita. No crear tarea. No nombrar tratamientos en la respuesta."
@@ -268,7 +404,9 @@
         ],
         "responseTemplate": "Tu cita ha quedado confirmada. Te esperamos.",
         "responseTemplateMode": "literal",
-        "allowedTools": ["manage_schedule_block_status"]
+        "allowedTools": [
+          "manage_schedule_block_status"
+        ]
       },
       "signature_protocol_information": {
         "intent": "signature_protocol_inquiry",
@@ -276,7 +414,9 @@
         "steps": [
           {
             "step": 1,
-            "tools": ["query_protocol"],
+            "tools": [
+              "query_protocol"
+            ],
             "parallel": false,
             "required": [],
             "note": "Consultar el protocolo Signature para responder de forma breve, cercana y profesional. Transmitir que es un protocolo integral, no solo una colocación de implantes. No dar precio cerrado ni valorar aptitud. Si el paciente pide precio, aptitud o quiere avanzar, derivar a human_follow_up y crear tarea."
@@ -284,7 +424,9 @@
         ],
         "responseTemplate": "Signature es nuestro protocolo más completo de implantología avanzada. No se trata solo de colocar implantes, sino de planificar digitalmente todo el caso, realizar cirugía guiada, usar materiales premium y acompañarle antes, durante y después de la cirugía. El Dr. Zaragoza habla inglés y alemán y atiende a pacientes internacionales.",
         "responseTemplateMode": "model",
-        "allowedTools": ["query_protocol"]
+        "allowedTools": [
+          "query_protocol"
+        ]
       }
     }
   },
@@ -801,14 +943,24 @@
       "name": "Blanqueamiento dental durante la lactancia",
       "description": "El tratamiento de blanqueamiento dental con Philips Zoom utiliza un agente a base de peróxido de hidrógeno. Aunque su absorción sistémica es mínima, no existen estudios suficientes que confirmen su seguridad durante la lactancia. Como es un procedimiento estético y no urgente ni médicamente necesario, en Clínica MZL no lo recomendamos durante el periodo de lactancia.",
       "responseTemplate": "El blanqueamiento con Philips Zoom utiliza peróxido de hidrógeno. Aunque su absorción es mínima, no existen estudios suficientes que confirmen su seguridad durante la lactancia. Como es un tratamiento estético y no urgente, en Clínica MZL no lo recomendamos en este periodo. Si desea, podemos trasladar su consulta al equipo para una valoración personalizada.",
-      "sections": ["Recomendación médica", "Justificación basada en evidencia", "Alternativa: valoración personalizada"]
+      "sections": [
+        "Recomendación médica",
+        "Justificación basada en evidencia",
+        "Alternativa: valoración personalizada"
+      ]
     }
   },
   "errorCategories": [
     {
       "id": "scheduling_conflict",
       "description": "Conflicto de agenda cuando el paciente solicita días u horarios que no están disponibles, o cuando pide jueves o viernes para citas generales.",
-      "keywords": ["jueves", "viernes", "no hay hueco", "no disponible", "conflicto de agenda"],
+      "keywords": [
+        "jueves",
+        "viernes",
+        "no hay hueco",
+        "no disponible",
+        "conflicto de agenda"
+      ],
       "suggestions": [
         "Explicar que jueves y viernes son exclusivamente cirugía y la IA no gestiona citas generales esos días.",
         "Crear TAREA con las preferencias del paciente para que el equipo humano busque alternativas.",
@@ -818,7 +970,12 @@
     {
       "id": "no_appointments_found",
       "description": "El paciente pregunta por citas existentes pero no tiene ninguna cita programada en el contexto ASSOCIATED_PATIENTS.",
-      "keywords": ["no tengo citas", "sin cita", "no aparece cita", "no encuentro cita"],
+      "keywords": [
+        "no tengo citas",
+        "sin cita",
+        "no aparece cita",
+        "no encuentro cita"
+      ],
       "suggestions": [
         "Informar amablemente que no se encuentran citas programadas.",
         "Ofrecer ayuda para crear una nueva solicitud de cita mediante TAREA.",
@@ -828,7 +985,13 @@
     {
       "id": "treatment_not_found",
       "description": "El paciente menciona un tratamiento o servicio que no está en el catálogo de la clínica.",
-      "keywords": ["no lo hacen", "no ofrecen", "no tienen", "servicio no disponible", "tratamiento desconocido"],
+      "keywords": [
+        "no lo hacen",
+        "no ofrecen",
+        "no tienen",
+        "servicio no disponible",
+        "tratamiento desconocido"
+      ],
       "suggestions": [
         "Indicar que no se ofrece ese servicio en Clínica MZL.",
         "Ofrecer información sobre los tratamientos disponibles que sean similares.",
@@ -838,7 +1001,13 @@
     {
       "id": "price_inquiry_restricted",
       "description": "El paciente insiste en conocer el precio de un tratamiento marcado como precio personalizado o del Protocolo Signature.",
-      "keywords": ["precio", "cuánto cuesta", "tarifa", "presupuesto cerrado", "Signature precio"],
+      "keywords": [
+        "precio",
+        "cuánto cuesta",
+        "tarifa",
+        "presupuesto cerrado",
+        "Signature precio"
+      ],
       "suggestions": [
         "Explicar que el precio se determina tras una valoración personalizada en clínica.",
         "Invitar a una primera visita gratuita para evaluar el caso.",

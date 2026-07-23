@@ -1,9 +1,28 @@
-{
+ecto",
+    "welcomeMessage": "Hola, soy Jaime, el asistente virtual de Clínica Andrea Palazzolo Fisioterapia y Pilates. ¿En qué puedo ayudarte?",
+        "farewellMessage": null,
+	    "escalationMessage": "Dejo tu solicitud pasada al equipo para que puedan revisarlo y contactarte.",
+	        "socialLinks": [
+			      {
+				              "platform": "instagram",
+					              "url": "andreapalazzolo.fisioterapia"
+						            }
+							        ],
+								    "additionalContacts": [
+									          {
+											          "type": "whatsapp",
+												          "value": "747 469 716",
+													          "label": "Teléfono y WhatsApp"
+														        },
+															      {
+																              "type": "parking",
+																	              "value": "Parking cubierto José Barnes, Parking La Vega, parking disuasorio a 200 m, líneas azules/verdes y líneas blancas frente a la clínica si hay disponibilidad",
+																		              "lab{
   "version": "1.0",
   "capabilities": {
     "sensitiveSituations": true,
     "protocols": true,
-    "reminders": true,
+    "reminders": false,
     "scheduling": false
   },
   "identity": {
@@ -16,26 +35,7 @@
     "openingHours": "Lunes a viernes: 09:00 a 21:00. Sábados, domingos y festivos: cerrado.",
     "language": "auto",
     "persona": "Asistente virtual de atención al paciente de Clínica Andrea Palazzolo Fisioterapia y Pilates",
-    "tone": "muy cariñoso, cercano, amable, profesional, claro y directo",
-    "welcomeMessage": "Hola, soy Jaime, el asistente virtual de Clínica Andrea Palazzolo Fisioterapia y Pilates. ¿En qué puedo ayudarte?",
-    "farewellMessage": null,
-    "escalationMessage": "Dejo tu solicitud pasada al equipo para que puedan revisarlo y contactarte.",
-    "socialLinks": [
-      {
-        "platform": "instagram",
-        "url": "andreapalazzolo.fisioterapia"
-      }
-    ],
-    "additionalContacts": [
-      {
-        "type": "whatsapp",
-        "value": "747 469 716",
-        "label": "Teléfono y WhatsApp"
-      },
-      {
-        "type": "parking",
-        "value": "Parking cubierto José Barnes, Parking La Vega, parking disuasorio a 200 m, líneas azules/verdes y líneas blancas frente a la clínica si hay disponibilidad",
-        "label": "Parking cercano"
+    "tone": "muy cariñoso, cercano, amable, profesional, claro y direl": "Parking cercano"
       },
       {
         "type": "address_reference",
@@ -262,14 +262,18 @@
           {
             "note": "Responder directamente si la información ya está en el contexto. Si no está, usar query_knowledge_base para buscar en protocols, FAQ, responseTemplates y rules antes de responder. Si pregunta por un precio no autorizado o no comunicable, indicar que el equipo se pondrá en contacto.",
             "step": 1,
-            "tools": ["query_knowledge_base"],
+            "tools": [
+              "query_knowledge_base"
+            ],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "general_inquiry",
         "description": "El paciente pregunta por tratamientos, precios fijos, médicos, contacto, horarios o servicios que no requieren agendar ni gestionar citas.",
-        "allowedTools": ["query_knowledge_base"]
+        "allowedTools": [
+          "query_knowledge_base"
+        ]
       },
       "human_follow_up": {
         "steps": [
@@ -680,6 +684,11 @@
     {
       "question": "¿Cuándo enviáis recordatorios?",
       "answer": "Los recordatorios se envían 24 h antes a las 08:00. Los recordatorios del lunes se envían el viernes por ahora.",
+      "condition": null
+    },
+    {
+      "question": "¿Qué tratamientos y servicios ofrecéis?",
+      "answer": "Gestionamos fisioterapia, somatoemocional, suelo pélvico, movimiento y ejercicio terapéutico en camilla, fisioestética e INDIBA, Pilates (máquina, terapéutico y grupal), visitas a domicilio y sesiones regalo. Para más detalles, precios o agendar, lo paso al equipo para que puedan contactarte.",
       "condition": null
     }
   ],
