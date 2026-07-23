@@ -166,6 +166,16 @@ function validateSchema(data, errors) {
           if (usesScheduleBlockTool && (!flow.responseTemplate || String(flow.responseTemplate).trim() === '')) {
             errors.push({ category: 'business', message: `Flow '${name}' uses 'manage_schedule_block_status' but has no 'responseTemplate'. The backend will use a generic fallback. Consider adding a custom responseTemplate for better patient experience.` });
           }
+
+          // Search tools must NOT have literal responseTemplates — they need freedom to synthesise retrieved results
+          const searchTools = ['query_knowledge_base', 'query_protocol'];
+          const usesSearchTool = (flow.steps || []).some(s => Array.isArray(s.tools) && s.tools.some(t => searchTools.includes(t)));
+          if (usesSearchTool && flow.responseTemplate) {
+            const templateMode = flow.responseTemplateMode ?? 'literal';
+            if (templateMode === 'literal') {
+              errors.push({ category: 'business', message: `Flow '${name}' uses search tools (${searchTools.join('/')}) but has a literal 'responseTemplate'. Search tools must synthesise retrieved results into an answer, so a forced literal template makes them useless. Remove responseTemplate or set responseTemplateMode to 'model'.` });
+            }
+          }
         }
       }
     } else {
