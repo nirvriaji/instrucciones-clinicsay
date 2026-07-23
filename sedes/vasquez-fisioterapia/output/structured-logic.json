@@ -3,7 +3,7 @@
   "capabilities": {
     "sensitiveSituations": true,
     "protocols": true,
-    "reminders": true,
+    "reminders": false,
     "scheduling": false
   },
   "identity": {
@@ -262,14 +262,20 @@
           {
             "note": "Responder directamente si la información ya está en el contexto. Si no está, usar query_knowledge_base para buscar en protocols, FAQ, responseTemplates y rules antes de responder. Si el paciente pregunta por algo distinto a sesión de fisioterapia general, no dar precio y crear tarea.",
             "step": 1,
-            "tools": ["query_knowledge_base"],
+            "tools": [
+              "query_knowledge_base"
+            ],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "general_inquiry",
         "description": "El paciente hace una pregunta general sobre la clínica, precios fijos, horarios, ubicación, servicios o métodos de pago. Si pregunta por tratamientos específicos, no listar nombres de tratamientos; para el paciente todo es sesión de fisioterapia.",
-        "allowedTools": ["query_knowledge_base"]
+        "responseTemplate": "greeting",
+        "responseTemplateMode": "literal",
+        "allowedTools": [
+          "query_knowledge_base"
+        ]
       },
       "human_follow_up": {
         "steps": [
