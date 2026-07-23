@@ -4,10 +4,6 @@
     "sensitiveSituations": false,
     "protocols": false
   },
-  "_meta": {
-    "lastUpdated": "2026-07-18T16:30:01.150Z",
-    "lastSection": "systemPromptInstructions"
-  },
   "identity": {
     "botName": "Ana",
     "clinicName": "Clínica Demo",
@@ -215,12 +211,12 @@
         "steps": [
           {
             "step": 1,
-            "tools": [],
+            "tools": ["query_knowledge_base"],
             "parallel": false,
-            "note": "Responder directamente con la información del contexto."
+            "note": "Responder directamente si la información ya está en el contexto. Si no está, usar query_knowledge_base para buscar en protocols, FAQ, responseTemplates y rules antes de responder."
           }
         ],
-        "allowedTools": []
+        "allowedTools": ["query_knowledge_base"]
       },
       "human_follow_up": {
         "intent": "human_follow_up",

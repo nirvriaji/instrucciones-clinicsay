@@ -4,7 +4,7 @@
     "scheduling": false,
     "sensitiveSituations": true,
     "protocols": true,
-    "reminders": false
+    "reminders": true
   },
   "identity": {
     "botName": "Asistente",
@@ -525,8 +525,6 @@
             "note": "Crear tarea si el paciente quiere avanzar hacia valoración o presupuesto personalizado."
           }
         ],
-        "responseTemplate": "El precio final depende de cada caso y debe definirse tras valoración médica con el Dr. Romeo.",
-        "responseTemplateMode": "literal",
         "allowedTools": [
           "query_knowledge_base",
           "create_task"
@@ -585,8 +583,6 @@
             "note": "Crear tarea si el paciente quiere una simulación de financiación personalizada."
           }
         ],
-        "responseTemplate": "Las opciones de financiación se estudian después de la valoración médica y con un presupuesto personalizado.",
-        "responseTemplateMode": "literal",
         "allowedTools": [
           "query_knowledge_base",
           "create_task"
@@ -615,8 +611,6 @@
             "note": "Crear tarea si el paciente quiere avanzar hacia valoración personalizada."
           }
         ],
-        "responseTemplate": "Puede consultar casos publicados en la web del Dr. Marco Romeo, su Instagram y las reseñas disponibles, sin que eso suponga una promesa de resultado individual.",
-        "responseTemplateMode": "literal",
         "allowedTools": [
           "query_knowledge_base",
           "create_task"
@@ -656,8 +650,6 @@
             "note": "Consultar protocolo de exclusividad y días de operación del Dr. Romeo."
           }
         ],
-        "responseTemplate": "El Dr. Romeo opera de lunes a viernes.",
-        "responseTemplateMode": "literal",
         "allowedTools": [
           "query_knowledge_base"
         ]
@@ -676,8 +668,6 @@
             "note": "Consultar protocolo de exclusividad del Dr. Romeo."
           }
         ],
-        "responseTemplate": "Solo a uno. El Dr. Romeo trabaja con un solo paciente quirúrgico por día.",
-        "responseTemplateMode": "literal",
         "allowedTools": [
           "query_knowledge_base"
         ]
@@ -696,8 +686,6 @@
             "note": "Consultar protocolo de exclusividad del Dr. Romeo."
           }
         ],
-        "responseTemplate": "Sí, la intervención la realiza el Dr. Marco Romeo personalmente como cirujano principal, acompañado de su equipo quirúrgico.",
-        "responseTemplateMode": "literal",
         "allowedTools": [
           "query_knowledge_base"
         ]
@@ -716,8 +704,6 @@
             "note": "Consultar protocolo de horario de consulta del Dr. Romeo."
           }
         ],
-        "responseTemplate": "El Dr. Romeo pasa consulta los lunes de 16:00 a 21:00 y los jueves de 10:00 a 14:00. Excepcionalmente, según disponibilidad, también puede haber consulta algún miércoles de 10:00 a 14:00.",
-        "responseTemplateMode": "literal",
         "allowedTools": [
           "query_knowledge_base"
         ]
