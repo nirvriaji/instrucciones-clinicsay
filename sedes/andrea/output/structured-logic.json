@@ -1,23 +1,4 @@
-ecto",
-    "welcomeMessage": "Hola, soy Jaime, el asistente virtual de Clínica Andrea Palazzolo Fisioterapia y Pilates. ¿En qué puedo ayudarte?",
-        "farewellMessage": null,
-	    "escalationMessage": "Dejo tu solicitud pasada al equipo para que puedan revisarlo y contactarte.",
-	        "socialLinks": [
-			      {
-				              "platform": "instagram",
-					              "url": "andreapalazzolo.fisioterapia"
-						            }
-							        ],
-								    "additionalContacts": [
-									          {
-											          "type": "whatsapp",
-												          "value": "747 469 716",
-													          "label": "Teléfono y WhatsApp"
-														        },
-															      {
-																              "type": "parking",
-																	              "value": "Parking cubierto José Barnes, Parking La Vega, parking disuasorio a 200 m, líneas azules/verdes y líneas blancas frente a la clínica si hay disponibilidad",
-																		              "lab{
+{
   "version": "1.0",
   "capabilities": {
     "sensitiveSituations": true,
@@ -35,7 +16,26 @@ ecto",
     "openingHours": "Lunes a viernes: 09:00 a 21:00. Sábados, domingos y festivos: cerrado.",
     "language": "auto",
     "persona": "Asistente virtual de atención al paciente de Clínica Andrea Palazzolo Fisioterapia y Pilates",
-    "tone": "muy cariñoso, cercano, amable, profesional, claro y direl": "Parking cercano"
+    "tone": "muy cariñoso, cercano, amable, profesional, claro y directo",
+    "welcomeMessage": "Hola, soy Jaime, el asistente virtual de Clínica Andrea Palazzolo Fisioterapia y Pilates. ¿En qué puedo ayudarte?",
+    "farewellMessage": null,
+    "escalationMessage": "Dejo tu solicitud pasada al equipo para que puedan revisarlo y contactarte.",
+    "socialLinks": [
+      {
+        "platform": "instagram",
+        "url": "andreapalazzolo.fisioterapia"
+      }
+    ],
+    "additionalContacts": [
+      {
+        "type": "whatsapp",
+        "value": "747 469 716",
+        "label": "Teléfono y WhatsApp"
+      },
+      {
+        "type": "parking",
+        "value": "Parking cubierto José Barnes, Parking La Vega, parking disuasorio a 200 m, líneas azules/verdes y líneas blancas frente a la clínica si hay disponibilidad",
+        "label": "Parking cercano"
       },
       {
         "type": "address_reference",
