@@ -158,7 +158,6 @@
         "language": { "type": ["string", "null"] },
         "persona": { "type": ["string", "null"] },
         "tone": { "type": ["string", "null"] },
-        "welcomeMessage": { "type": ["string", "null"] },
         "farewellMessage": { "type": ["string", "null"] },
         "escalationMessage": { "type": ["string", "null"] },
         "socialLinks": {
@@ -202,8 +201,22 @@
         "avoidPhrases": { "type": ["array", "null"], "items": { "type": "string" } },
         "mandatoryPhrases": { "type": ["array", "null"], "items": { "type": "string" } },
         "additionalRules": { "type": ["array", "null"], "items": { "type": "string" } },
-        "mustGreet": { "type": ["boolean", "null"] },
-        "mustOfferHumanHandoff": { "type": ["boolean", "null"] }
+        "mustOfferHumanHandoff": { "type": ["boolean", "null"] },
+        "timeGreetingRanges": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string", "enum": ["dias", "tardes", "noches"] },
+              "start": { "type": "string", "pattern": "^([01]\\d|2[0-3]):([0-5]\\d)$" },
+              "end": { "type": "string", "pattern": "^([01]\\d|2[0-3]):([0-5]\\d)$" },
+              "greeting": { "type": "string" }
+            },
+            "required": ["label", "start", "end", "greeting"]
+          }
+        }
       }
     },
     "responseTemplates": {

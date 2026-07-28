@@ -215,7 +215,7 @@ function validateSchema(data, errors) {
   if (data.identity && typeof data.identity === 'object') {
     const allowedIdentityKeys = new Set([
       'botName', 'clinicName', 'address', 'phone', 'email', 'website',
-      'openingHours', 'language', 'persona', 'tone', 'welcomeMessage',
+      'openingHours', 'language', 'persona', 'tone',
       'farewellMessage', 'escalationMessage', 'socialLinks', 'additionalContacts',
     ]);
     for (const key of Object.keys(data.identity)) {
@@ -225,7 +225,7 @@ function validateSchema(data, errors) {
     }
     const stringOrNullFields = [
       'botName', 'clinicName', 'address', 'phone', 'email', 'website',
-      'openingHours', 'persona', 'tone', 'welcomeMessage', 'farewellMessage', 'escalationMessage',
+      'openingHours', 'persona', 'tone', 'farewellMessage', 'escalationMessage',
     ];
     for (const field of stringOrNullFields) {
       const value = data.identity[field];
@@ -283,7 +283,7 @@ function validateSchema(data, errors) {
       'brevity', 'format', 'tone', 'emojiPolicy', 'languagePolicy',
       'noMedicalDiagnosis', 'noAsterisks', 'noMarkdown',
       'maxSentences', 'maxWordsPerSentence', 'avoidPhrases',
-      'mandatoryPhrases', 'additionalRules', 'mustGreet', 'mustOfferHumanHandoff',
+      'mandatoryPhrases', 'additionalRules', 'mustOfferHumanHandoff', 'timeGreetingRanges',
     ]);
     for (const key of Object.keys(data.styleRules)) {
       if (!allowedStyleKeys.has(key)) {
@@ -298,7 +298,7 @@ function validateSchema(data, errors) {
       }
     }
     const booleanOrNullFields = [
-      'noMedicalDiagnosis', 'noAsterisks', 'noMarkdown', 'mustGreet', 'mustOfferHumanHandoff',
+      'noMedicalDiagnosis', 'noAsterisks', 'noMarkdown', 'mustOfferHumanHandoff',
     ];
     for (const field of booleanOrNullFields) {
       const value = data.styleRules[field];
@@ -322,6 +322,53 @@ function validateSchema(data, errors) {
     }
     if (data.styleRules.emojiPolicy !== undefined && !['allowed', 'forbidden', 'contextual'].includes(data.styleRules.emojiPolicy)) {
       errors.push({ category: 'schema', message: `styleRules.emojiPolicy must be one of: allowed, forbidden, contextual` });
+    }
+
+    // timeGreetingRanges validation (aligned with backend)
+    const ranges = data.styleRules.timeGreetingRanges;
+    if (!Array.isArray(ranges)) {
+      errors.push({ category: 'schema', message: 'styleRules.timeGreetingRanges is required and must be an array' });
+    } else {
+      if (ranges.length !== 3) {
+        errors.push({ category: 'schema', message: `styleRules.timeGreetingRanges must contain exactly 3 ranges, got ${ranges.length}` });
+      }
+      const validLabels = new Set(['dias', 'tardes', 'noches']);
+      const seenLabels = new Set();
+      const hhmmRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      for (let i = 0; i < ranges.length; i++) {
+        const r = ranges[i];
+        if (!r || typeof r !== 'object' || Array.isArray(r)) {
+          errors.push({ category: 'schema', message: `styleRules.timeGreetingRanges[${i}] must be an object` });
+          continue;
+        }
+        if (r.label === undefined || !validLabels.has(r.label)) {
+          errors.push({ category: 'schema', message: `styleRules.timeGreetingRanges[${i}].label must be one of: dias, tardes, noches` });
+        } else if (seenLabels.has(r.label)) {
+          errors.push({ category: 'schema', message: `styleRules.timeGreetingRanges has duplicate label: ${r.label}` });
+        } else {
+          seenLabels.add(r.label);
+        }
+        if (r.start === undefined || !hhmmRegex.test(r.start)) {
+          errors.push({ category: 'schema', message: `styleRules.timeGreetingRanges[${i}].start must be a valid HH:mm string` });
+        }
+        if (r.end === undefined || !hhmmRegex.test(r.end)) {
+          errors.push({ category: 'schema', message: `styleRules.timeGreetingRanges[${i}].end must be a valid HH:mm string` });
+        }
+        if (r.greeting === undefined || typeof r.greeting !== 'string' || r.greeting.trim() === '') {
+          errors.push({ category: 'schema', message: `styleRules.timeGreetingRanges[${i}].greeting must be a non-empty string` });
+        }
+      }
+      // Check 24h coverage (simple sorted check)
+      if (ranges.length === 3) {
+        const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
+        const expected = ['dias', 'tardes', 'noches'];
+        for (let i = 0; i < 3; i++) {
+          if (sorted[i].label !== expected[i]) {
+            errors.push({ category: 'schema', message: `styleRules.timeGreetingRanges must cover the full 24-hour cycle without gaps. Expected order: dias, tardes, noches.` });
+            break;
+          }
+        }
+      }
     }
   }
 

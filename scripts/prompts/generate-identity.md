@@ -34,7 +34,8 @@
    - Tasks-only mode: "Un miembro de nuestro equipo se pondrá en contacto contigo."
    - Si los archivos de input tienen mensaje específico de escalamiento, úsalo.
 
-8. **welcomeMessage, farewellMessage**: `null` si no aparecen en los archivos de input.
+8. **farewellMessage**: `null` si no aparece en los archivos de input.
+   - Nota: `welcomeMessage` ya no existe en `identity`. El saludo inicial se configura en `responseTemplates.greeting`.
 
 9. **socialLinks**: Si hay redes sociales, DEBE ser array de objetos:
    ```json
@@ -79,7 +80,6 @@
   "language": "es",
   "persona": "Asistente virtual de Clínica Martínez-Boné para atención por WhatsApp",
   "tone": "profesional, cercano, elegante, claro y prudente",
-  "welcomeMessage": null,
   "farewellMessage": null,
   "escalationMessage": "Te paso con atención humana.",
   "socialLinks": null,

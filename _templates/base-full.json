@@ -15,7 +15,6 @@
     "language": "es",
     "persona": "Asistente virtual de la clínica",
     "tone": "profesional y amable",
-    "welcomeMessage": null,
     "farewellMessage": null,
     "escalationMessage": "Te paso con atención humana.",
     "socialLinks": null,
@@ -35,8 +34,12 @@
     "avoidPhrases": ["No sé", "No puedo ayudarte con eso"],
     "mandatoryPhrases": [],
     "additionalRules": [],
-    "mustGreet": false,
-    "mustOfferHumanHandoff": true
+    "mustOfferHumanHandoff": true,
+    "timeGreetingRanges": [
+      { "label": "dias", "start": "06:00", "end": "13:59", "greeting": "buenos días" },
+      { "label": "tardes", "start": "14:00", "end": "21:00", "greeting": "buenas tardes" },
+      { "label": "noches", "start": "21:01", "end": "05:59", "greeting": "buenas noches" }
+    ]
   },
   "intents": {
     "scheduling_request": {
