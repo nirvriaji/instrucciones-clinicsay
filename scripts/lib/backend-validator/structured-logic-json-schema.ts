@@ -1,0 +1,316 @@
+/**
+ * JSON Schema for StructuredLogic — RUNTIME MAP FORMAT.
+ *
+ * This schema describes the runtime map format: { [key]: value } for
+ * intents, flows, protocols, and responseTemplates. It uses
+ * `additionalProperties` for dynamic keys.
+ *
+ * PURPOSE:
+ * - Runtime validator (`validateStructuredLogic`) reference.
+ * - Human-readable docs and builder tool `get_schema` legacy.
+ *
+ * NOT used by the LLM for structured output. The LLM uses
+ * `StructuredLogicWireJsonSchema` (entry arrays) because OpenAI strict:true
+ * does not support dynamic keys.
+ *
+ * @see StructuredLogicWireJsonSchema — wire format used by the LLM.
+ */
+
+import { ALL_CHAT_TOOLS } from './tool-definitions-full';
+import { ALL_CHAT_TOOLS_TASKS_ONLY } from './tool-definitions-tasks-only';
+
+export const ALL_CHAT_TOOL_NAMES = [
+  ...new Set([...ALL_CHAT_TOOLS.map((t) => t.name), ...ALL_CHAT_TOOLS_TASKS_ONLY.map((t) => t.name)]),
+] as const;
+
+export const StructuredLogicJsonSchema = {
+  type: 'object',
+  properties: {
+    version: { type: 'string' },
+    capabilities: {
+      type: 'object',
+      properties: {
+        scheduling: { type: 'boolean' },
+        sensitiveSituations: { type: 'boolean' },
+        protocols: { type: 'boolean' },
+        reminders: { type: 'boolean' },
+      },
+      required: ['sensitiveSituations', 'protocols'],
+    },
+    intents: {
+      type: 'object',
+      description: 'Semantic intent catalog. Every intent referenced by flows and rules MUST be declared here. The intent classifier reads these descriptions to match patient messages.',
+      additionalProperties: {
+        type: 'object',
+        properties: {
+          description: { type: 'string' },
+          examples: { type: ['array', 'null'], items: { type: 'string' } },
+        },
+        required: ['description'],
+        additionalProperties: false,
+      },
+    },
+    toolOrchestration: {
+      type: 'object',
+      properties: {
+        flows: {
+          type: 'object',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              intent: { type: 'string' },
+              description: { type: ['string', 'null'] },
+              selection: {
+                type: ['object', 'null'],
+                properties: {
+                  requiredCapabilities: { type: ['array', 'null'], items: { type: 'string' } },
+                  excludedCapabilities: { type: ['array', 'null'], items: { type: 'string' } },
+                },
+                additionalProperties: false,
+              },
+              steps: {
+                type: 'array',
+                minItems: 1,
+                items: {
+                  type: 'object',
+                  properties: {
+                    step: { type: 'number' },
+                    tools: { type: 'array', items: { type: 'string', enum: ALL_CHAT_TOOL_NAMES } },
+                    parallel: { type: 'boolean' },
+                    required: { type: 'array', items: { type: 'string' } },
+                    note: { type: ['string', 'null'] },
+                  },
+                  required: ['step', 'tools', 'parallel'],
+                  additionalProperties: false,
+                },
+              },
+              responseTemplate: { type: ['string', 'null'] },
+              responseTemplateMode: { type: ['string', 'null'], enum: ['literal', 'model'] },
+              allowedTools: { type: ['array', 'null'], items: { type: 'string', enum: ALL_CHAT_TOOL_NAMES } },
+            },
+            required: ['intent', 'description', 'steps'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['flows'],
+      additionalProperties: false,
+    },
+    rules: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: ['string', 'null'] },
+          intent: { type: 'string' },
+          description: { type: ['string', 'null'] },
+          action: { type: 'string', enum: ['allow', 'block'] },
+          conditionLogic: { type: ['string', 'null'], enum: ['and', 'or'] },
+          conditions: {
+            type: ['array', 'null'],
+            items: {
+              type: 'object',
+              properties: {
+                field: { type: 'string' },
+                operator: { type: 'string', enum: ['equals', 'in', 'not_in', 'gt', 'lt', 'gte', 'lte', 'contains', 'exists'] },
+                value: {},
+                negated: { type: ['boolean', 'null'] },
+                note: { type: ['string', 'null'] },
+              },
+              required: ['field', 'operator', 'value'],
+              additionalProperties: false,
+            },
+          },
+          reason: { type: ['string', 'null'] },
+          message: { type: ['string', 'null'] },
+          protocolId: { type: ['string', 'null'] },
+          requiredFields: { type: ['array', 'null'], items: { type: 'string' } },
+          note: { type: ['string', 'null'] },
+          priority: { type: ['number', 'null'] },
+          hidePrice: { type: ['boolean', 'null'] },
+          redirectToTask: { type: ['boolean', 'null'] },
+          informOnly: { type: ['boolean', 'null'] },
+        },
+        required: ['id', 'intent', 'description', 'action'],
+        additionalProperties: false,
+      },
+    },
+    identity: {
+      type: 'object',
+      properties: {
+        botName: { type: ['string', 'null'] },
+        clinicName: { type: ['string', 'null'] },
+        address: { type: ['string', 'null'] },
+        phone: { type: ['string', 'null'] },
+        email: { type: ['string', 'null'] },
+        website: { type: ['string', 'null'] },
+        openingHours: { type: ['string', 'null'] },
+        // 'auto' or a fixed language code (e.g. 'es', 'en').
+        language: { type: ['string', 'null'] },
+        persona: { type: ['string', 'null'] },
+        tone: { type: ['string', 'null'] },
+        welcomeMessage: { type: ['string', 'null'] },
+        farewellMessage: { type: ['string', 'null'] },
+        escalationMessage: { type: ['string', 'null'] },
+        socialLinks: {
+          type: ['array', 'null'],
+          items: {
+            type: 'object',
+            properties: {
+              platform: { type: 'string' },
+              url: { type: 'string' },
+            },
+            required: ['platform', 'url'],
+            additionalProperties: false,
+          },
+        },
+        additionalContacts: {
+          type: ['array', 'null'],
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string' },
+              value: { type: 'string' },
+              label: { type: ['string', 'null'] },
+            },
+            required: ['type', 'value'],
+            additionalProperties: false,
+          },
+        },
+      },
+      additionalProperties: false,
+    },
+    styleRules: {
+      type: 'object',
+      properties: {
+        brevity: { type: ['string', 'null'] },
+        format: { type: ['string', 'null'] },
+        tone: { type: ['string', 'null'] },
+        emojiPolicy: { type: ['string', 'null'], enum: ['allowed', 'forbidden', 'contextual'] },
+        // 'auto' or a fixed language code (e.g. 'es', 'en').
+        languagePolicy: { type: ['string', 'null'] },
+        noMedicalDiagnosis: { type: ['boolean', 'null'] },
+        noAsterisks: { type: ['boolean', 'null'] },
+        noMarkdown: { type: ['boolean', 'null'] },
+        maxSentences: { type: ['number', 'null'] },
+        maxWordsPerSentence: { type: ['number', 'null'] },
+        avoidPhrases: { type: ['array', 'null'], items: { type: 'string' } },
+        mandatoryPhrases: { type: ['array', 'null'], items: { type: 'string' } },
+        additionalRules: { type: ['array', 'null'], items: { type: 'string' } },
+        mustOfferHumanHandoff: { type: ['boolean', 'null'] },
+        timeGreetingRanges: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              label: { type: 'string', enum: ['dias', 'tardes', 'noches'] },
+              start: { type: 'string' },
+              end: { type: 'string' },
+              greeting: { type: 'string' },
+            },
+            required: ['label', 'start', 'end', 'greeting'],
+            additionalProperties: false,
+          },
+        },
+      },
+      additionalProperties: false,
+    },
+    responseTemplates: {
+      type: 'object',
+      additionalProperties: {
+        type: 'object',
+        properties: {
+          text: { type: ['string', 'null'] },
+          mode: { type: ['string', 'null'], enum: ['literal', 'model'] },
+        },
+        required: ['text'],
+        additionalProperties: false,
+      },
+    },
+    faq: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          question: { type: 'string' },
+          answer: { type: 'string' },
+          condition: { type: ['string', 'null'] },
+        },
+        required: ['question', 'answer'],
+        additionalProperties: false,
+      },
+    },
+    protocols: {
+      type: 'object',
+      additionalProperties: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          responseTemplate: { type: ['string', 'null'] },
+          sections: { type: ['array', 'null'], items: { type: 'string' } },
+        },
+        required: ['name', 'description', 'responseTemplate'],
+        additionalProperties: false,
+      },
+    },
+    errorCategories: {
+      type: ['array', 'null'],
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          description: { type: 'string' },
+          keywords: { type: ['array', 'null'], items: { type: 'string' } },
+          suggestions: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['id', 'description', 'suggestions'],
+        additionalProperties: false,
+      },
+    },
+    treatmentPolicyHints: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          treatmentId: { type: ['string', 'null'] },
+          treatmentName: { type: ['string', 'null'] },
+          categoryId: { type: ['string', 'null'] },
+          categoryName: { type: ['string', 'null'] },
+          reason: { type: 'string' },
+          recommendedPolicies: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                type: {
+                  type: 'string',
+                  enum: ['allowed_days', 'allowed_hours', 'allowed_professionals', 'min_notice', 'start_minutes'],
+                },
+                description: { type: 'string' },
+                whyNotInStructuredLogic: { type: 'string' },
+              },
+              required: ['type', 'description', 'whyNotInStructuredLogic'],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ['reason', 'recommendedPolicies'],
+        additionalProperties: false,
+      },
+    },
+    systemPromptInstructions: {
+      type: 'object',
+      properties: {
+        notesForAdvisor: { type: 'array', items: { type: 'string' } },
+        knownGaps: { type: 'array', items: { type: 'string' } },
+        recommendedNextSteps: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['notesForAdvisor', 'knownGaps', 'recommendedNextSteps'],
+      additionalProperties: false,
+    },
+  },
+  required: ['version', 'capabilities', 'intents', 'toolOrchestration', 'rules'],
+  additionalProperties: false,
+} as const;

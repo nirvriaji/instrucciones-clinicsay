@@ -590,19 +590,51 @@ function main() {
   }
 
   const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-  const errors = [];
 
-  // Run all validators
-  validateSchema(data, errors);
-  validateCrossReferences(data, errors);
-  validateMinimumIntents(data, mode, errors);
-
-  const modeErrors = validateMode(data, mode);
-  for (const e of modeErrors) {
-    errors.push({ category: 'mode', message: e });
+  // ── Backend-real validation (replicated, not imported from external repo) ──
+  const { execSync } = require('child_process');
+  const path = require('path');
+  const validatorScript = path.join(__dirname, 'lib', 'backend-validator', 'run-validation.ts');
+  let backendResult;
+  try {
+    const stdout = execSync(
+      `npx tsx "${validatorScript}" "${jsonPath}" "${mode}"`,
+      { encoding: 'utf8', cwd: path.join(__dirname, '..'), shell: true, stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    backendResult = JSON.parse(stdout);
+  } catch (err) {
+    const stderr = err.stderr ? err.stderr.toString() : '';
+    const stdout = err.stdout ? err.stdout.toString() : '';
+    // If the validator emitted valid JSON to stdout even on non-zero exit, use it
+    try {
+      backendResult = JSON.parse(stdout);
+    } catch {
+      // If tsx is not available, fall back to the legacy JS validator with a warning
+      logger.warn('Backend validator (tsx) not available. Falling back to legacy JS validator. Results may differ from production.');
+      logger.warn(`tsx stderr: ${stderr}`);
+      const errors = [];
+      validateSchema(data, errors);
+      validateCrossReferences(data, errors);
+      validateMinimumIntents(data, mode, errors);
+      const modeErrors = validateMode(data, mode);
+      for (const e of modeErrors) {
+        errors.push({ category: 'mode', message: e });
+      }
+      backendResult = {
+        valid: errors.length === 0,
+        errors: errors.map(e => e.message || e),
+      };
+    }
   }
 
-  if (errors.length === 0) {
+  // Also run legacy mode enforcer for additional business rules
+  const modeErrors = validateMode(data, mode);
+  const allErrors = [...(backendResult.errors || [])];
+  for (const e of modeErrors) {
+    allErrors.push(e);
+  }
+
+  if (backendResult.valid && allErrors.length === 0) {
     // Valid: promote the exact draft that was validated.
     if (jsonPath === paths.draft) {
       fs.copyFileSync(paths.draft, paths.final);
@@ -627,11 +659,18 @@ function main() {
     process.exit(0);
   } else {
     // Invalid: report errors
-    logger.error(`❌ ${errors.length} validation error(s):`);
+    logger.error(`❌ ${allErrors.length} validation error(s):`);
     const byCategory = {};
-    for (const e of errors) {
-      byCategory[e.category] = byCategory[e.category] || [];
-      byCategory[e.category].push(e.message);
+    // Categorize backend errors
+    for (const e of allErrors) {
+      const msg = typeof e === 'string' ? e : (e.message || String(e));
+      // Simple heuristic categorization
+      let cat = 'schema';
+      if (msg.includes('intent') && (msg.includes('references') || msg.includes('Missing'))) cat = 'cross-ref';
+      if (msg.includes('scheduling') || msg.includes('tasks-only') || msg.includes('create_task')) cat = 'mode';
+      if (msg.includes('responseTemplate')) cat = 'business';
+      byCategory[cat] = byCategory[cat] || [];
+      byCategory[cat].push(msg);
     }
 
     for (const [cat, msgs] of Object.entries(byCategory)) {
