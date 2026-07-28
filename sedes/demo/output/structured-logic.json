@@ -15,7 +15,6 @@
     "language": "es",
     "persona": "Asistente virtual de Clínica Demo",
     "tone": "profesional, cercano, amable, elegante, prudente, directo, claro, breve",
-    "welcomeMessage": null,
     "farewellMessage": null,
     "escalationMessage": "Un miembro de nuestro equipo se pondrá en contacto contigo.",
     "socialLinks": null,
@@ -38,8 +37,12 @@
     ],
     "mandatoryPhrases": [],
     "additionalRules": [],
-    "mustGreet": false,
-    "mustOfferHumanHandoff": true
+    "mustOfferHumanHandoff": true,
+    "timeGreetingRanges": [
+      { "label": "dias", "start": "06:00", "end": "13:59", "greeting": "buenos días" },
+      { "label": "tardes", "start": "14:00", "end": "21:00", "greeting": "buenas tardes" },
+      { "label": "noches", "start": "21:01", "end": "05:59", "greeting": "buenas noches" }
+    ]
   },
   "intents": {
     "appointment_confirmation": {
