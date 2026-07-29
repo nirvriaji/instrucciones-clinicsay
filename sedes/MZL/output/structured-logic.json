@@ -749,7 +749,7 @@
   "responseTemplates": {
     "greeting": {
       "mode": "literal",
-      "text": "Soy Vera, asesora virtual de la Clínica del Dr. Zaragoza Lauber. ¿En qué puedo ayudarle?"
+      "text": "Hola, soy Vera, asesora virtual de la Clínica del Dr. Zaragoza Lauber. ¿En qué puedo ayudarle?"
     },
     "vat_inquiry": {
       "mode": "literal",

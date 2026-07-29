@@ -1,0 +1,134 @@
+{
+  "meta": {
+    "sede": "fisioterapia",
+    "mode": "tasks-only",
+    "timestamp": "2026-07-29T02:52:15.851Z",
+    "inputFiles": [
+      "fisioterapia.md"
+    ],
+    "inputFilesCount": 1,
+    "combinedTextLength": 3525
+  },
+  "summary": {
+    "total": 12,
+    "errors": 12,
+    "warnings": 0,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 12,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 0
+  },
+  "gaps": [
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Básica (valoración, ecografía, terapia manual, radiofrecuencia): 45€/sesión (60 min). Bonos: 3 sesiones 125€, 5 sesiones 200€\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Básica (valoración, ecografía, terapia manual, radiofrecuencia): 45€/sesión (60 min). Bonos: 3 sesio",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"bsica_valoracin_ecografa_terapia_manual_radiofrecuencia_45sesin_60_min_bonos_3_sesiones_125_5_sesiones_200_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Básica (valoración, ecografía, terapia manual, radiofrecuencia): 45€/sesión (60 min). Bonos: 3 sesiones 125€, 5 sesiones 200€\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Completa: 55€/sesión (60 min). Bonos: 3 sesiones 150€, 5 sesiones 220€\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Completa: 55€/sesión (60 min). Bonos: 3 sesiones 150€, 5 sesiones 220€",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"completa_55sesin_60_min_bonos_3_sesiones_150_5_sesiones_220_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Completa: 55€/sesión (60 min). Bonos: 3 sesiones 150€, 5 sesiones 220€\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Activación neuromuscular: 55€/sesión (60 min)\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Activación neuromuscular: 55€/sesión (60 min)",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"activacin_neuromuscular_55sesin_60_min_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Activación neuromuscular: 55€/sesión (60 min)\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Suelo pélvico (valoración): 60€ (60 min). Bonos: 3 sesiones 160€, 5 sesiones 220€\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Suelo pélvico (valoración): 60€ (60 min). Bonos: 3 sesiones 160€, 5 sesiones 220€",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"suelo_plvico_valoracin_60_60_min_bonos_3_sesiones_160_5_sesiones_220_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Suelo pélvico (valoración): 60€ (60 min). Bonos: 3 sesiones 160€, 5 sesiones 220€\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Pediatría (valoración): 60€ (60 min). Bonos: 3 sesiones 150€, 5 sesiones 200€\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Pediatría (valoración): 60€ (60 min). Bonos: 3 sesiones 150€, 5 sesiones 200€",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"pediatra_valoracin_60_60_min_bonos_3_sesiones_150_5_sesiones_200_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Pediatría (valoración): 60€ (60 min). Bonos: 3 sesiones 150€, 5 sesiones 200€\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"ATM (articulación temporomandibular): 50€ (60 min)\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "ATM (articulación temporomandibular): 50€ (60 min)",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"atm_articulacin_temporomandibular_50_60_min_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"ATM (articulación temporomandibular): 50€ (60 min)\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Valoración ecográfica: 20€ (30 min)\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Valoración ecográfica: 20€ (30 min)",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"valoracin_ecogrfica_20_30_min_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Valoración ecográfica: 20€ (30 min)\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Descarga de piernas: 35€ (45 min)\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Descarga de piernas: 35€ (45 min)",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"descarga_de_piernas_35_45_min_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Descarga de piernas: 35€ (45 min)\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Presoterapia: 5€ (30 min)\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Presoterapia: 5€ (30 min)",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"presoterapia_5_30_min_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Presoterapia: 5€ (30 min)\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Quiropodia: 35€ (30 min)\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Quiropodia: 35€ (30 min)",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"quiropodia_35_30_min_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Quiropodia: 35€ (30 min)\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Estudio de la pisada: 50€ (60 min)\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Estudio de la pisada: 50€ (60 min)",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"estudio_de_la_pisada_50_60_min_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Estudio de la pisada: 50€ (60 min)\"?"
+    },
+    {
+      "severity": "error",
+      "category": "missing_intent",
+      "description": "Servicio \"Plantillas personali\" mencionado en anotaciones pero no hay intent correspondiente en el JSON",
+      "anotacion_ref": "Plantillas personali",
+      "json_path": "intents",
+      "suggestion": "Crear intent \"plantillas_personali_inquiry\" con descripción semántica",
+      "question_for_advisor": "¿Confirmas que ofrecéis el servicio \"Plantillas personali\"?"
+    }
+  ]
+}
