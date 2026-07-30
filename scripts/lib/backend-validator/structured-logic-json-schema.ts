@@ -150,7 +150,6 @@ export const StructuredLogicJsonSchema = {
         language: { type: ['string', 'null'] },
         persona: { type: ['string', 'null'] },
         tone: { type: ['string', 'null'] },
-        welcomeMessage: { type: ['string', 'null'] },
         farewellMessage: { type: ['string', 'null'] },
         escalationMessage: { type: ['string', 'null'] },
         socialLinks: {

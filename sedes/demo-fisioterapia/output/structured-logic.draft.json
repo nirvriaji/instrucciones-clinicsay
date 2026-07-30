@@ -408,7 +408,6 @@
       }
     ],
     "openingHours": "Lunes y Miércoles: 9:00-13:00 y 16:00-22:00. Martes, Jueves y Viernes: 8:00-13:00 y 16:00-21:00. Fines de semana consultar.",
-    "welcomeMessage": null,
     "farewellMessage": null,
     "escalationMessage": "Un miembro de nuestro equipo se pondrá en contacto contigo lo antes posible.",
     "additionalContacts": [

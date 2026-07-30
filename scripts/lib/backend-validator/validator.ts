@@ -252,7 +252,7 @@ export function validateStructuredLogic(
     rejectUnknownKeys(identity, ALLOWED_IDENTITY_KEYS, 'identity', errors);
     const stringOrNullFields = [
       'botName', 'clinicName', 'address', 'phone', 'email', 'website',
-      'openingHours', 'persona', 'tone', 'welcomeMessage', 'farewellMessage', 'escalationMessage',
+      'openingHours', 'persona', 'tone', 'farewellMessage', 'escalationMessage',
     ];
     for (const field of stringOrNullFields) {
       if (identity[field] !== undefined && identity[field] !== null && typeof identity[field] !== 'string') {
@@ -564,8 +564,11 @@ export function validateStructuredLogic(
       if (rule.action !== undefined && !validActions.includes(rule.action)) {
         errors.push(`Rule ${index} (${rule.id || rule.intent}) action must be "allow" or "block"`);
       }
-      if (rule.priority !== undefined && typeof rule.priority !== 'number') {
-        errors.push(`Rule ${index} (${rule.id || rule.intent}) priority must be a number`);
+      // NOTE: schema declares `priority: { type: ['number', 'null'] }`, so null is a valid sentinel.
+      // `typeof null === 'object'` in JavaScript, so the naive typeof check below must
+      // explicitly skip null to avoid false positives.
+      if (rule.priority !== undefined && rule.priority !== null && typeof rule.priority !== 'number') {
+        errors.push(`Rule ${index} (${rule.id || rule.intent}) priority must be a number or null`);
       }
       if (rule.conditionLogic !== undefined && rule.conditionLogic !== null && rule.conditionLogic !== 'and' && rule.conditionLogic !== 'or') {
         errors.push(`Rule ${index} (${rule.id || rule.intent}) conditionLogic must be "and" or "or"`);
