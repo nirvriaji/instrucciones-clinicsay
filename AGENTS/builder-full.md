@@ -161,18 +161,20 @@ Cuando el asesor dice "vamos a trabajar en <nombre>":
 Evoluciona `sedes/<nombre>/output/structured-logic.draft.json` **sección por sección y chunk por chunk**, nunca todo de una vez:
 
 **Secuencia de generación (una sección a la vez):**
-1. **identity** — Generar SOLO con datos extraídos de los chunks. Verificar que cada dato proviene de un archivo de input.
-2. **styleRules** — Extraer reglas de estilo de los chunks leídos. Cada regla debe poder rastrearse a una línea del input.
+1. **identity** — Generar SOLO con datos extraídos de los chunks.
+2. **styleRules** — Extraer reglas de estilo de los chunks leídos. Incluye obligatoriamente `timeGreetingRanges` (3 ranges: días, tardes, noches).
 3. **capabilities** — `{ sensitiveSituations: false, protocols: false }` (default)
-4. **intents** — Crear baseline + por servicio usando SOLO los datos de los chunks.
-5. **toolOrchestration.flows** — Mapear intents a flows con tools de full mode, usando SOLO datos de los chunks.
-6. **rules** — Crear rules por intent. Cada rule debe basarse en datos de los chunks.
-7. **responseTemplates** — Crear templates con tono de la clínica, usando SOLO textos y situaciones de los chunks.
-8. **faq** — Extraer de #Preguntas Frecuentes de los chunks, pregunta por pregunta.
-9. **protocols** — Solo si hay protocolos en los chunks leídos.
-10. **errorCategories** — 3 categorías genéricas mínimas basadas en situaciones del input.
-11. **treatmentPolicyHints** — Extraer señales, precios, restricciones de agendamiento de los chunks.
-12. **systemPromptInstructions** — Notas para el asesor, gaps detectados, next steps. Documentar TODO dato faltante.
+4. **intents** — Crear baseline (12 mínimos del template) + por servicio usando SOLO datos de los chunks.
+5. **toolOrchestration.flows** — Mapear intents a flows con tools de full mode. DEBE incluir flow `farewell` con `allowsSilence: true`.
+6. **rules** — Crear rules por intent. `scheduling_request` NO debe tener `redirectToTask: true` en full mode.
+7. **responseTemplates** — Crear templates. OBLIGATORIOS: `information_not_available`, `out_of_scope`, `farewell`.
+8. **faq** — Extraer de #Preguntas Frecuentes de los chunks.
+9. **serviceCatalog** — OBLIGATORIO. Extraer tratamientos del input con `name`, `priceDescription`, `requiresConsultation`. Mínimo 1 tratamiento.
+10. **protocols** — Solo si hay protocolos en los chunks leídos.
+11. **errorCategories** — 3 categorías genéricas mínimas basadas en situaciones del input.
+12. **treatmentPolicyHints** — Extraer señales, precios, restricciones de agendamiento de los chunks.
+13. **systemPromptInstructions** — Notas para el asesor, gaps detectados, next steps.
+14. **conversationResumption** — Instrucciones de saludo tras pausa conversacional. Usar defaults del template si no hay especificaciones en input.
 
 **Regla de fusión de fuentes:**
 - Si la carpeta `input/` contiene un archivo `.json` con lógica estructurada previa, úsalo como base para `intents`, `rules`, `toolOrchestration.flows`, `protocols` y `errorCategories`.
@@ -222,35 +224,6 @@ Cuando validación + gaps + estructura pasan:
 > Gaps resueltos: X. Gaps pendientes: Y.
 > Copia este archivo al builder de instrucciones de tu clínica.
 > ¿Necesitas ajustar algo más?"
-
-### Paso 6.1: Segunda pasada obligatoria (best practice)
-
-> ⚠️ **NUNCA consideres una tarea terminada sin esta segunda verificación.**
-
-Después de la entrega del JSON final, **debes ejecutar automáticamente una segunda pasada**:
-
-1. **Releer TODOS los archivos de input** (`sedes/<nombre>/input/*.md`, `sedes/<nombre>/input/*.json`)
-2. **Comparar contra el JSON generado** (`sedes/<nombre>/output/structured-logic.json`)
-3. **Detectar cualquier gap o inconsistencia**:
-   - Datos de contacto faltantes en `identity`
-   - Servicios mencionados en input pero ausentes en `intents`
-   - Profesionales mencionados pero no reflejados
-   - Precios, señales o restricciones omitidas
-   - FAQs en input pero no en `faq`
-   - Protocolos mencionados pero no documentados
-4. **Corregir lo detectado** directamente en el JSON
-5. **Revalidar** con `validate-and-save.js`
-6. **Re-ejecutar gap-detector** para confirmar que está limpio
-
-**Si el asesor no pide explícitamente la segunda pasada, tú debes ofrecerla:**
-> "¿Quieres que haga una segunda pasada revisando todos los archivos de input para verificar que no haya información faltante en el JSON?"
-
-**Si el asesor acepta o no responde:** ejecuta la segunda pasada.
-
-**Respuesta esperada tras segunda pasada:**
-> "🔍 Segunda pasada completada. He revisado todos los archivos de input contra el JSON.
-> [X] inconsistencias encontradas y corregidas / [Ninguna inconsistencia encontrada].
-> JSON revalidado. Listo para entregar."
 
 ---
 
@@ -380,13 +353,17 @@ Sintaxis del draft: válida
 Después de generar TODAS las secciones del JSON y antes de declararlo completo, DEBES re-leer `_templates/base-full.json` y verificar que tu draft no diverge silenciosamente del baseline:
 
 **Checklist de verificación (MANDATORIO):**
-- [ ] `general_inquiry` flow tiene `query_knowledge_base` en `allowedTools` o en al menos un step. Si no lo tiene, el bot no podrá buscar en protocols, FAQ, responseTemplates ni rules cuando la respuesta no esté en contexto.
+- [ ] `general_inquiry` flow tiene `query_knowledge_base` en `allowedTools` o en al menos un step.
 - [ ] `scheduling_request` flow usa tools de scheduling reales (`check_availability`, `resolve_availability_query`, `schedule_block`, `resolve_patient`, `resolve_professional`, `resolve_treatment`). En full mode el bot agenda directamente, NO usa `create_task` para scheduling.
 - [ ] `appointment_confirmation` flow usa `manage_schedule_block_status`.
 - [ ] `appointment_cancellation` flow usa `manage_schedule_block_status` o `manage_all_schedule_blocks_for_date`.
 - [ ] `human_follow_up` flow usa `create_task`.
+- [ ] `farewell` flow existe con `allowsSilence: true`.
 - [ ] Rule de `scheduling_request` NO tiene `redirectToTask: true` (en full mode se agenda directamente).
-- [ ] Todos los 6 baseline intents están presentes: appointment_confirmation, appointment_cancellation, appointment_inquiry, scheduling_request, general_inquiry, human_follow_up.
+- [ ] `serviceCatalog` existe con al menos 1 tratamiento con `name`.
+- [ ] `responseTemplates` incluye `information_not_available`, `out_of_scope`, `farewell`.
+- [ ] `conversationResumption` existe con `instructions` para los 5 hitos.
+- [ ] Todos los baseline intents están presentes (12 del template): appointment_confirmation, appointment_cancellation, appointment_inquiry, scheduling_request, general_inquiry, human_follow_up, farewell, appointment_reschedule_request, patient_running_late, appointment_reschedule_inquiry, appointment_cancellation_inquiry, keep_appointment.
 - [ ] Cada intent del catálogo tiene al menos 1 rule en `rules`.
 - [ ] Ningún step tiene tool names en `required` (debe ser `[]` o capability flags).
 
@@ -454,6 +431,22 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
     "human_follow_up": {
       "description": "Solicitudes que requieren seguimiento humano y no encajan en los intents anteriores.",
       "examples": ["quiero hablar con alguien"]
+    },
+    "farewell": {
+      "description": "El paciente se despide, agradece o cierra la conversación de forma amable.",
+      "examples": ["adios", "gracias", "hasta luego", "nos vemos", "chao", "ok"]
+    },
+    "appointment_reschedule_inquiry": {
+      "description": "El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía.",
+      "examples": ["¿Se puede cambiar mi cita?", "¿Podria moverla a otro dia?"]
+    },
+    "appointment_cancellation_inquiry": {
+      "description": "El paciente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente.",
+      "examples": ["¿Que pasa si no puedo ir?", "¿Se puede cancelar?"]
+    },
+    "keep_appointment": {
+      "description": "El paciente indica que quiere mantener la cita tal como está.",
+      "examples": ["la dejo como esta", "mantenla"]
     }
   }
 }
@@ -625,34 +618,44 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 
 #### Schema
 - `version` string no vacío.
-- `capabilities` coincide con el schema y `_templates/base-full.json`.
+- `capabilities` coincide con el schema canónico: solo `sensitiveSituations` y `protocols` (booleanos).
+- `serviceCatalog` requerido con `treatments` array no vacío (mínimo 1 tratamiento con `name` no vacío).
 - `intents` presente y no vacío; cada intent referenciado por flows/rules existe en él.
-- `toolOrchestration.flows` objeto (no array).
-- `rules` array con AL MENOS 5 elementos (`[]` prohibido).
-- `BusinessRule.action` es `"allow"` o `"block"`.
+- `toolOrchestration.flows` objeto (no array); DEBE incluir flow `farewell` con `allowsSilence: true`.
+- `rules` array no vacío.
+- `responseTemplates` DEBE incluir templates: `information_not_available`, `out_of_scope`, `farewell`.
+- `BusinessRule.action` es `"allow"` o `"block"`. Block rules DEBEN incluir `message` no vacío.
 - `ToolStep.tools` solo de las 12 tools disponibles.
 - `Protocol.responseTemplate` string no vacío si existe.
+- Prohibido intent `price_inquiry` (usar `general_inquiry` + `serviceCatalog`).
+- Flows con `query_knowledge_base` o `query_protocol` NO deben tener `responseTemplate` con modo `literal`.
 - Flow `new_patient_booking`: `resolve_patient` antes de `schedule_block`.
 - Flow `existing_patient_rebooking`: identificación de paciente antes de `schedule_block`.
 
 #### Intents/rules mínimos
-Deben existir intents y rules para: `appointment_confirmation`, `appointment_cancellation`, `appointment_inquiry`, `scheduling_request`, `general_inquiry`.
+Deben existir intents y rules para: `appointment_confirmation`, `appointment_cancellation`, `appointment_inquiry`, `scheduling_request`, `general_inquiry`, `human_follow_up`, `farewell`.
 
 #### Flows críticos
-- Flow de `appointment_confirmation`: existe y usa únicamente `manage_schedule_block_status` (sin `create_task`).
-- Flow de `appointment_cancellation`: existe (crear tarea solo si la clínica lo exige).
-- Flow de `appointment_inquiry`: existe con `tools: []`.
+- Flow de `appointment_confirmation`: existe y usa únicamente `manage_schedule_block_status`.
+- Flow de `appointment_cancellation`: existe con `manage_schedule_block_status`.
+- Flow de `appointment_inquiry`: existe con `tools: []` o `responseTemplate`.
 - `new_patient_booking`: existe con `resolve_patient` antes de `schedule_block`.
+- Flow de `farewell`: existe con `allowsSilence: true`.
+- Flow `general_inquiry` debe tener `query_knowledge_base` en `allowedTools` o steps.
 
 ### Checklist de calidad antes de entregar
 
-- [ ] `intents` no vacío y cubre los intents mínimos.
+- [ ] `intents` no vacío y cubre los 12+ intents baseline del template.
 - [ ] Cada `intent` de flows y rules existe en el catálogo (sin referencias huérfanas).
-- [ ] `rules` tiene al menos 5 elementos.
+- [ ] `rules` tiene al menos 1 rule por intent (mínimo 7 rules para los intents críticos).
 - [ ] Flow de confirmación usa únicamente `manage_schedule_block_status`.
-- [ ] Flow de `appointment_inquiry` tiene `tools: []`.
+- [ ] Flow de `appointment_inquiry` tiene `tools: []` o `responseTemplate`.
 - [ ] `new_patient_booking` tiene `resolve_patient` antes de `schedule_block`.
 - [ ] Dependencias correctas: `resolve_patient` → `schedule_block`, `check_availability` → `schedule_block`.
+- [ ] Flow de `farewell` tiene `allowsSilence: true`.
+- [ ] `serviceCatalog.treatments` tiene al menos 1 tratamiento con `name`.
+- [ ] `responseTemplates` incluye `information_not_available`, `out_of_scope`, `farewell`.
+- [ ] `conversationResumption` existe con `instructions` para los 5 hitos.
 - [ ] Todas las `description` son descripciones semánticas en lenguaje natural.
 - [ ] Las capabilities coinciden con `_templates/base-full.json` y no contienen propiedades inventadas.
 - [x] Todos los archivos de input han sido leídos por bloques de ~100 líneas.
