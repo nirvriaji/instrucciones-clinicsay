@@ -21,6 +21,10 @@ export type ClinicCapabilities = {
   protocols: boolean;
 };
 
+// Re-export conversation resumption types from their canonical domain file.
+export { type ConversationResumptionConfig, type ConversationResumptionType } from './conversation-resumption';
+import type { ConversationResumptionConfig } from './conversation-resumption';
+
 /**
  * Derive scheduling capability from the external chat mode.
  * The JSON does not store this; it is computed at runtime.
@@ -28,7 +32,6 @@ export type ClinicCapabilities = {
 export function getSchedulingCapability(chatMode: StructuredLogicChatMode): boolean {
   return chatMode === 'full';
 }
-
 // ========== Text-derived sections (single source of truth) ========== //
 
 export type SocialLink = {
@@ -188,6 +191,11 @@ export type ToolFlow = {
   responseTemplateMode?: 'literal' | 'model';
   /** Optional explicit tool whitelist for the LLM in this flow */
   allowedTools?: string[];
+  /**
+   * If true, the LLM may return an empty response (silence) in this flow.
+   * Only the farewell flow should have this flag enabled.
+   */
+  allowsSilence?: boolean;
 };
 
 export type ToolStep = {
@@ -332,6 +340,29 @@ export type IntentCatalog = {
   [intentId: string]: IntentDefinition;
 };
 
+export type ChatService = {
+  /** Name of the treatment or pack (e.g., "Limpieza dental", "Bono 5 sesiones") */
+  name: string;
+  /** Brief description for the patient */
+  description?: string;
+  /**
+   * Free-text pricing / promotion info.
+   * Examples: "45€ por sesión", "Pack 3x2: 120€", "Requiere valoración personalizada en consulta"
+   */
+  priceDescription?: string;
+  /** If true, the bot should offer to book a consultation for evaluation */
+  requiresConsultation?: boolean;
+  /** Category for grouping (e.g., "Dental", "Medicina estética") */
+  category?: string;
+};
+
+export type ServiceCatalog = {
+  /** Treatments and services the bot can mention. Configured manually by the clinic. */
+  treatments: ChatService[];
+  /** Packs / bundles the bot can mention. Optional. */
+  packs?: ChatService[];
+};
+
 export type StructuredLogic = {
   /** Schema version */
   version: string;
@@ -345,6 +376,8 @@ export type StructuredLogic = {
   responseTemplates?: ResponseTemplates;
   /** Frequently asked questions and their answers */
   faq?: FaqEntry[];
+  /** Catalog of treatments and packs the bot can reference for pricing and promotions */
+  serviceCatalog: ServiceCatalog;
   /** Semantic intent catalog. Required: the classifier reads these descriptions to match patient messages. */
   intents: IntentCatalog;
   /** Tool orchestration flows */
@@ -365,6 +398,12 @@ export type StructuredLogic = {
    * The runtime does NOT render this into the LLM system prompt.
    */
   systemPromptInstructions?: SystemPromptInstructions;
+  /**
+   * Temporal conversation-resumption instructions. Each clinic configures style
+   * guidance per resumption hito (continuous, short_break, same_period, recent, distant).
+   * Thresholds are fixed by the domain; only the text instructions are configurable.
+   */
+  conversationResumption?: ConversationResumptionConfig;
 };
 
 /**
@@ -377,16 +416,22 @@ export const BASELINE_INTENTS: IntentCatalog = {
     examples: ['confirmo', 'ahí estaré'],
   },
   appointment_cancellation: {
-    description: 'El paciente cancela una cita existente o indica que no podrá asistir.',
-    examples: ['cancela mi cita', 'no puedo ir mañana'],
+    description:
+      'El paciente cancela una cita existente o indica que no podrá asistir. ' +
+      'NO preguntar el motivo al paciente. El campo "reason" es obligatorio en la tool; usar "Solicitud del paciente". ' +
+      'Si el paciente cancela y luego pide "restablecer" en el mismo turno, tratar como scheduling_request (reagendar).',
+    examples: ['cancela mi cita', 'no puedo ir mañana', 'anula la sesion'],
   },
   appointment_inquiry: {
     description: 'El paciente pregunta por citas que ya tiene reservadas (horarios, fechas). La información ya está en el contexto.',
     examples: ['¿cuándo es mi cita?'],
   },
   scheduling_request: {
-    description: 'El paciente quiere reservar una NUEVA cita o consultar disponibilidad.',
-    examples: ['quiero pedir cita', '¿tenéis hueco el viernes?'],
+    description:
+      'El paciente quiere reservar una NUEVA cita o consultar disponibilidad. ' +
+      'También incluye "restablecer" una cita que acaba de cancelar en este mismo turno de conversacion, ' +
+      'usando los datos disponibles en el historial de tool outputs del turno actual.',
+    examples: ['quiero pedir cita', '¿tenéis hueco el viernes?', 'restablecer la cita que acabo de anular'],
   },
   general_inquiry: {
     description: 'Preguntas generales sobre la clínica: horarios, ubicación, contacto, precios fijos.',
@@ -395,6 +440,42 @@ export const BASELINE_INTENTS: IntentCatalog = {
   human_follow_up: {
     description: 'Solicitudes que requieren seguimiento humano y no encajan en lo anterior.',
     examples: ['quiero hablar con una persona'],
+  },
+  farewell: {
+    description: 'El paciente se despide, agradece o cierra la conversación de forma amable.',
+    examples: ['adios', 'gracias', 'hasta luego', 'nos vemos', 'chao', 'ok'],
+  },
+  appointment_reschedule_request: {
+    description:
+      'El paciente quiere MOVER una cita ya agendada a otra fecha u hora. ' +
+      'Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, ' +
+      '(c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), ' +
+      '(d) "restablecer" una cita tras cancelarla en el mismo turno de conversacion. ' +
+      'Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. ' +
+      'Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs).',
+    examples: [
+      '¿podemos cambiar mi cita al jueves?',
+      'muevela a la tarde',
+      'adelantala a las 10h',
+      'la cita es para mi pareja, no para mi',
+      'restablecer la cita que acabo de cancelar',
+    ],
+  },
+  patient_running_late: {
+    description: 'El paciente avisa que llegara tarde a una cita confirmada.',
+    examples: ['voy con 10 minutos de retraso'],
+  },
+  appointment_reschedule_inquiry: {
+    description: 'El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavia.',
+    examples: ['¿Se puede cambiar mi cita?', '¿Podria moverla a otro dia?'],
+  },
+  appointment_cancellation_inquiry: {
+    description: 'El paciente consulta sobre cancelacion o pregunta que pasaria si no puede asistir, sin ordenar la cancelacion directamente.',
+    examples: ['¿Que pasa si no puedo ir?', '¿Como cancelo una cita?'],
+  },
+  keep_appointment: {
+    description: 'El paciente quiere mantener la cita actual y descartar cualquier propuesta de cambio o cancelacion.',
+    examples: ['Dejala igual', 'Olvida el cambio', 'Mejor mantengamos la cita'],
   },
 };
 
@@ -416,13 +497,51 @@ export const DEFAULT_STRUCTURED_LOGIC: StructuredLogic = {
       { label: 'noches', start: '21:01', end: '05:59', greeting: 'buenas noches' },
     ],
   },
-  responseTemplates: {},
+  responseTemplates: {
+    information_not_available: { text: 'No tengo esa información en este momento.', mode: 'literal' },
+    out_of_scope: { text: 'Eso está fuera de mi alcance. ¿Puedo ayudarte con algo más?', mode: 'literal' },
+    farewell: { text: '¡Hasta luego! Que tengas un buen día.', mode: 'literal' },
+  },
   faq: [],
+  serviceCatalog: {
+    treatments: [
+      { name: 'Primera visita', description: 'Consulta inicial de evaluación', priceDescription: 'Consultar en clínica', requiresConsultation: true },
+    ],
+  },
   intents: BASELINE_INTENTS,
   toolOrchestration: {
-    flows: {},
+    flows: {
+      farewell: {
+        intent: 'farewell',
+        description: 'Despedirse del paciente',
+        steps: [{ step: 1, tools: [], parallel: false }],
+        responseTemplate: 'farewell',
+        allowsSilence: true,
+      },
+    },
   },
   rules: [],
+  protocols: {},
+  errorCategories: [],
+  systemPromptInstructions: {
+    notesForAdvisor: [],
+    knownGaps: [],
+    recommendedNextSteps: [],
+  },
+  conversationResumption: {
+    instructions: {
+      continuous:
+        'El paciente sigue en la conversación. NO saludes de nuevo. Continúa directamente desde el último punto.',
+      short_break:
+        'Pausa corta (menos de 2 horas). NO saludes de nuevo. Respeta el contexto completo de la conversación activa.',
+      same_period:
+        'El paciente escribió hoy o ayer. Un saludo breve opcional está permitido ("Hola de nuevo", "Continuamos"). Asume que sigue en la misma intención salvo que diga lo contrario.',
+      recent:
+        'Han pasado varios días. Saluda cordialmente reconociendo la ausencia. Ofrece un resumen de 1 línea SOLO si hay algo pendiente relevante (cita, tratamiento, duda sin resolver). No asumas que sigue en el hilo antiguo si no hay pending context claro.',
+      distant:
+        'Han pasado semanas o meses. Saluda reconociendo la ausencia ("Hola, hace tiempo que no hablamos"). NO te presentes como nuevo. NO asumas contexto antiguo. Pregunta cómo puedes ayudarle HOY. Si hay citas futuras confirmadas, menciónalas brevemente como recordatorio.',
+    },
+  },
 };
 
 export type ExtractStructuredLogicResult =
@@ -434,15 +553,26 @@ export type ExtractStructuredLogicResult =
  * Extract structured logic from bot metadata.
  * Returns an explicit result — never a silent fallback.
  */
+/**
+ * Extract structured logic from bot metadata.
+ * Reads from the correct slot based on mode:
+ * - 'full' → metadata.structuredLogicFull or metadata.builderStructuredLogicFull
+ * - otherwise → metadata.structuredLogic or metadata.builderStructuredLogic
+ */
 export function extractStructuredLogic(
   metadata: Record<string, unknown> | null | undefined,
+  mode?: StructuredLogicChatMode,
 ): ExtractStructuredLogicResult {
   if (!metadata || typeof metadata !== 'object') {
     return { type: 'missing' };
   }
 
-  const structuredLogic = metadata.structuredLogic as StructuredLogic | undefined;
-  const builderStructuredLogic = metadata.builderStructuredLogic as StructuredLogic | undefined;
+  const isFull = mode === 'full';
+  const logicKey = isFull ? 'structuredLogicFull' : 'structuredLogic';
+  const builderKey = isFull ? 'builderStructuredLogicFull' : 'builderStructuredLogic';
+
+  const structuredLogic = metadata[logicKey] as StructuredLogic | undefined;
+  const builderStructuredLogic = metadata[builderKey] as StructuredLogic | undefined;
   const effectiveLogic =
     structuredLogic && typeof structuredLogic === 'object'
       ? structuredLogic
@@ -473,6 +603,14 @@ export function extractStructuredLogic(
   }
   if (!Array.isArray(effectiveLogic.rules)) {
     return { type: 'corrupt', reason: 'Missing or invalid required field: rules' };
+  }
+  if (
+    !effectiveLogic.serviceCatalog ||
+    typeof effectiveLogic.serviceCatalog !== 'object' ||
+    !Array.isArray(effectiveLogic.serviceCatalog.treatments) ||
+    effectiveLogic.serviceCatalog.treatments.length === 0
+  ) {
+    return { type: 'corrupt', reason: 'Missing or invalid required field: serviceCatalog (must have treatments array with at least one item)' };
   }
 
   return { type: 'success', logic: effectiveLogic };

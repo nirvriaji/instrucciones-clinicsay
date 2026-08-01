@@ -5,35 +5,45 @@
     "protocols": false
   },
   "identity": {
-    "botName": "Asistente",
-    "clinicName": "Tu Clínica",
-    "address": null,
-    "phone": null,
-    "email": null,
-    "website": null,
-    "openingHours": null,
-    "language": "es",
-    "persona": "Asistente virtual de la clínica",
-    "tone": "profesional y amable",
-    "farewellMessage": null,
-    "escalationMessage": "Te paso con atención humana.",
+    "botName": "{{NOMBRE_BOT}}",
+    "clinicName": "{{CLINIC_NAME}}",
+    "address": "{{DIRECCION}}",
+    "phone": "{{TELEFONO}}",
+    "email": "{{EMAIL}}",
+    "website": "{{WEB}}",
+    "openingHours": "{{HORARIO}}",
+    "language": "auto",
+    "persona": "asistente virtual de la clinica",
+    "tone": "muy cariñoso, cercano, amable, profesional y claro",
+    "farewellMessage": "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo mas, estamos aqui.",
+    "escalationMessage": "Para orientarte bien, prefiero que lo revise nuestro equipo especializado. Les paso tu caso ahora mismo y te contactan.",
     "socialLinks": null,
     "additionalContacts": null
   },
   "styleRules": {
-    "brevity": "Responder en 1-2 frases cortas cuando sea posible",
-    "format": "Texto plano para WhatsApp, sin markdown ni asteriscos",
-    "tone": "profesional y amable",
-    "emojiPolicy": "forbidden",
+    "brevity": "1-2 frases cortas",
+    "format": "texto plano, sin markdown, sin asteriscos, sin negritas, sin listas",
+    "tone": "muy cariñoso, cercano, amable, profesional y claro",
+    "emojiPolicy": "allowed",
     "languagePolicy": "auto",
     "noMedicalDiagnosis": true,
     "noAsterisks": true,
     "noMarkdown": true,
     "maxSentences": 2,
-    "maxWordsPerSentence": 30,
-    "avoidPhrases": ["No sé", "No puedo ayudarte con eso"],
-    "mandatoryPhrases": [],
-    "additionalRules": [],
+    "maxWordsPerSentence": 18,
+    "avoidPhrases": [
+      "Vaya, lamento que...",
+      "Debe ser muy molesto",
+      "Siento muchisimo que te sientas asi"
+    ],
+    "mandatoryPhrases": [
+      "Para orientarte bien, prefiero que lo revise nuestro equipo especializado."
+    ],
+    "additionalRules": [
+      "No pensar en voz alta.",
+      "Una unica pregunta por turno.",
+      "No terminar con pregunta salvo que sea imprescindible."
+    ],
     "mustOfferHumanHandoff": true,
     "timeGreetingRanges": [
       { "label": "dias", "start": "06:00", "end": "13:59", "greeting": "buenos días" },
@@ -41,95 +51,327 @@
       { "label": "noches", "start": "21:01", "end": "05:59", "greeting": "buenas noches" }
     ]
   },
-  "intents": {
-    "scheduling_request": {
-      "description": "El paciente quiere reservar una NUEVA cita o consultar disponibilidad. El bot agenda directamente.",
-      "examples": ["quiero pedir cita", "¿tenéis hueco el viernes por la tarde?"]
+  "responseTemplates": {
+    "appointment_confirmed": { "text": "Perfecto, he registrado su confirmación. ¡Nos vemos pronto!", "mode": "literal" },
+    "appointment_cancelled": { "text": "Entendido, hemos gestionado tu cita.", "mode": "literal" },
+    "appointment_booked": { "text": "He agendado su cita. ¿Necesita algo mas?", "mode": "literal" },
+    "appointment_multiple": { "text": "He agendado tus citas. Si necesitas cambiar alguna, dimelo.", "mode": "literal" },
+    "task_created": { "text": "Te contactaremos por WhatsApp lo antes posible.", "mode": "literal" },
+    "list_wait": { "text": "Te contactaremos por WhatsApp lo antes posible. Quedas en lista de espera.", "mode": "literal" },
+    "no_availability": { "text": "Te contactaremos por WhatsApp lo antes posible. Quedas en lista de espera.", "mode": "literal" },
+    "on_the_way": { "text": "No te preocupes, ven con cuidado. Aprovecharemos el tiempo lo mejor posible.", "mode": "literal" },
+    "sensitive_situation": { "text": "Para orientarte bien, prefiero que lo revise nuestro equipo especializado. Les paso tu caso ahora mismo y te contactan.", "mode": "literal" },
+    "emotional_support": { "text": "Gracias por contarmelo. Voy a pasarlo al equipo para que puedan acompanarte y revisarlo con cuidado.", "mode": "literal" },
+    "greeting": { "text": "Hola, soy {{NOMBRE_BOT}}, el asistente virtual de {{CLINIC_NAME}}. ¿En que puedo ayudarte?", "mode": "literal" },
+    "goodbye": { "text": "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo mas, estamos aqui.", "mode": "literal" },
+    "home_visit": { "text": "Claro, las visitas a domicilio las gestiona directamente el equipo. ¿Quieres que deje la solicitud anotada?", "mode": "literal" },
+    "class_issue": { "text": "Entendido. Voy a pasar tu caso al equipo para que lo revisen y te contacten.", "mode": "literal" },
+    "change_requested": { "text": "He pasado tu solicitud al equipo. Te contactarán pronto.", "mode": "literal" },
+    "acknowledgement": { "text": "Gracias a ti. Si necesitas algo mas, estamos aqui.", "mode": "literal" },
+    "cancellation_inquiry": { "text": "¿Quieres que cancelemos la cita o prefieres buscar otra fecha?", "mode": "literal" },
+    "keep_appointment": { "text": "Perfecto, tu cita sigue confirmada.", "mode": "literal" },
+    "reschedule_inquiry": { "text": "¿Para qué fecha te gustaría cambiarla? Puedo buscar disponibilidad ahora mismo.", "mode": "literal" },
+    "information_not_available": { "text": "No tengo información sobre eso en este momento. ¿Quieres que lo consulte con el equipo?", "mode": "literal" },
+    "out_of_scope": { "text": "Soy el asistente de {{CLINIC_NAME}} y solo puedo ayudarte con nuestros servicios, tratamientos y citas. ¿En qué puedo ayudarte?", "mode": "literal" },
+    "farewell": { "text": "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo más, estamos aquí.", "mode": "literal" }
+  },
+  "faq": [
+    {
+      "question": "¿Donde esta la clinica?",
+      "answer": "Estamos en {{DIRECCION}}. ¿Necesitas ayuda para llegar?"
     },
+    {
+      "question": "¿Haceis domicilio?",
+      "answer": "Claro. Las visitas a domicilio las revisa directamente el equipo. ¿Te gustaria que dejemos la solicitud anotada?"
+    },
+    {
+      "question": "¿Aceptais pago con tarjeta?",
+      "answer": "Si, aceptamos efectivo y tarjeta. Tambien puedes pagar con Bizum al {{TELEFONO}}."
+    },
+    {
+      "question": "¿Teneis bonos?",
+      "answer": "Para informarte del precio y las condiciones, voy a pasar tu consulta al equipo."
+    },
+    {
+      "question": "¿Que puede ser este dolor o que ejercicios deberia hacer?",
+      "answer": "Para orientarte bien, prefiero que lo revise nuestro equipo especializado. Les paso tu caso ahora mismo y te contactan."
+    },
+    {
+      "question": "¿Puedo cambiar mi cita?",
+      "answer": "Gracias por avisarnos con antelacion. Voy a gestionar el cambio de tu cita."
+    },
+    {
+      "question": "¿Cual es el telefono?",
+      "answer": "Nuestro telefono es {{TELEFONO}}. ¿En que puedo ayudarte?"
+    },
+    {
+      "question": "¿Cual es el horario?",
+      "answer": "Nuestro horario es {{HORARIO}}. ¿Necesitas una cita?"
+    },
+    {
+      "question": "¿Teneis pagina web?",
+      "answer": "Si, puedes visitarnos en {{WEB}}. ¿Necesitas ayuda con algo mas?"
+    }
+  ],
+  "serviceCatalog": {
+    "treatments": [
+      {
+        "name": "Primera visita",
+        "description": "Consulta inicial de evaluación",
+        "priceDescription": "Consultar en clínica",
+        "requiresConsultation": true
+      }
+    ]
+  },
+  "intents": {
     "appointment_confirmation": {
       "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
       "examples": ["confirmo", "ahí estaré"]
     },
     "appointment_cancellation": {
-      "description": "El paciente cancela una cita existente o indica que no podrá asistir.",
-      "examples": ["cancela mi cita", "no podré ir mañana"]
-    },
-    "appointment_reschedule_request": {
-      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora.",
-      "examples": ["¿podemos cambiar mi cita al jueves?", "muévela a la tarde"]
+      "description": "El paciente cancela una cita existente o indica que no podrá asistir. NO preguntar el motivo al paciente. El campo 'reason' es obligatorio en la tool; usar 'Solicitud del paciente'. Si el paciente cancela y luego pide 'restablecer' en el mismo turno, tratar como scheduling_request (reagendar).",
+      "examples": ["cancela mi cita", "no puedo ir mañana", "anula la sesion"]
     },
     "appointment_inquiry": {
-      "description": "El paciente pregunta por citas que ya tiene reservadas. La información ya está en el contexto.",
+      "description": "El paciente pregunta por citas que ya tiene reservadas (horarios, fechas). La información ya está en el contexto.",
       "examples": ["¿cuándo es mi cita?"]
     },
-    "patient_running_late": {
-      "description": "El paciente avisa que llegará tarde a una cita confirmada.",
-      "examples": ["voy con 10 minutos de retraso"]
+    "scheduling_request": {
+      "description": "El paciente quiere reservar una NUEVA cita o consultar disponibilidad. También incluye 'restablecer' una cita que acaba de cancelar en este mismo turno de conversacion, usando los datos disponibles en el historial de tool outputs del turno actual.",
+      "examples": ["quiero pedir cita", "¿tenéis hueco el viernes?", "restablecer la cita que acabo de anular"]
     },
     "general_inquiry": {
-      "description": "Preguntas generales sobre la clínica: horarios, ubicación, contacto, precios fijos, servicios.",
+      "description": "Preguntas generales sobre la clínica: horarios, ubicación, contacto, precios fijos.",
       "examples": ["¿qué horario tenéis?"]
     },
     "human_follow_up": {
-      "description": "Solicitudes que requieren seguimiento humano y no encajan en los intents anteriores.",
-      "examples": ["quiero hablar con alguien"]
+      "description": "Solicitudes que requieren seguimiento humano y no encajan en lo anterior.",
+      "examples": ["quiero hablar con una persona"]
+    },
+    "farewell": {
+      "description": "El paciente se despide, agradece o cierra la conversación de forma amable.",
+      "examples": ["adios", "gracias", "hasta luego", "nos vemos", "chao", "ok"]
+    },
+    "appointment_reschedule_request": {
+      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, (c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), (d) 'restablecer' una cita tras cancelarla en el mismo turno de conversacion. Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs).",
+      "examples": ["¿podemos cambiar mi cita al jueves?", "muevela a la tarde", "adelantala a las 10h", "la cita es para mi pareja, no para mi", "restablecer la cita que acabo de cancelar"]
+    },
+    "patient_running_late": {
+      "description": "El paciente avisa que llegara tarde a una cita confirmada.",
+      "examples": ["voy con 10 minutos de retraso"]
+    },
+    "appointment_reschedule_inquiry": {
+      "description": "El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavia.",
+      "examples": ["¿Se puede cambiar mi cita?", "¿Podria moverla a otro dia?"]
+    },
+    "appointment_cancellation_inquiry": {
+      "description": "El paciente consulta sobre cancelacion o pregunta que pasaria si no puede asistir, sin ordenar la cancelacion directamente.",
+      "examples": ["¿Que pasa si no puedo ir?", "¿Se puede cancelar?"]
+    },
+    "keep_appointment": {
+      "description": "El paciente indica que quiere mantener la cita tal como esta.",
+      "examples": ["la dejo como esta", "mantenla"]
     }
   },
   "toolOrchestration": {
     "flows": {
       "new_patient_booking": {
         "intent": "scheduling_request",
-        "description": "Paciente SIN historial previo que quiere reservar su primera sesión o consulta.",
+        "description": "Paciente que NO tiene historial previo quiere reservar su primera sesion o consulta.",
+        "selection": {
+          "excludedCapabilities": ["hasResolvedPatient"]
+        },
         "steps": [
-          { "step": 1, "tools": ["resolve_patient"], "parallel": false, "required": [], "note": "Crear o identificar paciente. Obligatorio antes de agendar." },
-          { "step": 2, "tools": ["resolve_treatment", "resolve_professional", "resolve_availability_query"], "parallel": true, "required": [], "note": "Identificar tratamiento (obligatorio), profesional (opcional) y convertir fecha natural a concreta." },
-          { "step": 3, "tools": ["check_availability"], "parallel": false, "required": [], "note": "Consultar disponibilidad con los parámetros resueltos." },
-          { "step": 4, "tools": ["schedule_block"], "parallel": false, "required": [], "note": "Crear la cita con el slot elegido. Solo después de check_availability." }
+          {
+            "step": 1,
+            "tools": ["resolve_treatment", "resolve_patient", "resolve_availability_query"],
+            "parallel": true,
+            "required": ["hasResolvedTreatment", "hasResolvedPatient"],
+            "note": "En paralelo: identificar tratamiento, paciente y traducir fechas"
+          },
+          {
+            "step": 2,
+            "tools": ["resolve_professional"],
+            "parallel": false,
+            "note": "Si el paciente nombra un doctor, resolverlo (condicion: patient_mentions_doctor_name)"
+          },
+          {
+            "step": 3,
+            "tools": ["check_availability"],
+            "parallel": false,
+            "note": "Buscar horarios con treatmentId + patientId + fechas (condicion: treatment_resolved && patient_resolved)"
+          },
+          {
+            "step": 4,
+            "tools": ["schedule_block"],
+            "parallel": false,
+            "note": "Agendar cita con el slot elegido (condicion: slot_selected)"
+          }
         ]
       },
       "existing_patient_rebooking": {
         "intent": "scheduling_request",
-        "description": "Paciente CON historial que quiere reservar una sesión ADICIONAL (no mover una cita existente).",
+        "description": "Paciente que YA tiene historial quiere reservar una sesion ADICIONAL, no mover una cita existente.",
+        "selection": {
+          "requiredCapabilities": ["hasResolvedPatient"]
+        },
         "steps": [
-          { "step": 1, "tools": ["lookup_patient", "resolve_treatment", "resolve_professional"], "parallel": true, "required": [], "note": "Verificar paciente (si no está en contexto), identificar tratamiento y profesional." },
-          { "step": 2, "tools": ["resolve_availability_query"], "parallel": false, "note": "Convertir fecha natural a concreta." },
-          { "step": 3, "tools": ["check_availability"], "parallel": false, "required": [], "note": "Consultar disponibilidad." },
-          { "step": 4, "tools": ["schedule_block"], "parallel": false, "required": [], "note": "Crear la cita. Requiere resolve_patient previo (paso 1 o contexto)." }
+          {
+            "step": 1,
+            "tools": ["lookup_patient", "resolve_treatment"],
+            "parallel": true,
+            "note": "Buscar paciente por telefono + identificar tratamiento"
+          },
+          {
+            "step": 2,
+            "tools": ["check_availability"],
+            "parallel": false,
+            "note": "Buscar disponibilidad con paciente existente (condicion: patient_found && treatment_resolved)"
+          },
+          {
+            "step": 3,
+            "tools": ["schedule_block"],
+            "parallel": false,
+            "note": "Agendar (condicion: slot_selected)"
+          }
         ]
       },
-      "confirm_existing_appointment": {
+      "confirm_appointment": {
         "intent": "appointment_confirmation",
-        "description": "El paciente confirma asistencia a una cita existente, especialmente como respuesta a un recordatorio.",
+        "description": "Paciente confirma asistencia a una cita ya reservada, especialmente como respuesta a un recordatorio.",
         "steps": [
-          { "step": 1, "tools": ["manage_schedule_block_status"], "parallel": false, "required": [], "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). La confirmación no requiere tarea de seguimiento." }
+          {
+            "step": 1,
+            "tools": ["manage_schedule_block_status"],
+            "parallel": false,
+            "note": "Marcar CONFIRMADA"
+          }
         ],
-        "responseTemplate": "Tu cita ha quedado confirmada. Te esperamos.",
+        "responseTemplate": "Perfecto, hemos confirmado tu cita. Nos vemos pronto.",
         "responseTemplateMode": "literal",
         "allowedTools": ["manage_schedule_block_status"]
       },
-      "cancel_existing_appointment": {
+      "cancel_appointment": {
         "intent": "appointment_cancellation",
-        "description": "El paciente comunica que no podrá asistir a una cita ya reservada y necesita anularla.",
+        "description": "Paciente comunica que no podra asistir a una cita ya reservada y necesita anularla.",
         "steps": [
-          { "step": 1, "tools": ["manage_schedule_block_status", "manage_all_schedule_blocks_for_date"], "parallel": false, "required": [], "note": "Una cita: CANCELADA. Varias el mismo día: gestionar en lote." }
+          {
+            "step": 1,
+            "tools": ["manage_schedule_block_status"],
+            "parallel": false,
+            "note": "Marcar CANCELADA. El campo 'reason' es obligatorio; usar 'Solicitud del paciente'. NO preguntar motivo al paciente."
+          },
+          {
+            "step": 2,
+            "tools": ["create_task"],
+            "parallel": false,
+            "note": "Si quiere nueva fecha, crear tarea para reprogramar (condicion: patient_wants_new_date)"
+          }
         ],
-        "responseTemplate": "Tu cita ha sido cancelada. Si deseas reprogramar, podemos ayudarte.",
+        "responseTemplate": "Entendido, hemos cancelado tu cita. Si necesitas otra, avisanos.",
         "responseTemplateMode": "literal",
-        "allowedTools": ["manage_schedule_block_status", "manage_all_schedule_blocks_for_date"]
+        "allowedTools": ["manage_schedule_block_status", "create_task"]
+      },
+      "reschedule_appointment": {
+        "intent": "appointment_reschedule_request",
+        "description": "Paciente quiere cambiar la fecha u hora de una cita YA AGENDADA. Incluye: (a) mover a otro dia, (b) adelantar/atrasar el MISMO dia, (c) corregir titular manteniendo mismo tratamiento, (d) restablecer cita tras cancelar en este turno.",
+        "steps": [
+          {
+            "step": 1,
+            "tools": ["manage_schedule_block_status", "resolve_availability_query"],
+            "parallel": true,
+            "note": "Cancelar cita actual (reason='Solicitud del paciente', NO preguntar motivo) + resolver nuevas fechas. Para correccion de titular: usar mismo treatmentId, cambiar paciente. Para restablecer: usar datos del historial de tool outputs de este turno."
+          },
+          {
+            "step": 2,
+            "tools": ["check_availability"],
+            "parallel": false,
+            "note": "Buscar nuevos horarios (condicion: dates_resolved). Para mismo dia: filtrar slots del dia actual."
+          },
+          {
+            "step": 3,
+            "tools": ["schedule_block"],
+            "parallel": false,
+            "note": "Agendar nueva cita (condicion: slot_selected). Mantener treatmentId original salvo que el paciente pida cambiarlo."
+          }
+        ],
+        "responseTemplate": "He movido tu cita. Te esperamos en la nueva fecha y hora.",
+        "responseTemplateMode": "literal",
+        "allowedTools": ["manage_schedule_block_status", "resolve_availability_query", "check_availability", "schedule_block"]
+      },
+      "on_the_way": {
+        "intent": "patient_running_late",
+        "description": "Paciente avisa que llega tarde a una cita confirmada.",
+        "steps": [
+          {
+            "step": 1,
+            "tools": ["manage_schedule_block_status"],
+            "parallel": false,
+            "note": "Marcar EN_CAMINO"
+          }
+        ],
+        "responseTemplate": "Gracias por avisar. Ajustamos tu cita segun el retraso.",
+        "responseTemplateMode": "literal",
+        "allowedTools": ["manage_schedule_block_status"]
+      },
+      "reschedule_inquiry": {
+        "intent": "appointment_reschedule_inquiry",
+        "description": "Paciente pregunta sobre reagendar o cambiar una cita, sin decidir aun.",
+        "steps": [],
+        "responseTemplate": "reschedule_inquiry",
+        "responseTemplateMode": "literal",
+        "allowedTools": []
+      },
+      "cancellation_inquiry": {
+        "intent": "appointment_cancellation_inquiry",
+        "description": "Paciente pregunta sobre cancelar una cita, sin decidir aun.",
+        "steps": [],
+        "responseTemplate": "cancellation_inquiry",
+        "responseTemplateMode": "literal",
+        "allowedTools": []
+      },
+      "keep_appointment_flow": {
+        "intent": "keep_appointment",
+        "description": "Paciente indica que quiere mantener la cita tal como esta.",
+        "steps": [],
+        "responseTemplate": "keep_appointment",
+        "responseTemplateMode": "literal",
+        "allowedTools": []
+      },
+      "farewell": {
+        "intent": "farewell",
+        "description": "Paciente se despide, agradece o cierra la conversación de forma amable.",
+        "steps": [{ "step": 1, "tools": [], "parallel": false }],
+        "responseTemplate": "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo más, estamos aquí.",
+        "responseTemplateMode": "literal",
+        "allowsSilence": true,
+        "allowedTools": []
       },
       "appointment_inquiry": {
         "intent": "appointment_inquiry",
-        "description": "El paciente consulta información sobre citas que ya tiene reservadas.",
+        "description": "El paciente consulta información sobre citas que ya tiene reservadas, como horarios, fechas o tratamientos.",
         "steps": [
-          { "step": 1, "tools": [], "parallel": false, "note": "Usa el contexto ASSOCIATED_PATIENTS para responder. Si no hay citas, indica que no hay citas programadas y ofrece ayuda." }
+          {
+            "step": 1,
+            "tools": [],
+            "parallel": false,
+            "note": "Usa el contexto ASSOCIATED_PATIENTS para responder. Si no hay citas, indica que no hay citas programadas y ofrece ayuda."
+          }
         ],
+        "responseTemplate": "no_appointments",
         "allowedTools": []
       },
       "general_inquiry": {
         "intent": "general_inquiry",
         "description": "Preguntas generales sobre la clínica.",
         "steps": [
-          { "step": 1, "tools": ["query_knowledge_base"], "parallel": false, "required": [], "note": "Responder directamente si la información ya está en contexto. Si no está, usar query_knowledge_base para buscar en protocols, FAQ, responseTemplates y rules antes de responder." }
+          {
+            "step": 1,
+            "tools": ["query_knowledge_base"],
+            "parallel": false,
+            "required": [],
+            "note": "Responder directamente si la información ya está en contexto. Si no está, usar query_knowledge_base para buscar en protocols, FAQ, responseTemplates y rules antes de responder."
+          }
         ],
         "allowedTools": ["query_knowledge_base"]
       },
@@ -137,68 +379,195 @@
         "intent": "human_follow_up",
         "description": "Solicitudes que requieren seguimiento humano.",
         "steps": [
-          { "step": 1, "tools": ["create_task"], "parallel": false, "required": [], "note": "Crear tarea para seguimiento humano." }
+          {
+            "step": 1,
+            "tools": ["create_task"],
+            "parallel": false,
+            "required": [],
+            "note": "Crear tarea para seguimiento humano."
+          }
         ],
-        "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto contigo.",
+        "responseTemplate": "Te contactaremos por WhatsApp lo antes posible.",
         "responseTemplateMode": "literal",
         "allowedTools": ["create_task"]
-      },
-      "reschedule_appointment": {
-        "intent": "appointment_reschedule_request",
-        "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora.",
-        "steps": [
-          { "step": 1, "tools": ["manage_schedule_block_status"], "parallel": false, "required": [], "note": "Cancelar cita existente." },
-          { "step": 2, "tools": ["resolve_availability_query"], "parallel": false, "note": "Convertir nueva fecha." },
-          { "step": 3, "tools": ["check_availability"], "parallel": false, "required": [], "note": "Buscar nuevos slots." },
-          { "step": 4, "tools": ["schedule_block"], "parallel": false, "required": [], "note": "Crear nueva cita." }
-        ]
-      },
-      "patient_running_late": {
-        "intent": "patient_running_late",
-        "description": "El paciente avisa que llegará tarde a una cita confirmada.",
-        "steps": [
-          { "step": 1, "tools": ["manage_schedule_block_status"], "parallel": false, "required": [], "note": "Marcar EN CAMINO." }
-        ],
-        "responseTemplate": "Gracias por avisarnos. Le esperamos en la clínica.",
-        "responseTemplateMode": "literal",
-        "allowedTools": ["manage_schedule_block_status"]
       }
     }
   },
   "rules": [
-    { "id": "ask_about_existing_appointment", "intent": "appointment_inquiry", "description": "El paciente consulta información sobre citas que ya tiene reservadas (horarios, fechas, tratamientos).", "action": "allow", "note": "El backend inyecta las citas en el system prompt. Responder sin llamar tools." },
-    { "id": "confirm_existing_appointment", "intent": "appointment_confirmation", "description": "El paciente confirma asistencia a una cita existente.", "action": "allow", "note": "Ejecutar manage_schedule_block_status (CONFIRMADA). La confirmación no requiere tarea de seguimiento." },
-    { "id": "cancel_existing_appointment", "intent": "appointment_cancellation", "description": "El paciente cancela una cita existente o indica que no asistirá.", "action": "allow", "note": "Ejecutar el flow de cancelación." },
-    { "id": "scheduling_request", "intent": "scheduling_request", "description": "El paciente quiere reservar una NUEVA cita sin tener una previa para ese motivo.", "action": "allow", "note": "El bot puede agendar directamente siguiendo el flow de booking." },
-    { "id": "general_inquiry", "intent": "general_inquiry", "description": "El paciente pregunta por tratamientos, precios fijos, médicos, contacto, horarios o servicios.", "action": "allow", "note": "Responder directamente con la información del contexto y las instrucciones." },
-    { "id": "human_follow_up", "intent": "human_follow_up", "description": "Solicitudes que requieren seguimiento humano.", "action": "allow", "note": "Crear tarea para seguimiento humano." },
-    { "id": "reschedule_request", "intent": "appointment_reschedule_request", "description": "El paciente quiere MOVER una cita ya agendada.", "action": "allow", "note": "Cancelar cita existente + crear nueva." },
-    { "id": "patient_running_late", "intent": "patient_running_late", "description": "El paciente avisa que llegará tarde.", "action": "allow", "note": "Marcar EN CAMINO." }
-  ],
-  "responseTemplates": {
-    "greeting": { "text": "¿En qué puedo ayudarle?", "mode": "literal" },
-    "confirmation": { "text": "Tu cita ha quedado confirmada. Te esperamos.", "mode": "literal" },
-    "cancellation": { "text": "Tu cita ha sido cancelada. Si deseas reprogramar, podemos ayudarte.", "mode": "literal" },
-    "no_appointments": { "text": "No aparecen citas programadas. ¿Puedo ayudarte con algo más?", "mode": "literal" },
-    "booking_options": { "text": "He encontrado estas opciones: [options]. ¿Cuál prefieres?", "mode": "model" },
-    "booking_confirmed": { "text": "Tu cita ha quedado agendada para [date] a las [time]. Te esperamos.", "mode": "model" },
-    "task_created": { "text": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible.", "mode": "literal" }
-  },
-  "faq": [
-    { "question": "¿Dónde están ubicados?", "answer": "Puedo darte la dirección y referencias de llegada.", "condition": null },
-    { "question": "¿Cuál es el horario de atención?", "answer": "Te informo nuestros horarios.", "condition": null },
-    { "question": "¿Qué tratamientos ofrecen?", "answer": "Contamos con diversos tratamientos. ¿Sobre cuál te gustaría información?", "condition": null }
+    {
+      "id": "ask_about_existing_appointment",
+      "intent": "appointment_inquiry",
+      "description": "El paciente consulta informacion sobre citas que ya tiene reservadas, como horarios, fechas o tratamientos.",
+      "action": "allow",
+      "note": "El backend inyecta las citas del paciente en el system prompt. El bot responde sin llamar tools."
+    },
+    {
+      "id": "confirm_existing_appointment",
+      "intent": "appointment_confirmation",
+      "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
+      "action": "allow",
+      "note": "Ejecutar manage_schedule_block_status (CONFIRMADA)."
+    },
+    {
+      "id": "cancel_existing_appointment",
+      "intent": "appointment_cancellation",
+      "description": "El paciente cancela una cita existente o indica que no podra asistir.",
+      "action": "allow",
+      "note": "Ejecutar el flow de cancelacion."
+    },
+    {
+      "id": "general_inquiry",
+      "intent": "general_inquiry",
+      "description": "El paciente pregunta por tratamientos, precios fijos, medicos, contacto, horarios o servicios.",
+      "action": "allow",
+      "note": "Responder directamente con la informacion del contexto y las instrucciones."
+    },
+    {
+      "id": "human_follow_up",
+      "intent": "human_follow_up",
+      "description": "Solicitudes que requieren seguimiento humano y no encajan en los intents anteriores.",
+      "action": "allow",
+      "note": "Crear tarea para seguimiento humano."
+    },
+    {
+      "id": "farewell",
+      "intent": "farewell",
+      "description": "El paciente se despide, agradece o cierra la conversación de forma amable.",
+      "action": "allow",
+      "note": "Permitir al bot responder brevemente o callarse amablemente."
+    },
+    {
+      "id": "reschedule_inquiry",
+      "intent": "appointment_reschedule_inquiry",
+      "description": "Paciente pregunta sobre reagendar o cambiar una cita, sin decidir aun.",
+      "action": "allow",
+      "note": "Responder conversacionalmente. En full, el bot puede buscar disponibilidad si el paciente confirma."
+    },
+    {
+      "id": "cancellation_inquiry",
+      "intent": "appointment_cancellation_inquiry",
+      "description": "Paciente pregunta sobre cancelar una cita, sin decidir aun.",
+      "action": "allow",
+      "note": "Responder conversacionalmente. Preguntar si quiere cancelar o buscar otra fecha."
+    },
+    {
+      "id": "keep_appointment",
+      "intent": "keep_appointment",
+      "description": "Paciente indica que quiere mantener la cita tal como esta.",
+      "action": "allow",
+      "informOnly": true,
+      "note": "Confirmar que la cita sigue activa."
+    },
+    {
+      "id": "scheduling_request",
+      "intent": "scheduling_request",
+      "description": "El paciente quiere reservar una NUEVA cita sin tener una previa para ese motivo. Tambien incluye 'restablecer' una cita cancelada en este mismo turno de conversacion.",
+      "action": "allow",
+      "note": "El bot puede agendar directamente siguiendo el flow de booking. Para restablecer: usar datos del historial de tool outputs."
+    },
+    {
+      "id": "reschedule_request",
+      "intent": "appointment_reschedule_request",
+      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye: otro dia, mismo dia (adelantar/atrasar), correccion de titular, restablecer tras cancelar en este turno.",
+      "action": "allow",
+      "note": "Cancelar cita actual (reason='Solicitud del paciente', NO preguntar motivo) + agendar nueva. Para correccion de titular: mantener mismo treatmentId. Para restablecer: usar datos del historial de tool outputs de este turno."
+    },
+    {
+      "id": "patient_running_late",
+      "intent": "patient_running_late",
+      "description": "El paciente avisa que llegara tarde a una cita confirmada.",
+      "action": "allow",
+      "note": "Marcar EN_CAMINO."
+    }
   ],
   "protocols": {},
   "errorCategories": [
-    { "id": "scheduling_conflict", "description": "Conflicto de horario al intentar agendar.", "keywords": ["ocupado", "no disponible", "solapado"], "suggestions": ["Ofrecer alternativas de horario.", "Consultar próxima semana."] },
-    { "id": "patient_not_found", "description": "No se encuentra al paciente en el sistema.", "keywords": ["no registrado", "nuevo paciente"], "suggestions": ["Crear paciente nuevo.", "Verificar datos de contacto."] },
-    { "id": "missing_data", "description": "Faltan datos obligatorios para completar la acción.", "keywords": ["falta", "necesito", "dato"], "suggestions": ["Solicitar dato faltante amablemente.", "No proceder hasta tener todos los datos."] }
+    {
+      "id": "session_not_found",
+      "description": "La cita o sesion no existe",
+      "suggestions": [
+        "Verificar que el ID de la sesion sea correcto",
+        "La sesion puede haber sido eliminada"
+      ]
+    },
+    {
+      "id": "permission_denied",
+      "description": "El usuario no tiene permisos para realizar la accion",
+      "suggestions": [
+        "El usuario bot puede no tener permiso para esta accion",
+        "Contactar al staff de la clinica para asistencia"
+      ]
+    },
+    {
+      "id": "task_status_group_not_found",
+      "description": "El grupo de estados de tarea no existe",
+      "suggestions": [
+        "El sitio puede no tener un grupo de estados de tarea configurado",
+        "Contactar al staff de la clinica para configurar tableros de tareas"
+      ]
+    },
+    {
+      "id": "scheduling_conflict",
+      "description": "El horario o slot ya esta ocupado o hay conflicto de disponibilidad",
+      "suggestions": [
+        "Probar con un horario diferente",
+        "Verificar disponibilidad con check_availability"
+      ]
+    },
+    {
+      "id": "resource_not_found",
+      "description": "El profesional, sala o recurso no existe en el sistema",
+      "suggestions": [
+        "Verificar que el profesional o sala exista",
+        "Contactar al staff de la clinica"
+      ]
+    },
+    {
+      "id": "treatment_not_found",
+      "description": "El tratamiento no existe en el catalogo",
+      "suggestions": [
+        "Verificar que el tratamiento exista en el catalogo",
+        "Contactar al staff de la clinica"
+      ]
+    },
+    {
+      "id": "session_already_completed",
+      "description": "La sesion ya esta completada y no se puede cancelar",
+      "suggestions": [
+        "Esta sesion ya ha sido completada",
+        "Las sesiones completadas no se pueden cancelar directamente"
+      ]
+    },
+    {
+      "id": "session_already_cancelled",
+      "description": "La sesion ya esta cancelada",
+      "suggestions": [
+        "Esta sesion ya esta cancelada",
+        "No se requiere accion adicional"
+      ]
+    },
+    {
+      "id": "invalid_transition",
+      "description": "La transicion de estado no es valida",
+      "suggestions": [
+        "La sesion puede no estar en un estado valido para esta accion",
+        "Verificar el estado actual de la sesion primero"
+      ]
+    }
   ],
   "treatmentPolicyHints": [],
   "systemPromptInstructions": {
     "notesForAdvisor": [],
     "knownGaps": [],
-    "recommendedNextSteps": ["Validar el JSON generado antes de desplegar"]
+    "recommendedNextSteps": []
+  },
+  "conversationResumption": {
+    "instructions": {
+      "continuous": "El paciente sigue en la conversación. NO saludes de nuevo. Continúa directamente desde el último punto.",
+      "short_break": "Pausa corta (menos de 2 horas). NO saludes de nuevo. Respeta el contexto completo de la conversación activa.",
+      "same_period": "El paciente escribió hoy o ayer. Un saludo breve opcional está permitido ('Hola de nuevo', 'Continuamos'). Asume que sigue en la misma intención salvo que diga lo contrario.",
+      "recent": "Han pasado varios días. Saluda cordialmente reconociendo la ausencia. Ofrece un resumen de 1 línea SOLO si hay algo pendiente relevante (cita, tratamiento, duda sin resolver). No asumas que sigue en el hilo antiguo si no hay pending context claro.",
+      "distant": "Han pasado semanas o meses. Saluda reconociendo la ausencia ('Hola, hace tiempo que no hablamos'). NO te presentes como nuevo. NO asumas contexto antiguo. Pregunta cómo puedes ayudarle HOY. Si hay citas futuras confirmadas, menciónalas brevemente como recordatorio."
+    }
   }
 }

@@ -32,6 +32,10 @@ const ALLOWED_ERROR_CATEGORY_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.
 const ALLOWED_PROTOCOL_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.protocols.additionalProperties.properties');
 const ALLOWED_TPH_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.treatmentPolicyHints.items.properties');
 const ALLOWED_RESPONSE_TEMPLATE_VALUE_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.responseTemplates.additionalProperties.properties');
+const ALLOWED_SERVICE_CATALOG_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.serviceCatalog.properties');
+const ALLOWED_CHAT_SERVICE_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.serviceCatalog.properties.treatments.items.properties');
+const ALLOWED_CONVERSATION_RESUMPTION_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.conversationResumption.properties');
+const ALLOWED_RESUMPTION_INSTRUCTION_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.conversationResumption.properties.instructions.properties');
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -76,13 +80,14 @@ function validateSchema(data, errors) {
   // 0. Top-level strict schema (reject unknown properties)
   const allowedTopLevelKeys = new Set([
     'version', 'capabilities', 'identity', 'styleRules', 'responseTemplates',
-    'faq', 'intents', 'toolOrchestration', 'rules', 'protocols',
+    'faq', 'serviceCatalog', 'intents', 'toolOrchestration', 'rules', 'protocols',
     'errorCategories', 'treatmentPolicyHints', 'systemPromptInstructions',
+    'conversationResumption',
   ]);
   rejectUnknownKeys(data, allowedTopLevelKeys, 'root', errors);
 
   // Top-level required
-  validateRequired(data, 'root', ['version', 'capabilities', 'intents', 'toolOrchestration', 'rules'], errors);
+  validateRequired(data, 'root', ['version', 'capabilities', 'serviceCatalog', 'intents', 'toolOrchestration', 'rules'], errors);
 
   // version
   validateType(data.version, 'string', 'version', errors);
@@ -123,6 +128,73 @@ function validateSchema(data, errors) {
     }
   }
 
+  // 1b. serviceCatalog validation (aligned with backend)
+  if (!data.serviceCatalog || typeof data.serviceCatalog !== 'object') {
+    errors.push({ category: 'schema', message: 'serviceCatalog is required. It replaces the old TREATMENTS_LIST placeholder. Define at least one treatment with: name (required), priceDescription (optional), and requiresConsultation (optional).' });
+  } else {
+    rejectUnknownKeys(data.serviceCatalog, ALLOWED_SERVICE_CATALOG_KEYS, 'serviceCatalog', errors);
+    if (!Array.isArray(data.serviceCatalog.treatments) || data.serviceCatalog.treatments.length === 0) {
+      errors.push({ category: 'schema', message: 'serviceCatalog.treatments must have at least one treatment.' });
+    } else {
+      data.serviceCatalog.treatments.forEach((treatment, index) => {
+        rejectUnknownKeys(treatment, ALLOWED_CHAT_SERVICE_KEYS, `serviceCatalog.treatments[${index}]`, errors);
+        if (!treatment.name || typeof treatment.name !== 'string' || treatment.name.trim().length === 0) {
+          errors.push({ category: 'schema', message: `serviceCatalog.treatments[${index}].name is required and must be a non-empty string` });
+        }
+        if (treatment.priceDescription !== undefined && treatment.priceDescription !== null && (typeof treatment.priceDescription !== 'string' || treatment.priceDescription.trim().length === 0)) {
+          errors.push({ category: 'schema', message: `serviceCatalog.treatments[${index}].priceDescription must be a non-empty string` });
+        }
+        if (treatment.requiresConsultation !== undefined && treatment.requiresConsultation !== null && typeof treatment.requiresConsultation !== 'boolean') {
+          errors.push({ category: 'schema', message: `serviceCatalog.treatments[${index}].requiresConsultation must be a boolean` });
+        }
+      });
+    }
+    if (data.serviceCatalog.packs !== undefined && data.serviceCatalog.packs !== null) {
+      if (!Array.isArray(data.serviceCatalog.packs)) {
+        errors.push({ category: 'schema', message: 'serviceCatalog.packs must be an array' });
+      } else {
+        data.serviceCatalog.packs.forEach((pack, index) => {
+          rejectUnknownKeys(pack, ALLOWED_CHAT_SERVICE_KEYS, `serviceCatalog.packs[${index}]`, errors);
+          if (!pack.name || typeof pack.name !== 'string' || pack.name.trim().length === 0) {
+            errors.push({ category: 'schema', message: `serviceCatalog.packs[${index}].name is required and must be a non-empty string` });
+          }
+        });
+      }
+    }
+  }
+
+  // 1c. Prohibit legacy intent price_inquiry
+  const declaredIntents = new Set(data.intents ? Object.keys(data.intents) : []);
+  if (declaredIntents.has('price_inquiry')) {
+    errors.push({ category: 'business', message: 'Intent "price_inquiry" is prohibited. Use "general_inquiry" instead and configure serviceCatalog.treatments[].priceDescription for each treatment.' });
+  }
+
+  // 1d. Required response templates
+  const requiredTemplates = ['information_not_available', 'out_of_scope', 'farewell'];
+  const availableTemplates = new Set(Object.keys(data.responseTemplates ?? {}));
+  for (const templateKey of requiredTemplates) {
+    if (!availableTemplates.has(templateKey)) {
+      errors.push({ category: 'business', message: `responseTemplates must include template "${templateKey}". Add: { "${templateKey}": { "text": "Your text here", "mode": "literal" } }` });
+    }
+  }
+
+  // 1e. farewell flow with allowsSilence validation
+  let hasFarewellFlow = false;
+  const flows = data.toolOrchestration?.flows ?? {};
+  Object.entries(flows).forEach(([flowName, flow]) => {
+    if (flow.intent === 'farewell') {
+      hasFarewellFlow = true;
+      if (flow.allowsSilence !== true) {
+        errors.push({ category: 'business', message: `Flow "${flowName}" (intent: farewell) must have allowsSilence: true` });
+      }
+    } else if (flow.allowsSilence === true) {
+      errors.push({ category: 'business', message: `Flow "${flowName}" has allowsSilence: true. Only the farewell flow may have this flag.` });
+    }
+  });
+  if (!hasFarewellFlow) {
+    errors.push({ category: 'business', message: 'toolOrchestration.flows must include a flow with intent "farewell" and allowsSilence: true' });
+  }
+
   // toolOrchestration.flows
   if (data.toolOrchestration) {
     validateType(data.toolOrchestration, 'object', 'toolOrchestration', errors);
@@ -140,9 +212,6 @@ function validateSchema(data, errors) {
           validateType(flow.intent, 'string', `flows.${name}.intent`, errors);
           validateType(flow.description, 'string', `flows.${name}.description`, errors);
           validateType(flow.steps, 'array', `flows.${name}.steps`, errors);
-          if (Array.isArray(flow.steps) && flow.steps.length === 0) {
-            errors.push({ category: 'schema', message: `Flow "${name}" has no steps` });
-          }
           for (let i = 0; i < (flow.steps || []).length; i++) {
             const step = flow.steps[i];
             validateType(step, 'object', `flows.${name}.steps[${i}]`, errors);
@@ -436,8 +505,8 @@ function validateSchema(data, errors) {
       if (typeof value.description !== 'string' || value.description.length === 0) {
         errors.push({ category: 'schema', message: `protocols["${key}"].description is required and must be a non-empty string` });
       }
-      if (value.responseTemplate !== undefined && value.responseTemplate !== null && typeof value.responseTemplate !== 'string') {
-        errors.push({ category: 'schema', message: `protocols["${key}"].responseTemplate must be a string or null` });
+      if (typeof value.responseTemplate !== 'string' || value.responseTemplate.length === 0) {
+        errors.push({ category: 'schema', message: `protocols["${key}"].responseTemplate is required and must be a non-empty string` });
       }
       if (value.sections !== undefined && value.sections !== null && !Array.isArray(value.sections)) {
         errors.push({ category: 'schema', message: `protocols["${key}"].sections must be an array of strings or null` });
@@ -479,6 +548,21 @@ function validateSchema(data, errors) {
         errors.push({ category: 'schema', message: `errorCategories[${index}].suggestions is required and must be a non-empty array` });
       }
     });
+  }
+
+  // 4i. conversationResumption structure
+  if (data.conversationResumption && typeof data.conversationResumption === 'object') {
+    rejectUnknownKeys(data.conversationResumption, ALLOWED_CONVERSATION_RESUMPTION_KEYS, 'conversationResumption', errors);
+    if (data.conversationResumption.instructions && typeof data.conversationResumption.instructions === 'object') {
+      rejectUnknownKeys(data.conversationResumption.instructions, ALLOWED_RESUMPTION_INSTRUCTION_KEYS, 'conversationResumption.instructions', errors);
+      const instructionFields = ['continuous', 'short_break', 'same_period', 'recent', 'distant'];
+      for (const field of instructionFields) {
+        const value = data.conversationResumption.instructions[field];
+        if (value !== undefined && value !== null && typeof value !== 'string') {
+          errors.push({ category: 'schema', message: `conversationResumption.instructions.${field} must be a string or null` });
+        }
+      }
+    }
   }
 
   // 4h. treatmentPolicyHints structure
@@ -539,6 +623,8 @@ function validateMinimumIntents(data, mode, errors) {
     'appointment_inquiry',
     'scheduling_request',
     'general_inquiry',
+    'human_follow_up',
+    'farewell',
   ];
   const present = new Set(Object.keys(data.intents || {}));
   for (const req of requiredIntents) {

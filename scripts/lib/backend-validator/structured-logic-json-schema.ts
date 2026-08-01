@@ -30,10 +30,8 @@ export const StructuredLogicJsonSchema = {
     capabilities: {
       type: 'object',
       properties: {
-        scheduling: { type: 'boolean' },
         sensitiveSituations: { type: 'boolean' },
         protocols: { type: 'boolean' },
-        reminders: { type: 'boolean' },
       },
       required: ['sensitiveSituations', 'protocols'],
     },
@@ -87,6 +85,7 @@ export const StructuredLogicJsonSchema = {
               responseTemplate: { type: ['string', 'null'] },
               responseTemplateMode: { type: ['string', 'null'], enum: ['literal', 'model'] },
               allowedTools: { type: ['array', 'null'], items: { type: 'string', enum: ALL_CHAT_TOOL_NAMES } },
+              allowsSilence: { type: ['boolean', 'null'] },
             },
             required: ['intent', 'description', 'steps'],
             additionalProperties: false,
@@ -240,6 +239,44 @@ export const StructuredLogicJsonSchema = {
         additionalProperties: false,
       },
     },
+    serviceCatalog: {
+      type: 'object',
+      properties: {
+        treatments: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              description: { type: ['string', 'null'] },
+              priceDescription: { type: ['string', 'null'] },
+              requiresConsultation: { type: ['boolean', 'null'] },
+              category: { type: ['string', 'null'] },
+            },
+            required: ['name'],
+            additionalProperties: false,
+          },
+        },
+        packs: {
+          type: ['array', 'null'],
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              description: { type: ['string', 'null'] },
+              priceDescription: { type: ['string', 'null'] },
+              requiresConsultation: { type: ['boolean', 'null'] },
+              category: { type: ['string', 'null'] },
+            },
+            required: ['name'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['treatments'],
+      additionalProperties: false,
+    },
     protocols: {
       type: 'object',
       additionalProperties: {
@@ -309,7 +346,25 @@ export const StructuredLogicJsonSchema = {
       required: ['notesForAdvisor', 'knownGaps', 'recommendedNextSteps'],
       additionalProperties: false,
     },
+    conversationResumption: {
+      type: 'object',
+      properties: {
+        instructions: {
+          type: 'object',
+          properties: {
+            continuous: { type: ['string', 'null'] },
+            short_break: { type: ['string', 'null'] },
+            same_period: { type: ['string', 'null'] },
+            recent: { type: ['string', 'null'] },
+            distant: { type: ['string', 'null'] },
+          },
+          additionalProperties: false,
+        },
+      },
+      required: ['instructions'],
+      additionalProperties: false,
+    },
   },
-  required: ['version', 'capabilities', 'intents', 'toolOrchestration', 'rules'],
+  required: ['version', 'capabilities', 'serviceCatalog', 'intents', 'toolOrchestration', 'rules'],
   additionalProperties: false,
 } as const;

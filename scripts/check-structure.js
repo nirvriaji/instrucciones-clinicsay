@@ -23,10 +23,12 @@ const REQUIRED_SECTIONS = [
   'rules',
   'responseTemplates',
   'faq',
+  'serviceCatalog',
   'protocols',
   'errorCategories',
   'treatmentPolicyHints',
   'systemPromptInstructions',
+  'conversationResumption',
 ];
 
 const MINIMUM_INTENTS = 5;
@@ -58,7 +60,12 @@ function checkSection(data, sectionName, required) {
   // Check emptiness
   if (typeof value === 'object' && !Array.isArray(value)) {
     if (Object.keys(value).length === 0) {
-      errors.push({ section: sectionName, issue: 'empty', message: `Sección "${sectionName}" está vacía` });
+      // Objects vacíos pueden ser ok para secciones opcionales
+      if (['protocols', 'responseTemplates'].includes(sectionName)) {
+        // Está bien que estén vacíos
+      } else {
+        errors.push({ section: sectionName, issue: 'empty', message: `Sección "${sectionName}" está vacía` });
+      }
     }
   }
 
@@ -144,7 +151,9 @@ function checkContent(data) {
       errors.push({ section: 'toolOrchestration.flows', issue: 'incomplete', message: `Flow "${name}" no tiene descripción` });
     }
     if (!Array.isArray(flow.steps) || flow.steps.length === 0) {
-      errors.push({ section: 'toolOrchestration.flows', issue: 'incomplete', message: `Flow "${name}" no tiene steps` });
+      if (!flow.responseTemplate && !flow.allowsSilence) {
+        errors.push({ section: 'toolOrchestration.flows', issue: 'incomplete', message: `Flow "${name}" no tiene steps ni responseTemplate/allowsSilence` });
+      }
     }
   }
 

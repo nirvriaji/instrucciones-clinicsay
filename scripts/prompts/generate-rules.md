@@ -77,7 +77,7 @@ Operadores permitidos: `"equals"`, `"in"`, `"not_in"`, `"gt"`, `"lt"`, `"gte"`, 
 
 ### 7. Campos opcionales
 - `hidePrice`: `true` si el intent es de un tratamiento donde NO se menciona precio (según los archivos de input)
-- `priority`: **OBLIGATORIO como número entero ≥ 0.** NUNCA usar `null`. Número mayor = mayor prioridad (para ordenar evaluación). Valor por defecto: `0`.
+- `priority`: Opcional. Número entero ≥ 0, o `null`. Número mayor = mayor prioridad (para ordenar evaluación). Valor por defecto: `0` o `null`.
 - `note`: Explicación interna para el asesor
 
 ## Anti-patrones a Evitar

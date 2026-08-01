@@ -101,12 +101,19 @@ The person sending the message (interlocutor) may be the patient, a partner, a f
 {
   version: string;                    // Required. Schema version (e.g., "1.0")
   capabilities: ClinicCapabilities;   // Required
-  intents: IntentCatalog;             // Required in generated output. The intent vocabulary.
+  identity?: BotIdentity;             // Clinic contact info, tone, and bot persona
+  styleRules?: StyleRules;            // Tone, brevity, formatting, emoji, time greetings
+  responseTemplates?: ResponseTemplates; // Named templates for common replies
+  faq?: FaqEntry[];                   // Frequently asked questions
+  serviceCatalog: ServiceCatalog;     // Required. Treatments/packs the bot can reference for pricing
+  intents: IntentCatalog;             // Required. The intent vocabulary.
   toolOrchestration: ToolOrchestration; // Required
   rules: BusinessRule[];              // Required. MUST contain at least one rule. Never empty.
   protocols?: Record<string, Protocol>;  // Optional. Knowledge base searchable via query_knowledge_base.
-  // NOTE: products and shipping have been removed from the schema. Product info must go into protocols, faq, or responseTemplates.
   errorCategories?: ErrorCategory[];  // Optional
+  treatmentPolicyHints?: TreatmentPolicyHint[]; // Optional. Scheduling policy guidance for the advisor
+  systemPromptInstructions?: SystemPromptInstructions; // Builder-only metadata (notes, gaps, next steps)
+  conversationResumption?: ConversationResumptionConfig; // Optional. Greeting behavior after conversation pauses
 }
 ```
 
@@ -127,14 +134,11 @@ type IntentDefinition = {
 
 ```typescript
 {
-  scheduling: boolean;        // Can schedule real appointments?
-  products: boolean;          // Sells physical products?
-  shipping: boolean;          // Offers shipping?
   sensitiveSituations: boolean;  // Handles delicate situations?
   protocols: boolean;         // Has specific protocols?
-  reminders: boolean;         // Sends reminders?
 }
 ```
+> **NOTE:** `scheduling` capability is derived from the external chat mode (`'full'` or `'tasks-only'`), **NOT** stored in the JSON. The backend computes it at runtime. Do NOT add `scheduling`, `products`, `shipping`, or `reminders` to `capabilities`.
 
 ### `ToolOrchestration` and `ToolFlow`
 
@@ -146,9 +150,12 @@ type ToolOrchestration = {
 type ToolFlow = {
   intent: string;             // Required. Semantic intent reference (must exist in the intents catalog).
   description: string;        // Differentiates this flow's intent from similar ones (semantic, no keywords).
-  steps: ToolStep[];          // Ordered flow steps.
-  responseTemplate?: string;   // Optional. Exact text the bot MUST use after completing this flow.
+  selection?: ToolFlowSelection; // Optional capability-based routing when multiple flows share the same intent.
+  steps: ToolStep[];          // Ordered flow steps. May be empty for purely informational flows.
+  responseTemplate?: string;   // Optional. Template key or exact text the bot uses after completing this flow.
+  responseTemplateMode?: "literal" | "model"; // Optional. "literal" = exact text (default). "model" = LLM adapts the template.
   allowedTools?: string[];    // Optional. Explicit tool whitelist for the LLM in this flow.
+  allowsSilence?: boolean;    // Optional. If true, the LLM may return empty response. ONLY allowed on farewell flow.
 };
 ```
 
@@ -165,6 +172,15 @@ type ToolFlow = {
 }
 ```
 
+### `ToolFlowSelection`
+
+```typescript
+type ToolFlowSelection = {
+  requiredCapabilities?: string[];  // Capabilities that must ALL be present for this flow to be eligible (turn-start only).
+  excludedCapabilities?: string[];  // Capabilities that must ALL be absent for this flow to be eligible (turn-start only).
+};
+```
+
 ### `BusinessRule`
 
 ```typescript
@@ -172,10 +188,18 @@ type ToolFlow = {
   id: string;                 // Unique identifier (e.g., "no_surgery_days")
   intent: string;             // Required. Semantic intent reference (must exist in the intents catalog).
   description?: string;       // How the classifier recognizes this intent (semantic, no keywords). REQUIRED in practice.
-  condition?: BusinessRuleCondition;     // AND condition
-  conditions?: BusinessRuleCondition[];  // OR conditions
   action: "allow" | "block";  // ONLY these two values. Rules are filters, never executors.
+  conditionLogic?: "and" | "or"; // How to combine conditions. Default "and".
+  conditions?: BusinessRuleCondition[]; // Optional conditions evaluated against rule context.
+  reason?: string;            // Machine-readable reason (e.g., "missing_patient_data")
+  message?: string;           // Patient-facing message when action is "block".
+  protocolId?: string;        // Optional protocol to inject when this rule fires.
+  requiredFields?: string[];  // Fields that must be collected before allowing proceeding.
   note?: string;              // Note for the advisor
+  priority?: number | null; // Evaluation order. Higher = first. Default 0.
+  hidePrice?: boolean;        // If true, the bot must not mention the treatment price.
+  redirectToTask?: boolean;   // If true, redirect to human task instead of booking.
+  informOnly?: boolean;       // If true, the bot should only provide information.
 }
 ```
 
@@ -202,14 +226,105 @@ type ToolFlow = {
 
 **CRITICAL:** `responseTemplate` must be COMPLETE (not a summary) because the bot may search it via `query_knowledge_base` when the patient asks informational questions. Include prices, durations, conditions, and example responses.
 
-### `ProductConfig`
+### `ServiceCatalog`
 
 ```typescript
-{
-  shipping?: { enabled: boolean; requiresPostalCode: boolean; options: Array<{ type: string; price: number }> };
-  paymentMethods?: string[];
-  bizumReservation?: { enabled: boolean; amount: number; phone: string };
-}
+type ServiceCatalog = {
+  treatments: ChatService[];  // Required. At least one treatment.
+  packs?: ChatService[];      // Optional bundles / promos.
+};
+
+type ChatService = {
+  name: string;               // Required. Treatment or pack name (e.g., "Limpieza dental").
+  description?: string;       // Optional brief description.
+  priceDescription?: string;  // Free-text pricing. Exact price ("50 EUR"), range ("From 120 EUR"), or directive ("Consult clinic").
+  requiresConsultation?: boolean; // If true, the bot should offer to book a consultation first.
+  category?: string;          // Optional grouping category (e.g., "Dental", "Medicina estética").
+};
+```
+
+### `BotIdentity`
+
+```typescript
+type BotIdentity = {
+  botName?: string;
+  clinicName?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  openingHours?: string;
+  language?: "auto" | string;
+  persona?: string;
+  tone?: string;
+  farewellMessage?: string;
+  escalationMessage?: string;
+  socialLinks?: Array<{ platform: string; url: string }>;
+  additionalContacts?: Array<{ type: string; value: string; label?: string }>;
+};
+```
+
+### `StyleRules`
+
+```typescript
+type StyleRules = {
+  brevity?: string;
+  format?: string;
+  tone?: string;
+  emojiPolicy?: "allowed" | "forbidden" | "contextual";
+  languagePolicy?: "auto" | string;
+  noMedicalDiagnosis?: boolean;
+  noAsterisks?: boolean;
+  noMarkdown?: boolean;
+  maxSentences?: number;
+  maxWordsPerSentence?: number;
+  avoidPhrases?: string[];
+  mandatoryPhrases?: string[];
+  additionalRules?: string[];
+  mustOfferHumanHandoff?: boolean;
+  timeGreetingRanges?: Array<{
+    label: "dias" | "tardes" | "noches";
+    start: string;   // HH:mm
+    end: string;     // HH:mm
+    greeting: string;
+  }>;
+};
+```
+
+### `ResponseTemplates` and `FaqEntry`
+
+```typescript
+type ResponseTemplates = { [key: string]: { text: string; mode?: "literal" | "model" } };
+
+type FaqEntry = {
+  question: string;
+  answer: string;
+  condition?: string;
+};
+```
+
+### `SystemPromptInstructions`
+
+```typescript
+type SystemPromptInstructions = {
+  notesForAdvisor: string[];
+  knownGaps: string[];
+  recommendedNextSteps: string[];
+};
+```
+
+### `ConversationResumptionConfig`
+
+```typescript
+type ConversationResumptionConfig = {
+  instructions: {
+    continuous?: string;   // Patient is responding immediately. Do NOT greet again.
+    short_break?: string;   // Pause < 2 hours. Do NOT greet again.
+    same_period?: string;   // Today or yesterday. Brief optional greeting allowed.
+    recent?: string;        // Several days passed. Greet cordially, offer 1-line summary if something is pending.
+    distant?: string;       // Weeks/months passed. Greet acknowledging absence. Do NOT present yourself as new.
+  };
+};
 ```
 
 ### `ErrorCategory`
@@ -236,8 +351,12 @@ Declare at least these intents in the catalog. The exact ids below are the canon
 | `scheduling_request` | Patient wants to book a NEW appointment, reschedule an existing one, or asks about availability. |
 | `general_inquiry` | General questions about the clinic (hours, location, contact, fixed prices, services). |
 | `human_follow_up` | Anything that needs human follow-up and does not fit the above. |
-
-Mode-specific prompts add more (e.g., `appointment_reschedule_request`, `patient_running_late`, `urgency_report`).
+| `farewell` | Patient says goodbye, thanks, or closes the conversation politely. **Required flow with `allowsSilence: true`.** |
+| `appointment_reschedule_request` | Patient wants to MOVE an already-booked appointment to another date/time. |
+| `patient_running_late` | Patient warns they will arrive late to a confirmed appointment. |
+| `appointment_reschedule_inquiry` | Patient asks about the possibility of rescheduling without confirming yet. |
+| `appointment_cancellation_inquiry` | Patient asks about canceling without confirming yet. |
+| `keep_appointment` | Patient indicates they want to keep the appointment as-is. |
 
 ---
 
@@ -273,14 +392,18 @@ Mode-specific prompts add more (e.g., `appointment_reschedule_request`, `patient
 
 ## Validations (must pass `validateStructuredLogic()`)
 - `version` is a non-empty string.
-- `capabilities` has all six boolean fields.
-- `toolOrchestration.flows` is an object (not an array).
+- `capabilities` has exactly two boolean fields: `sensitiveSituations` and `protocols`.
+- `serviceCatalog.treatments` is a non-empty array with at least one treatment having a non-empty `name`.
+- `toolOrchestration.flows` is an object (not an array) and MUST include a `farewell` flow with `allowsSilence: true`.
 - `rules` is a non-empty array.
+- `responseTemplates` MUST include templates named `information_not_available`, `out_of_scope`, and `farewell`.
+- The intent `price_inquiry` is PROHIBITED. Use `general_inquiry` with `serviceCatalog.treatments[].priceDescription` instead.
 - Every flow has a non-empty `intent`, and that intent is declared in the `intents` catalog.
 - Every rule has a non-empty `intent` (declared in the catalog) and a non-empty `description`.
-- `BusinessRule.action` is `"allow"` or `"block"`.
+- `BusinessRule.action` is `"allow"` or `"block"`. Block rules MUST include a non-empty `message`.
 - `ToolStep.tools` are strings matching the available tools for the bot mode.
 - `Protocol.responseTemplate` is a non-empty string if the protocol exists.
+- Flows using `query_knowledge_base` or `query_protocol` MUST NOT use a literal `responseTemplate` (set `responseTemplateMode: "model"` if needed).
 
 ---
 

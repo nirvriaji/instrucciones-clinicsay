@@ -239,6 +239,37 @@ function detectGaps(entities, json, mode) {
     });
   }
 
+  // 6b. Check serviceCatalog
+  const catalogTreatments = (json.serviceCatalog?.treatments || []).map(t => t.name);
+  const catalogPacks = (json.serviceCatalog?.packs || []).map(p => p.name);
+  const catalogNames = new Set([...catalogTreatments, ...catalogPacks].map(n => n.toLowerCase()));
+  for (const svc of entities.services) {
+    const svcLower = svc.name.toLowerCase();
+    const found = Array.from(catalogNames).some(cn => cn.includes(svcLower) || svcLower.includes(cn));
+    if (!found) {
+      gaps.push({
+        severity: 'warning',
+        category: 'missing_service_catalog',
+        description: `Servicio "${svc.name}" mencionado en anotaciones pero no aparece en serviceCatalog`,
+        anotacion_ref: svc.raw.substring(0, 100),
+        json_path: 'serviceCatalog.treatments',
+        suggestion: `Agregar "${svc.name}" a serviceCatalog.treatments con priceDescription y requiresConsultation si aplica`,
+        question_for_advisor: `¿Confirmas que ofrecéis "${svc.name}"? ¿Cuál es su precio o descripción?`,
+      });
+    }
+  }
+  if (catalogTreatments.length === 0) {
+    gaps.push({
+      severity: 'error',
+      category: 'missing_service_catalog',
+      description: 'serviceCatalog.treatments está vacío. El backend requiere al menos un tratamiento.',
+      anotacion_ref: null,
+      json_path: 'serviceCatalog.treatments',
+      suggestion: 'Agregar al menos un tratamiento con name, priceDescription y requiresConsultation',
+      question_for_advisor: '¿Cuáles son los tratamientos o servicios principales de la clínica?',
+    });
+  }
+
   // 7. Check mode compliance
   const flows = json.toolOrchestration?.flows || {};
   if (mode === 'tasks-only') {

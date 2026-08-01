@@ -28,6 +28,7 @@ export const MINIMUM_REQUIRED_SECTIONS = [
   'styleRules',
   'responseTemplates',
   'faq',
+  'serviceCatalog',
   'intents',
   'toolOrchestration.flows',
   'rules',
@@ -69,6 +70,12 @@ export function validateStructuredLogicMinimum(logic: StructuredLogic): MinimumV
 
   if (!Array.isArray(logic.faq)) {
     missing.push('faq');
+  }
+
+  if (!logic.serviceCatalog || typeof logic.serviceCatalog !== 'object' || Array.isArray(logic.serviceCatalog)) {
+    missing.push('serviceCatalog');
+  } else if (!Array.isArray(logic.serviceCatalog.treatments)) {
+    missing.push('serviceCatalog.treatments');
   }
 
   if (!logic.intents || typeof logic.intents !== 'object' || Array.isArray(logic.intents) || Object.keys(logic.intents).length === 0) {

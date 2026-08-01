@@ -56,6 +56,17 @@ export const CRITICAL_INTENTS: Array<{ category: string; description: string }> 
 export const TURN_START_CAPABILITIES = ['hasResolvedPatient'] as const;
 export const TURN_START_CAPABILITY_SET = new Set<string>(TURN_START_CAPABILITIES);
 
+export const VALID_CAPABILITIES = new Set([
+  'hasResolvedTreatment',
+  'hasResolvedPatient',
+  'hasResolvedProfessional',
+  'hasShownSlots',
+  'hasSelectedSlot',
+  'hasCreatedAppointment',
+  'hasCreatedTask',
+  'hasResolvedAvailabilityQuery',
+]);
+
 // ── Schema-Derived Allowed Keys (single source of truth) ──
 // These Sets are derived from StructuredLogicJsonSchema so that the
 // runtime validator never drifts from the authoritative schema.
@@ -75,6 +86,9 @@ const ALLOWED_INTENT_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'prope
 const ALLOWED_FLOW_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.toolOrchestration.properties.flows.additionalProperties.properties');
 const ALLOWED_SELECTION_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.toolOrchestration.properties.flows.additionalProperties.properties.selection.properties');
 const ALLOWED_STEP_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.toolOrchestration.properties.flows.additionalProperties.properties.steps.items.properties');
+const ALLOWED_RESUMPTION_INSTRUCTION_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.conversationResumption.properties.instructions.properties');
+const ALLOWED_SERVICE_CATALOG_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.serviceCatalog.properties');
+const ALLOWED_CHAT_SERVICE_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.serviceCatalog.properties.treatments.items.properties');
 
 /**
  * Validate structuredLogic.
@@ -97,9 +111,13 @@ export function validateStructuredLogic(
   const sl = logic as Partial<StructuredLogic>;
 
   // 1. Basic schema validation
-  if (!sl.version) errors.push('version is required');
+  if (!sl.version) errors.push('version is required. Use "1.0" for the current schema version.');
   if (!sl.capabilities || typeof sl.capabilities !== 'object') {
-    errors.push('capabilities is required and must be an object');
+    errors.push(
+      'capabilities is required and must be an object. ' +
+        'Required fields: sensitiveSituations (boolean), protocols (boolean). ' +
+        'Example: { sensitiveSituations: false, protocols: false }'
+    );
   }
   if (!sl.intents || typeof sl.intents !== 'object') {
     errors.push('intents catalog is required and must be an object');
@@ -137,6 +155,8 @@ export function validateStructuredLogic(
     'errorCategories',
     'treatmentPolicyHints',
     'systemPromptInstructions',
+    'conversationResumption',
+    'serviceCatalog',
   ]);
   const unknownKeys = Object.keys(sl).filter((k) => !allowedTopLevelKeys.has(k));
   if (unknownKeys.length > 0) {
@@ -149,9 +169,12 @@ export function validateStructuredLogic(
   if (sl.toolOrchestration?.flows && typeof sl.toolOrchestration.flows === 'object') {
     for (const [flowName, flow] of Object.entries(sl.toolOrchestration.flows as Record<string, ToolFlow>)) {
       if (!flow.intent) {
-        errors.push(`Flow "${flowName}" is missing required field "intent"`);
+        errors.push(`Flow "${flowName}" is missing required field "intent". Every flow must reference an intent from the intents catalog.`);
       } else if (!declaredIntents.has(flow.intent)) {
-        errors.push(`Flow "${flowName}" references intent "${flow.intent}" which is not declared in the intents catalog`);
+        errors.push(
+          `Flow "${flowName}" references intent "${flow.intent}" which is not declared in the intents catalog. ` +
+            `Add it to "intents" first: { "${flow.intent}": { "description": "What this intent means", "examples": ["example phrase"] } }`
+        );
       }
     }
   }
@@ -159,11 +182,107 @@ export function validateStructuredLogic(
   if (Array.isArray(sl.rules)) {
     for (const rule of sl.rules) {
       if (!rule.intent) {
-        errors.push(`Rule "${rule.id || '(unknown)'}" is missing required field "intent"`);
+        errors.push(`Rule "${rule.id || '(unknown)'}" is missing required field "intent". Every rule must reference an intent from the intents catalog.`);
       } else if (!declaredIntents.has(rule.intent)) {
-        errors.push(`Rule "${rule.id || '(unknown)'}" references intent "${rule.intent}" which is not declared in the intents catalog`);
+        errors.push(
+          `Rule "${rule.id || '(unknown)'}" references intent "${rule.intent}" which is not declared in the intents catalog. ` +
+            `Add it to "intents" first: { "${rule.intent}": { "description": "What this intent means", "examples": ["example phrase"] } }`
+        );
       }
     }
+  }
+
+  // 1b. serviceCatalog validation
+  if (!sl.serviceCatalog || typeof sl.serviceCatalog !== 'object') {
+    errors.push(
+      'serviceCatalog is required. It replaces the old TREATMENTS_LIST placeholder. ' +
+        'Define at least one treatment with: name (required), priceDescription (optional: exact price like "50 EUR", ' +
+        'a range like "From 120 EUR", or an AI directive like "Consult clinic" / "Custom price after evaluation"), ' +
+        'and requiresConsultation (optional: true/false — tells the AI if a prior consultation is needed before booking). ' +
+        'Example: { name: "First visit", priceDescription: "Consult clinic", requiresConsultation: true }',
+    );
+  } else {
+    rejectUnknownKeys(sl.serviceCatalog as Record<string, unknown>, ALLOWED_SERVICE_CATALOG_KEYS, 'serviceCatalog', errors);
+    if (!Array.isArray(sl.serviceCatalog.treatments) || sl.serviceCatalog.treatments.length === 0) {
+      errors.push(
+        'serviceCatalog.treatments must have at least one treatment. ' +
+          'Each treatment needs: name (required), priceDescription (optional: put a price OR a directive), ' +
+          'requiresConsultation (optional: true/false). ' +
+          'Tip: priceDescription accepts exact prices ("50 EUR"), ranges ("From 120 EUR"), or AI directives ' +
+          '("Consult clinic", "Custom price after evaluation"). The AI will repeat this text verbatim when asked.',
+      );
+    } else {
+      sl.serviceCatalog.treatments.forEach((treatment, index) => {
+        rejectUnknownKeys(treatment as unknown as Record<string, unknown>, ALLOWED_CHAT_SERVICE_KEYS, `serviceCatalog.treatments[${index}]`, errors);
+        if (!treatment.name || typeof treatment.name !== 'string' || treatment.name.trim().length === 0) {
+          errors.push(`serviceCatalog.treatments[${index}].name is required and must be a non-empty string`);
+        }
+        if (treatment.priceDescription !== undefined && treatment.priceDescription !== null && (typeof treatment.priceDescription !== 'string' || treatment.priceDescription.trim().length === 0)) {
+          errors.push(
+            `serviceCatalog.treatments[${index}].priceDescription must be a non-empty string. ` +
+              `Tip: You can write an exact price (e.g. "50 EUR"), a range (e.g. "From 120 EUR"), ` +
+              `or an AI directive (e.g. "Consult clinic", "Custom price after evaluation", "Price depends on complexity"). ` +
+              `The AI will use this text verbatim when the patient asks about pricing. ` +
+              `Use requiresConsultation: true if this treatment needs a prior consultation before booking.`,
+          );
+        }
+        if (treatment.requiresConsultation !== undefined && treatment.requiresConsultation !== null && typeof treatment.requiresConsultation !== 'boolean') {
+          errors.push(`serviceCatalog.treatments[${index}].requiresConsultation must be a boolean`);
+        }
+      });
+    }
+    if (sl.serviceCatalog.packs !== undefined && sl.serviceCatalog.packs !== null) {
+      if (!Array.isArray(sl.serviceCatalog.packs)) {
+        errors.push('serviceCatalog.packs must be an array');
+      } else {
+        sl.serviceCatalog.packs.forEach((pack, index) => {
+          rejectUnknownKeys(pack as unknown as Record<string, unknown>, ALLOWED_CHAT_SERVICE_KEYS, `serviceCatalog.packs[${index}]`, errors);
+          if (!pack.name || typeof pack.name !== 'string' || pack.name.trim().length === 0) {
+            errors.push(`serviceCatalog.packs[${index}].name is required and must be a non-empty string`);
+          }
+        });
+      }
+    }
+  }
+
+  // 1c. Prohibit legacy intent price_inquiry
+  if (declaredIntents.has('price_inquiry')) {
+    errors.push(
+      'Intent "price_inquiry" is prohibited. Use "general_inquiry" instead and configure ' +
+        'serviceCatalog.treatments[].priceDescription for each treatment. ' +
+        'Tip: priceDescription is flexible — it can be an exact price ("50 EUR"), a range ("From 120 EUR"), ' +
+        'or an AI directive ("Consult clinic", "Price after evaluation"). ' +
+        'The AI will say exactly what you write. Use requiresConsultation: true if a prior consultation is required.',
+    );
+  }
+
+  // 1d. Required response templates
+  const requiredTemplates = ['information_not_available', 'out_of_scope', 'farewell'];
+  const availableTemplates = new Set(Object.keys(sl.responseTemplates ?? {}));
+  for (const templateKey of requiredTemplates) {
+    if (!availableTemplates.has(templateKey)) {
+      errors.push(
+        `responseTemplates must include template "${templateKey}". ` +
+          `Add: { "${templateKey}": { "text": "Your text here", "mode": "literal" } }`
+      );
+    }
+  }
+
+  // 1e. farewell flow with allowsSilence validation
+  let hasFarewellFlow = false;
+  const flows = sl.toolOrchestration?.flows ?? {};
+  Object.entries(flows).forEach(([flowName, flow]) => {
+    if (flow.intent === 'farewell') {
+      hasFarewellFlow = true;
+      if (flow.allowsSilence !== true) {
+        errors.push(`Flow "${flowName}" (intent: farewell) must have allowsSilence: true`);
+      }
+    } else if (flow.allowsSilence === true) {
+      errors.push(`Flow "${flowName}" has allowsSilence: true. Only the farewell flow may have this flag.`);
+    }
+  });
+  if (!hasFarewellFlow) {
+    errors.push('toolOrchestration.flows must include a flow with intent "farewell" and allowsSilence: true');
   }
 
   // 2. Domain-specific validation
@@ -185,7 +304,6 @@ export function validateStructuredLogic(
   if (typeof sl.capabilities?.protocols !== 'boolean') {
     errors.push('capabilities.protocols must be a boolean');
   }
-
   // 2b. Rules must have description for intent classifier
   if (Array.isArray(sl.rules)) {
     sl.rules.forEach((rule, index) => {
@@ -216,7 +334,6 @@ export function validateStructuredLogic(
   const schedulingTools = new Set(
     ALL_CHAT_TOOL_NAMES.filter((name) => !tasksOnlyToolNames.has(name)),
   );
-  const flows = sl.toolOrchestration?.flows ?? {};
 
   // 2d. Flows using manage_schedule_block_status should have responseTemplate
   Object.entries(flows).forEach(([flowName, flow]) => {
@@ -241,7 +358,11 @@ export function validateStructuredLogic(
       errors,
     );
     if (!cat.suggestions || cat.suggestions.length === 0) {
-      errors.push(`ErrorCategory ${index} (${cat.id}) is missing 'suggestions'.`);
+      errors.push(
+        `ErrorCategory ${index} (${cat.id}) is missing 'suggestions'. ` +
+          `Add actionable suggestions that the LLM can use when this error occurs. ` +
+          `Example: ["Try a different time slot", "Contact clinic staff for assistance"]`
+      );
     }
   });
 
@@ -402,7 +523,34 @@ export function validateStructuredLogic(
     }
   }
 
-  // 4f. systemPromptInstructions structure
+  // 4f. conversationResumption structure
+  if (sl.conversationResumption && typeof sl.conversationResumption === 'object') {
+    const cr = sl.conversationResumption as Record<string, unknown>;
+    rejectUnknownKeys(cr, extractAllowedKeys(StructuredLogicJsonSchema, 'properties.conversationResumption.properties'), 'conversationResumption', errors);
+
+    // instructions is required when conversationResumption is present
+    if (cr.instructions === undefined || cr.instructions === null) {
+      errors.push('conversationResumption.instructions is required');
+    } else if (typeof cr.instructions !== 'object' || Array.isArray(cr.instructions)) {
+      errors.push('conversationResumption.instructions must be an object');
+    } else {
+      const instructions = cr.instructions as Record<string, unknown>;
+      rejectUnknownKeys(
+        instructions,
+        ALLOWED_RESUMPTION_INSTRUCTION_KEYS,
+        'conversationResumption.instructions',
+        errors,
+      );
+      // each instruction value must be string | null | undefined
+      for (const [key, value] of Object.entries(instructions)) {
+        if (value !== undefined && value !== null && typeof value !== 'string') {
+          errors.push(`conversationResumption.instructions.${key} must be a string or null`);
+        }
+      }
+    }
+  }
+
+  // 4g. systemPromptInstructions structure
   if (sl.systemPromptInstructions && typeof sl.systemPromptInstructions === 'object') {
     const spi = sl.systemPromptInstructions as Record<string, unknown>;
     rejectUnknownKeys(
@@ -595,8 +743,12 @@ export function validateStructuredLogic(
 
   // 6a. Flow steps must have unique, sequential step numbers
   Object.entries(flows).forEach(([flowName, flow]) => {
-    if (!Array.isArray(flow.steps) || flow.steps.length === 0) {
-      errors.push(`Flow '${flowName}' must have at least one step`);
+    if (!Array.isArray(flow.steps)) {
+      errors.push(`Flow '${flowName}' steps must be an array`);
+      return;
+    }
+    if (flow.steps.length === 0) {
+      // Conversation-only flows may have empty steps (no tools)
       return;
     }
     const stepNumbers = flow.steps.map((step) => step.step);
@@ -701,10 +853,37 @@ export function validateStructuredLogic(
         if (!validTools.has(tool)) {
           errors.push(`Flow '${flowName}' step ${stepIndex + 1} references invalid tool '${tool}'.`);
         } else if (mode === 'tasks-only' && schedulingTools.has(tool)) {
-          errors.push(`Flow '${flowName}' step ${stepIndex + 1} uses scheduling tool '${tool}' but mode is 'tasks-only'.`);
+          errors.push(
+            `Flow '${flowName}' step ${stepIndex + 1} uses scheduling tool '${tool}' but mode is 'tasks-only'. ` +
+              `Scheduling tools are: ${Array.from(schedulingTools).join(', ')}. ` +
+              `In tasks-only mode, use create_task for human follow-up instead.`
+          );
         }
       });
+      if (Array.isArray(step.required)) {
+        step.required.forEach((req) => {
+          if (ALL_CHAT_TOOL_NAMES.includes(req)) {
+            errors.push(
+              `Flow '${flowName}' step ${stepIndex + 1} has invalid required capability '${req}'. Must be one of: ${Array.from(VALID_CAPABILITIES).join(', ')}. Tool names in 'required' will block execution at runtime.`,
+            );
+          } else if (!VALID_CAPABILITIES.has(req)) {
+            errors.push(
+              `Flow '${flowName}' step ${stepIndex + 1} has unknown required capability '${req}'. Must be one of: ${Array.from(VALID_CAPABILITIES).join(', ')}.`,
+            );
+          }
+        });
+      }
     });
+
+    // 4.3 Validate that flows without tools have response mechanism
+    const hasTools = flow.steps.some((step) => step.tools.length > 0);
+    const hasAllowedTools = (flow.allowedTools || []).length > 0;
+    const hasResponse = !!flow.responseTemplate || flow.allowsSilence === true;
+    if (!hasTools && !hasAllowedTools && !hasResponse) {
+      errors.push(
+        `Flow '${flowName}' has no tools and no response mechanism (responseTemplate or allowsSilence). The bot will not know how to respond.`,
+      );
+    }
   });
 
   // 6d1. general_inquiry must have query_knowledge_base available in allowedTools or steps
@@ -747,16 +926,68 @@ export function validateStructuredLogic(
     );
   }
 
-  // 6d3. scheduling_request rule must have redirectToTask: true in tasks-only mode
+  // 6d3. scheduling_request rules must have redirectToTask: true in tasks-only mode
   if (mode === 'tasks-only') {
     const schedulingRules = (sl.rules ?? []).filter((r) => r.intent === 'scheduling_request');
     for (const rule of schedulingRules) {
       if (rule.action === 'allow' && !rule.redirectToTask) {
         errors.push(
           `Rule "${rule.id || '(unknown)'}" for intent "scheduling_request" must have "redirectToTask: true" in tasks-only mode. ` +
-          `The bot cannot book real appointments in tasks-only mode; it must redirect to a human task.`
+            `The bot cannot book real appointments in tasks-only mode; it must redirect to a human task.`
         );
       }
+    }
+
+  }
+
+  // 6d4. scheduling_request flows in tasks-only must have create_task
+  if (mode === 'tasks-only') {
+    const schedulingFlows = Object.entries(flows).filter(([, flow]) => flow.intent === 'scheduling_request');
+    for (const [flowName, flow] of schedulingFlows) {
+      if (!flowUsesTool(flow, 'create_task')) {
+        errors.push(
+          `Flow "${flowName}" (intent: scheduling_request) must use "create_task" in allowedTools or steps in tasks-only mode. ` +
+            `The bot cannot book real appointments in tasks-only mode; it must create a human task.`
+        );
+      }
+    }
+  }
+
+  // 6d5. appointment_reschedule_request flows in full must have manage_schedule_block_status (cancel step)
+  if (mode === 'full') {
+    const rescheduleFlows = Object.entries(flows).filter(([, flow]) => flow.intent === 'appointment_reschedule_request');
+    for (const [flowName, flow] of rescheduleFlows) {
+      if (!flowUsesTool(flow, 'manage_schedule_block_status')) {
+        errors.push(
+          `Flow "${flowName}" (intent: appointment_reschedule_request) in full mode must use "manage_schedule_block_status" ` +
+            `(action: cancel) in allowedTools or steps before scheduling the new appointment. ` +
+            `This prevents double-booking by canceling the existing appointment first.`
+        );
+      }
+    }
+  }
+
+  // 6d6. appointment_reschedule_request flows in tasks-only must have create_task
+  if (mode === 'tasks-only') {
+    const rescheduleFlows = Object.entries(flows).filter(([, flow]) => flow.intent === 'appointment_reschedule_request');
+    for (const [flowName, flow] of rescheduleFlows) {
+      if (!flowUsesTool(flow, 'create_task')) {
+        errors.push(
+          `Flow "${flowName}" (intent: appointment_reschedule_request) must use "create_task" in allowedTools or steps in tasks-only mode. ` +
+            `The bot cannot reschedule real appointments directly; it must create a human task for follow-up.`
+        );
+      }
+    }
+  }
+
+  // 6d7. appointment_cancellation flows must have responseTemplate
+  const cancellationFlows = Object.entries(flows).filter(([, flow]) => flow.intent === 'appointment_cancellation');
+  for (const [flowName, flow] of cancellationFlows) {
+    if (!flow.responseTemplate) {
+      errors.push(
+        `Flow "${flowName}" (intent: appointment_cancellation) must have a "responseTemplate". ` +
+          `The patient needs confirmation that the cancellation was processed.`
+      );
     }
   }
 
@@ -772,7 +1003,11 @@ export function validateStructuredLogic(
   (sl.rules ?? []).forEach((rule: BusinessRule, index: number) => {
     if (rule.action === 'block') {
       if (!rule.message || rule.message.trim().length === 0) {
-        errors.push(`Rule ${index} (${rule.id || rule.intent}) has action='block' and must include a 'message' for the patient.`);
+        errors.push(
+          `Rule ${index} (${rule.id || rule.intent}) has action='block' and must include a 'message' for the patient. ` +
+            `The 'message' field is what the bot tells the patient when blocking this request. ` +
+            `Example: "I'm unable to process this request. Please contact the clinic directly."`
+        );
       }
     }
   });
@@ -786,7 +1021,7 @@ export function validateStructuredLogic(
 export type GapSeverity = 'high' | 'medium' | 'low';
 
 export type LogicGap = {
-  type: 'missing_rules' | 'missing_flows' | 'missing_templates' | 'missing_protocols' | 'missing_error_categories' | 'missing_rule_description' | 'missing_response_template' | 'missing_error_suggestions' | 'missing_capability' | 'unresolved_placeholder';
+  type: 'missing_rules' | 'missing_flows' | 'missing_templates' | 'missing_protocols' | 'missing_error_categories' | 'missing_rule_description' | 'missing_response_template' | 'missing_error_suggestions' | 'missing_capability' | 'unresolved_placeholder' | 'missing_service_catalog' | 'missing_service_catalog_treatments' | 'missing_farewell_flow';
   description: string;
   severity: GapSeverity;
   affectedFields?: string[];
@@ -1023,7 +1258,7 @@ const RUNTIME_PLACEHOLDERS = new Set([
  * Placeholders resolved from `identity` fields in the JSON itself (filled in
  * by the advisor through the builder), not from runtime Site/Clinic data.
  * There is intentionally NO placeholder for price: prices are per-treatment
- * and are shown via TREATMENTS_LIST or the `price_unknown` response template.
+ * and are configured in `serviceCatalog.treatments[].priceDescription`.
  */
 const IDENTITY_PLACEHOLDERS: Record<string, 'website' | 'openingHours'> = {
   WEB: 'website',
@@ -1272,7 +1507,45 @@ export function detectGaps(logic: StructuredLogic): LogicGap[] {
     });
   }
 
-  // 9. Unresolved or unknown placeholders in identity/responseTemplates/faq/protocols
+  // 9. serviceCatalog gaps
+  if (!logic.serviceCatalog || typeof logic.serviceCatalog !== 'object') {
+    gaps.push({
+      type: 'missing_service_catalog',
+      description:
+        'serviceCatalog is required. It replaces the old TREATMENTS_LIST placeholder. ' +
+        'Define at least one treatment with: name (required), priceDescription (optional: exact price like "50 EUR", ' +
+        'a range like "From 120 EUR", or an AI directive like "Consult clinic" / "Custom price after evaluation"), ' +
+        'and requiresConsultation (optional: true/false — tells the AI if a prior consultation is needed before booking).',
+      severity: 'high',
+      affectedFields: ['serviceCatalog'],
+    });
+  } else if (!Array.isArray(logic.serviceCatalog.treatments) || logic.serviceCatalog.treatments.length === 0) {
+    gaps.push({
+      type: 'missing_service_catalog_treatments',
+      description:
+        'serviceCatalog.treatments must have at least one treatment. ' +
+        'Tip: priceDescription accepts exact prices ("50 EUR"), ranges ("From 120 EUR"), or AI directives ' +
+        '("Consult clinic", "Custom price after evaluation"). The AI will repeat this text verbatim when asked. ' +
+        'Use requiresConsultation: true if a prior consultation is required before booking.',
+      severity: 'high',
+      affectedFields: ['serviceCatalog.treatments'],
+    });
+  }
+
+  // 10. farewell flow presence
+  const hasFarewellFlow = Object.values(logic.toolOrchestration?.flows ?? {}).some(
+    (flow) => flow.intent === 'farewell'
+  );
+  if (!hasFarewellFlow) {
+    gaps.push({
+      type: 'missing_farewell_flow',
+      description: 'Missing farewell flow. Required for graceful conversation end and silence control.',
+      severity: 'high',
+      affectedFields: ['toolOrchestration.flows'],
+    });
+  }
+
+  // 11. Unresolved or unknown placeholders in identity/responseTemplates/faq/protocols
   const placeholderIssues = detectUnresolvedPlaceholders(logic);
   if (placeholderIssues.length > 0) {
     gaps.push({
@@ -1311,6 +1584,19 @@ export function generateFixSuggestions(gaps: LogicGap[]): string[] {
         return `Add descriptions to rules at indices: ${gap.affectedIndices?.join(', ')}. Descriptions must define the patient's intent in natural language, not keyword lists.`;
       case 'missing_capability':
         return `Add required boolean capability flags: ${gap.affectedFields?.join(', ')}.`;
+      case 'missing_service_catalog':
+        return 'Add serviceCatalog with at least one treatment. ' +
+          'Each treatment needs: name (required), priceDescription (optional: exact price, range, or AI directive), ' +
+          'requiresConsultation (optional: true/false). ' +
+          'Example: { name: "First visit", priceDescription: "Consult clinic", requiresConsultation: true }';
+      case 'missing_service_catalog_treatments':
+        return 'Add at least one treatment to serviceCatalog.treatments. ' +
+          'Tip: priceDescription accepts exact prices ("50 EUR"), ranges ("From 120 EUR"), or AI directives ' +
+          '("Consult clinic", "Custom price after evaluation"). The AI will repeat this text verbatim when asked.';
+      case 'missing_farewell_flow':
+        return 'Add a farewell flow with intent "farewell" and allowsSilence: true. ' +
+          'This is required for graceful conversation endings (e.g., when the patient says "thanks" or "bye"). ' +
+          'Example: { intent: "farewell", description: "Say goodbye", steps: [{ step: 1, tools: [], parallel: false }], responseTemplate: "farewell", allowsSilence: true }';
       case 'unresolved_placeholder':
         return `Ask the advisor for the real values needed at: ${gap.affectedFields?.join(', ')}. ` +
           `Replace unknown placeholders with actual text, or fill in identity.website/identity.openingHours ` +
@@ -1326,18 +1612,17 @@ export function generateFixSuggestions(gaps: LogicGap[]): string[] {
  * Returns 0-100 score and list of gaps.
  *
  * Scoring breakdown:
- * - 40 points: required sections present (4 points per section).
+ * - 44 points: required sections present (4 points per section).
  * - 10 points: at least 1 rule with description.
  * - 10 points: at least 1 flow.
  * - 10 points: at least 1 flow with responseTemplate.
  * - 10 points: at least 1 protocol.
  * - 10 points: at least 1 errorCategory.
  *
- * Total max = 90. The previous 0-100 scale was unreachable because the
- * hardcoded 40-point base plus the 5 bonus categories only add up to 90.
+ * Total max = 94.
  */
 export function generateQualityScore(logic: StructuredLogic): QualityScore {
-  const max = 90;
+  const max = 94;
   let score = 0;
   const gaps: string[] = [];
 
@@ -1353,6 +1638,7 @@ export function generateQualityScore(logic: StructuredLogic): QualityScore {
     { key: 'protocols', present: !!logic.protocols && typeof logic.protocols === 'object' && !Array.isArray(logic.protocols) },
     { key: 'errorCategories', present: Array.isArray(logic.errorCategories) },
     { key: 'systemPromptInstructions', present: !!logic.systemPromptInstructions && typeof logic.systemPromptInstructions === 'object' && !Array.isArray(logic.systemPromptInstructions) && Array.isArray(logic.systemPromptInstructions.notesForAdvisor) && Array.isArray(logic.systemPromptInstructions.knownGaps) && Array.isArray(logic.systemPromptInstructions.recommendedNextSteps) },
+    { key: 'serviceCatalog', present: !!logic.serviceCatalog && typeof logic.serviceCatalog === 'object' && Array.isArray(logic.serviceCatalog.treatments) && logic.serviceCatalog.treatments.length > 0 },
   ];
 
   const missingRequiredSections = requiredSections.filter((s) => !s.present).map((s) => s.key);

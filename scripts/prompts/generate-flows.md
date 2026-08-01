@@ -111,7 +111,7 @@ Cualquier solicitud de agendamiento:
 ## Anti-patrones a Evitar
 
 ❌ **Tasks-only con scheduling tools**: `check_availability` o `schedule_block` en modo tasks-only → ERROR CRÍTICO
-❌ **Flow sin steps**: Cada flow debe tener al menos 1 step
+❌ **Flow sin steps ni responseTemplate**: Un flow puede tener `steps: []` si tiene `responseTemplate` o `allowsSilence` (ej: inquiry flows o farewell). Si no tiene ninguno de los dos, el bot no sabrá cómo responder.
 ❌ **Step sin tools array**: Siempre debe ser array, incluso vacío `[]` para flows informativos
 ❌ **schedule_block sin resolve_patient previo**: Violación de dependencia
 ❌ **responseTemplate en flow informativo**: No es necesario, el LLM responde naturalmente
