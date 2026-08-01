@@ -9,7 +9,7 @@
 ## Reglas Obligatorias
 
 ### 1. Baseline Intents (SIEMPRE presentes)
-Crea exactamente estos 6 intents como mínimo:
+Crea exactamente estos 12 intents canónicos como mínimo (copia los del template base):
 
 | ID | Descripción |
 |---|---|
@@ -19,11 +19,12 @@ Crea exactamente estos 6 intents como mínimo:
 | `scheduling_request` | El paciente quiere reservar una NUEVA cita o consultar disponibilidad. |
 | `general_inquiry` | Preguntas generales sobre la clínica: horarios, ubicación, contacto, precios fijos, servicios. |
 | `human_follow_up` | Solicitudes que requieren seguimiento humano y no encajan en los intents anteriores. |
-
-### 2. Intents adicionales por modo
-**Si `mode === 'full'`:**
-- `appointment_reschedule_request`: El paciente quiere MOVER una cita ya agendada a otra fecha u hora.
-- `patient_running_late`: El paciente avisa que llegará tarde a una cita confirmada.
+| `farewell` | El paciente se despide, agradece o cierra la conversación de forma amable. |
+| `appointment_reschedule_request` | El paciente quiere MOVER una cita ya agendada a otra fecha u hora. |
+| `patient_running_late` | El paciente avisa que llegará tarde a una cita confirmada. |
+| `appointment_reschedule_inquiry` | El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía. |
+| `appointment_cancellation_inquiry` | El paciente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente. |
+| `keep_appointment` | El paciente indica que quiere mantener la cita tal como está. |
 
 ### 3. Intents por servicio
 Por cada servicio/tratamiento mencionado en `# Tratamientos y Servicios Disponibles`:
@@ -83,8 +84,7 @@ Incluye 2-3 ejemplos realistas por intent. Los ejemplos son frases que un pacien
 ```
 
 ## Checklist antes de entregar
-- [ ] 6 baseline intents presentes con descriptions semánticas
-- [ ] Si full mode: appointment_reschedule_request y patient_running_late incluidos
+- [ ] 12 baseline intents presentes con descriptions semánticas
 - [ ] Un intent por cada servicio mencionado en los archivos de input
 - [ ] Descripción menciona profesional asignado si existe
 - [ ] Descripción menciona restricciones relevantes (señal, valoración obligatoria, etc.)

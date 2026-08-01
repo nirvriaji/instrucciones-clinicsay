@@ -19,6 +19,15 @@ Lee los adjetivos de tone de la identidad y ajusta los mensajes:
 - Si tone es "profesional, breve" → "Cita confirmada. Te esperamos."
 
 ### 3. Templates obligatorios (mínimo)
+El backend REQUIERE estos 3 templates obligatorios:
+
+| Template Key | Cuándo usar | Ejemplo |
+|---|---|---|
+| `information_not_available` | El bot no tiene la respuesta en contexto | "No tengo información sobre eso en este momento. ¿Quieres que lo consulte con el equipo?" |
+| `out_of_scope` | El paciente pregunta algo fuera de la clínica | "Soy el asistente de {{CLINIC_NAME}} y solo puedo ayudarte con nuestros servicios, tratamientos y citas. ¿En qué puedo ayudarte?" |
+| `farewell` | Despedida de la conversación | "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo más, estamos aquí." |
+
+Además, crea templates para cada flow que use `responseTemplate`:
 
 | Template Key | Cuándo usar | Ejemplo Full | Ejemplo Tasks-Only |
 |---|---|---|---|
@@ -87,6 +96,7 @@ Si un template incluye variables, usa formato claro:
 ```
 
 ## Checklist antes de entregar
+- [ ] Templates requeridos presentes: `information_not_available`, `out_of_scope`, `farewell`
 - [ ] Un template por cada `responseTemplate` usado en flows
 - [ ] Texto refleja el tono de la clínica (lee identity.tone)
 - [ ] Tasks-only NO promete agendamiento directo

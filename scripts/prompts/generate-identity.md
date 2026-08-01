@@ -37,7 +37,17 @@
 8. **farewellMessage**: `null` si no aparece en los archivos de input.
    - Nota: `welcomeMessage` ya no existe en `identity`. El saludo inicial se configura en `responseTemplates.greeting`.
 
-9. **socialLinks**: Si hay redes sociales, DEBE ser array de objetos:
+9. **styleRules.timeGreetingRanges**: OBLIGATORIO. 3 rangos exactos que cubran 24h:
+   ```json
+   [
+     { "label": "dias", "start": "06:00", "end": "13:59", "greeting": "buenos días" },
+     { "label": "tardes", "start": "14:00", "end": "21:00", "greeting": "buenas tardes" },
+     { "label": "noches", "start": "21:01", "end": "05:59", "greeting": "buenas noches" }
+   ]
+   ```
+   - Estos rangos se usan para el saludo contextual por hora del día.
+
+10. **socialLinks**: Si hay redes sociales, DEBE ser array de objetos:
    ```json
    [
      {"platform": "instagram", "url": "@ECOBABY_5D"},
@@ -93,4 +103,5 @@
 - [ ] Datos de contacto (address, phone, email, website) solo si aparecen en los archivos de input
 - [ ] `tone` refleja los adjetivos reales de la clínica
 - [ ] `escalationMessage` apropiado para el modo (full/tasks-only)
+- [ ] `styleRules.timeGreetingRanges` configurado con 3 rangos: días (06:00-13:59), tardes (14:00-21:00), noches (21:01-05:59)
 - [ ] Campos faltantes son `null`, no strings vacíos ni inventados
