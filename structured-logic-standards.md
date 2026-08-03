@@ -167,6 +167,9 @@ type ToolFlow = {
   tools: string[];            // Tool names to execute in this step
   parallel: boolean;          // Execute in parallel?
   required?: string[];         // Capability flags required for this step (e.g., ["hasResolvedPatient", "hasSelectedSlot"]). EMPTY [] if none. NEVER tool names — a tool name here will SILENTLY block execution.
+                               // ANTI-CIRCULAR INVARIANT (technical, blocking): a step must NEVER require a capability
+                               // established by a tool in the SAME step (e.g., requiring "hasResolvedTreatment" in a step
+                               // containing resolve_treatment). 'required' only consumes what EARLIER steps established.
   note?: string;              // Explanatory note for the LLM
   // NOTE: condition is NOT supported by the backend schema. Use 'note' for conditional guidance.
 }

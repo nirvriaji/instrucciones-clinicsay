@@ -37,6 +37,23 @@ export const VALID_CAPABILITIES = new Set([
 ]);
 
 /**
+ * Tools that ESTABLISH each capability at runtime (technical invariant).
+ * A step may only REQUIRE a capability established by EARLIER steps — never
+ * by a tool in the same step, or the requirement can never be satisfied
+ * (runtime error: step_requirements_failed).
+ */
+export const CAPABILITY_ESTABLISHERS: Record<string, string[]> = {
+  hasResolvedTreatment: ['resolve_treatment'],
+  hasResolvedPatient: ['resolve_patient', 'lookup_patient'],
+  hasResolvedProfessional: ['resolve_professional'],
+  hasShownSlots: ['check_availability'],
+  hasSelectedSlot: [], // established by the patient choosing a slot, not by a tool
+  hasCreatedAppointment: ['schedule_block'],
+  hasCreatedTask: ['create_task'],
+  hasResolvedAvailabilityQuery: ['resolve_availability_query'],
+};
+
+/**
  * Runtime placeholders that are always resolvable from the per-turn context
  * (Site/Clinic record). Kept in sync with `PLACEHOLDER_MAP` in
  * `src/application/chat/build-system-prompt-from-structured-logic.ts`.

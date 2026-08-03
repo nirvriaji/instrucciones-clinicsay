@@ -54,11 +54,13 @@ allowedTools: ["query_knowledge_base"]
 **FULL MODE (patrón canónico — ver `_templates/base-full.json`):**
 ```
 Nuevo paciente (new_patient_booking, selection.excludedCapabilities: ["hasResolvedPatient"]):
-  Step 1: resolve_treatment + resolve_availability_query (paralelos)
+  Step 1: resolve_treatment + resolve_availability_query (paralelos, required: [])
   Step 2: resolve_professional (solo si el paciente nombra un doctor)
-  Step 3: check_availability (con treatmentId + fechas)
-  Step 4: resolve_patient + schedule_block (SOLO cuando el paciente elige slot)
+  Step 3: check_availability (con treatmentId + fechas, required: ["hasResolvedTreatment"])
+  Step 4: resolve_patient (SOLO cuando el paciente elige slot, required: [])
+  Step 5: schedule_block (required: ["hasResolvedPatient"])
   ⚠️ El paciente se identifica AL FINAL, no al principio. NO pedir datos personales antes de mostrar horarios.
+  ⚠️ INVARIANTE ANTI-CIRCULAR: 'required' solo consume capabilities establecidas por steps ANTERIORES; un step NUNCA requiere lo que establece su propia tool (el validador lo rechaza como error bloqueante).
 
 Paciente existente (existing_patient_rebooking, selection.requiredCapabilities: ["hasResolvedPatient"]):
   Step 1: lookup_patient + resolve_treatment (paralelos)
@@ -77,7 +79,7 @@ Cualquier solicitud de agendamiento:
 - `step`: número secuencial (1, 2, 3...)
 - `tools`: array de strings (tool names)
 - `parallel`: `true` solo si las tools no dependen entre sí
-- `required`: array de **capability flags** que deben estar presentes para ejecutar este step. NUNCA tool names. Flags válidas: `hasResolvedTreatment`, `hasResolvedPatient`, `hasResolvedProfessional`, `hasShownSlots`, `hasSelectedSlot`, `hasCreatedAppointment`, `hasCreatedTask`, `hasResolvedAvailabilityQuery`. Ejemplo: `["hasResolvedPatient"]` en el step final de booking. Si no hay requirements, usar `[]`.
+- `required`: array de **capability flags** que deben estar presentes para ejecutar este step. NUNCA tool names. Flags válidas: `hasResolvedTreatment`, `hasResolvedPatient`, `hasResolvedProfessional`, `hasShownSlots`, `hasSelectedSlot`, `hasCreatedAppointment`, `hasCreatedTask`, `hasResolvedAvailabilityQuery`. Ejemplo: `["hasResolvedPatient"]` en el step final de booking. Si no hay requirements, usar `[]`. **INVARIANTE TÉCNICO (bloqueante):** la flag solo puede CONSUMIRSE; debe haber sido establecida por tools de steps ANTERIORES (`resolve_treatment`→`hasResolvedTreatment`, `resolve_patient`/`lookup_patient`→`hasResolvedPatient`, `resolve_professional`→`hasResolvedProfessional`, `check_availability`→`hasShownSlots`, `schedule_block`→`hasCreatedAppointment`, `create_task`→`hasCreatedTask`, `resolve_availability_query`→`hasResolvedAvailabilityQuery`). Un step que requiere lo que su propia tool establece es una dependencia circular y bloquea el flow en runtime.
 - `note`: explicación para el LLM de qué hacer en este step
 - **NO usar `condition` dentro de steps.** El schema del backend solo permite: `step`, `tools`, `parallel`, `required`, `note`. Si un step tiene una condición (ej: "solo si tiene múltiples citas"), escríbela en el campo `note`.
 
@@ -95,7 +97,7 @@ Cualquier solicitud de agendamiento:
 - **Dependencias críticas (patrón canónico):**
   - `check_availability` DEBE ir antes de `schedule_block`
   - `resolve_availability_query` DEBE ir antes de `check_availability`
-  - `resolve_patient` se ejecuta **junto a** `schedule_block` en el último step (el paciente se identifica al elegir slot, no antes). En bookings de paciente nuevo NO va en step 1.
+  - `resolve_patient` va en su **propio step anterior** a `schedule_block` (el paciente se identifica al elegir slot, no antes; `schedule_block` declara `required: ["hasResolvedPatient"]`). En bookings de paciente nuevo NO va en step 1.
 
 ### 5. responseTemplate
 - **OBLIGATORIO** en flows que usan `manage_schedule_block_status`

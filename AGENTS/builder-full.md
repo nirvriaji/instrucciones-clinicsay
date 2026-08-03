@@ -115,7 +115,7 @@ Las 12 tools disponibles en este modo son:
   2. Datos incompletos que impiden agendar.
   3. Limitaciones técnicas reales del bot.
 - `check_availability` debe ejecutarse antes de `schedule_block`.
-- En el patrón canónico de booking, el paciente se identifica AL FINAL: `resolve_patient` comparte el último step con `schedule_block` (solo cuando el paciente elige slot). NO pedir datos personales antes de mostrar horarios.
+- En el patrón canónico de booking (5 steps), el paciente se identifica AL FINAL: `resolve_patient` va en su propio step (step 4, sin `required`) y `schedule_block` en el último (step 5, `required: ["hasResolvedPatient"]`). NO pedir datos personales antes de mostrar horarios. INVARIANTE TÉCNICO: un step NUNCA puede requerir una capability que establece una tool del MISMO step (dependencia circular → bloqueo total en runtime; el validador lo rechaza como error bloqueante).
 
 ---
 
@@ -353,7 +353,7 @@ Sintaxis del draft: válida
    - Seguir exactamente las capabilities del schema y `_templates/base-full.json`; no añadir `scheduling` por suposición si el template canónico no lo declara.
    - Tools permitidas por backend, schema y registry: `check_availability`, `resolve_availability_query`, `schedule_block`, `manage_schedule_block_status`, `manage_all_schedule_blocks_for_date`, `create_task`, `resolve_patient`, `resolve_professional`, `resolve_treatment`, `lookup_patient`, `query_protocol`, `query_knowledge_base`.
    - `query_knowledge_base` busca semánticamente en `protocols`, `faq`, `responseTemplates` y `rules`. Debe estar disponible en flows informativos y usarse solo cuando la respuesta no esté ya en contexto. No sustituye tools de pacientes, scheduling o tareas.
-   - Flows de booking (patrón canónico): entidades (`resolve_treatment`/`resolve_professional`/`resolve_availability_query`) → `check_availability` → `resolve_patient` + `schedule_block` juntos en el último step. Paciente nuevo: `selection.excludedCapabilities: ["hasResolvedPatient"]`; paciente existente: `selection.requiredCapabilities: ["hasResolvedPatient"]` + `lookup_patient` en step 1.
+   - Flows de booking (patrón canónico de 5 steps): entidades (`resolve_treatment`/`resolve_professional`/`resolve_availability_query`) → `check_availability` (`required: ["hasResolvedTreatment"]`) → `resolve_patient` (sin required) → `schedule_block` (`required: ["hasResolvedPatient"]`). Paciente nuevo: `selection.excludedCapabilities: ["hasResolvedPatient"]`; paciente existente: `selection.requiredCapabilities: ["hasResolvedPatient"]` + `lookup_patient` en step 1.
 5. **NUNCA pongas tool names en `required`.** Usar `required: []`, salvo que el schema y capabilities canónicos definan explícitamente una capability válida. Los tool names van exclusivamente en `tools` y `allowedTools`.
 6. **VALIDACIÓN ESTRICTA DE SCHEMA (NON-NEGOTIABLE):** El backend rechaza CUALQUIER propiedad que no esté en el schema autorizado (additionalProperties: false en TODOS los niveles). Si el validador local no detecta una propiedad desconocida, DEBES corregir el validador local antes de seguir. NUNCA asumas que el JSON es válido solo porque pasó el validador local si el validador local no es estricto. Propiedades comunes que se cuelan y rompen el backend: `products`, `shipping`, `id` en protocols (debe ser `name`), `steps` en protocols (debe ser `sections`), `condition` en steps (deprecated, debe ir en `note`).
 7. **El asesor crea la estructura.** Si no hay archivos en `sedes/<nombre>/input/`, instruir al asesor que cree las carpetas y coloque ahí sus notas. Tú NO debes crear directorios ni archivos automáticamente.
@@ -378,6 +378,7 @@ Después de generar TODAS las secciones del JSON y antes de declararlo completo,
 - [ ] Todos los baseline intents están presentes (12 del template): appointment_confirmation, appointment_cancellation, appointment_inquiry, scheduling_request, general_inquiry, human_follow_up, farewell, appointment_reschedule_request, patient_running_late, appointment_reschedule_inquiry, appointment_cancellation_inquiry, keep_appointment.
 - [ ] Cada intent del catálogo tiene al menos 1 rule en `rules`.
 - [ ] Ningún step tiene tool names en `required` (debe ser `[]` o capability flags).
+- [ ] Ningún step requiere una capability que establece una tool del MISMO step (anti-circular: `resolve_treatment`/`resolve_patient`/`lookup_patient`/`resolve_professional`/`check_availability`/`schedule_block`/`create_task`/`resolve_availability_query` establecen; `required` solo consume lo de steps ANTERIORES).
 
 **Si falla algún item:** STOP. Corregir el draft. Revalidar sintaxis. Revalidar con `validate-and-save.js`. Solo entonces declarar éxito.
 
@@ -565,10 +566,11 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
     "excludedCapabilities": ["hasResolvedPatient"]
   },
   "steps": [
-    { "step": 1, "tools": ["resolve_treatment", "resolve_availability_query"], "parallel": true, "required": ["hasResolvedTreatment"], "note": "Identificar tratamiento y traducir fechas. NO pedir datos del paciente todavia." },
+    { "step": 1, "tools": ["resolve_treatment", "resolve_availability_query"], "parallel": true, "required": [], "note": "Identificar tratamiento y traducir fechas. NO pedir datos del paciente todavia." },
     { "step": 2, "tools": ["resolve_professional"], "parallel": false, "note": "Si el paciente nombra un doctor, resolverlo (condicion: patient_mentions_doctor_name)" },
-    { "step": 3, "tools": ["check_availability"], "parallel": false, "note": "Buscar horarios con treatmentId + fechas (condicion: treatment_resolved)" },
-    { "step": 4, "tools": ["resolve_patient", "schedule_block"], "parallel": false, "required": ["hasResolvedPatient"], "note": "Solo cuando el paciente elige un slot: resolver identidad y agendar (condicion: slot_selected)" }
+    { "step": 3, "tools": ["check_availability"], "parallel": false, "required": ["hasResolvedTreatment"], "note": "Buscar horarios con treatmentId + fechas (condicion: treatment_resolved)" },
+    { "step": 4, "tools": ["resolve_patient"], "parallel": false, "required": [], "note": "Solo cuando el paciente elige un slot: resolver identidad (condicion: slot_selected)" },
+    { "step": 5, "tools": ["schedule_block"], "parallel": false, "required": ["hasResolvedPatient"], "note": "Agendar solo cuando el paciente elige un slot y la identidad esta resuelta (condicion: patient_resolved && slot_selected)" }
   ]
 }
 ```

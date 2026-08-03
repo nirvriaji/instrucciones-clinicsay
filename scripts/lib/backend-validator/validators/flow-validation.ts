@@ -9,7 +9,29 @@ import type { BusinessRule, StructuredLogic, StructuredLogicChatMode, ToolFlow }
 import { StructuredLogicJsonSchema } from '../structured-logic-json-schema';
 import { extractAllowedKeys } from '../schema-key-extractor';
 import { ALL_CHAT_TOOL_NAMES } from '../structured-logic-json-schema';
-import { TURN_START_CAPABILITIES, TURN_START_CAPABILITY_SET, VALID_CAPABILITIES } from '../constants';
+import { TURN_START_CAPABILITIES, TURN_START_CAPABILITY_SET, VALID_CAPABILITIES, CAPABILITY_ESTABLISHERS } from '../constants';
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) => [i, ...Array<number>(n).fill(0)]);
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+  }
+  return dp[m][n];
+}
+
+function closestValidCapability(name: string): string | null {
+  let best: string | null = null;
+  let bestDist = Infinity;
+  for (const cap of VALID_CAPABILITIES) {
+    const dist = levenshtein(String(name), cap);
+    if (dist < bestDist) { bestDist = dist; best = cap; }
+  }
+  return bestDist <= 4 ? best : null;
+}
 import { ALL_CHAT_TOOLS_TASKS_ONLY } from '../tool-definitions-tasks-only';
 
 const ALLOWED_FLOW_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.toolOrchestration.properties.flows.additionalProperties.properties');
@@ -170,11 +192,30 @@ export function validateFlowsAndTools(
               `Flow '${flowName}' step ${stepIndex + 1} has invalid required capability '${req}'. Must be one of: ${Array.from(VALID_CAPABILITIES).join(', ')}. Tool names in 'required' will block execution at runtime.`,
             );
           } else if (!VALID_CAPABILITIES.has(req)) {
+            const suggestion = closestValidCapability(req);
             errors.push(
-              `Flow '${flowName}' step ${stepIndex + 1} has unknown required capability '${req}'. Must be one of: ${Array.from(VALID_CAPABILITIES).join(', ')}.`,
+              `Flow '${flowName}' step ${stepIndex + 1} has unknown required capability '${req}'. Must be one of: ${Array.from(VALID_CAPABILITIES).join(', ')}.${suggestion ? ` Did you mean '${suggestion}'?` : ''}`,
             );
           }
         });
+
+        // Anti-circular requirement (technical invariant — always a bug, blocking).
+        // A step may only REQUIRE capabilities established by EARLIER steps; if a tool
+        // in the SAME step establishes the required capability, the tool can never run
+        // at runtime (step_requirements_failed) and the flow deadlocks.
+        for (const req of step.required) {
+          const establishers = CAPABILITY_ESTABLISHERS[req] ?? [];
+          const circularTools = step.tools.filter((tool) => establishers.includes(tool));
+          if (circularTools.length > 0) {
+            errors.push(
+              `Flow '${flowName}' step ${stepIndex + 1} has a circular requirement: it requires '${req}', but ${circularTools
+                .map((t) => `'${t}'`)
+                .join(', ')} — the tool that ESTABLISHES that capability — is in the same step, so it can never run at runtime (step_requirements_failed). ` +
+                `FIX: 'required' must list what must be true BEFORE the step runs, established by EARLIER steps. Remove it from this step and declare it where the capability is CONSUMED ` +
+                `(e.g., check_availability requires 'hasResolvedTreatment' from a previous resolve_treatment step; schedule_block requires 'hasResolvedPatient' from a previous resolve_patient step).`,
+            );
+          }
+        }
       }
     });
 

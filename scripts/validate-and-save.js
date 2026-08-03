@@ -577,6 +577,71 @@ function validateSchema(data, errors) {
   }
 }
 
+// ── Anti-circular step requirements (technical invariant — always a bug, blocking) ──
+const VALID_STEP_CAPABILITIES = new Set([
+  'hasResolvedTreatment', 'hasResolvedPatient', 'hasResolvedProfessional',
+  'hasShownSlots', 'hasSelectedSlot', 'hasCreatedAppointment', 'hasCreatedTask',
+  'hasResolvedAvailabilityQuery',
+]);
+const CAPABILITY_ESTABLISHERS = {
+  hasResolvedTreatment: ['resolve_treatment'],
+  hasResolvedPatient: ['resolve_patient', 'lookup_patient'],
+  hasResolvedProfessional: ['resolve_professional'],
+  hasShownSlots: ['check_availability'],
+  hasSelectedSlot: [],
+  hasCreatedAppointment: ['schedule_block'],
+  hasCreatedTask: ['create_task'],
+  hasResolvedAvailabilityQuery: ['resolve_availability_query'],
+};
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+  }
+  return dp[m][n];
+}
+
+function closestCapability(name) {
+  let best = null, bestDist = Infinity;
+  for (const cap of VALID_STEP_CAPABILITIES) {
+    const dist = levenshtein(String(name), cap);
+    if (dist < bestDist) { bestDist = dist; best = cap; }
+  }
+  return bestDist <= 4 ? best : null;
+}
+
+function validateStepRequirements(data, errors) {
+  const flows = data.toolOrchestration?.flows || {};
+  for (const [flowName, flow] of Object.entries(flows)) {
+    (flow.steps || []).forEach((step, stepIndex) => {
+      if (!Array.isArray(step.required)) return;
+      for (const req of step.required) {
+        if (!VALID_STEP_CAPABILITIES.has(req)) {
+          const suggestion = closestCapability(req);
+          errors.push({
+            category: 'cross-ref',
+            message: `Flow '${flowName}' step ${stepIndex + 1} requires unknown capability '${req}'. Known: ${Array.from(VALID_STEP_CAPABILITIES).join(', ')}.${suggestion ? ` Did you mean '${suggestion}'?` : ''}`,
+          });
+          continue;
+        }
+        const establishers = CAPABILITY_ESTABLISHERS[req] || [];
+        const circularTools = (step.tools || []).filter((t) => establishers.includes(t));
+        if (circularTools.length > 0) {
+          errors.push({
+            category: 'cross-ref',
+            message: `Flow '${flowName}' step ${stepIndex + 1} has a circular requirement: it requires '${req}', but ${circularTools.map((t) => `'${t}'`).join(', ')} — the tool that ESTABLISHES that capability — is in the same step, so it can never run at runtime (step_requirements_failed). FIX: 'required' must list what must be true BEFORE the step runs, established by EARLIER steps. Remove it from this step and declare it where the capability is CONSUMED (e.g., check_availability requires 'hasResolvedTreatment' from a previous resolve_treatment step; schedule_block requires 'hasResolvedPatient' from a previous resolve_patient step).`,
+          });
+        }
+      }
+    });
+  }
+}
+
 function validateCrossReferences(data, errors) {
   const intentIds = new Set(Object.keys(data.intents || {}));
 
@@ -614,6 +679,9 @@ function validateCrossReferences(data, errors) {
       }
     }
   }
+
+  // Anti-circular + known-capability checks on step requirements
+  validateStepRequirements(data, errors);
 }
 
 function main() {

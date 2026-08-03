@@ -316,9 +316,6 @@
               "resolve_availability_query"
             ],
             "parallel": true,
-            "required": [
-              "hasResolvedTreatment"
-            ],
             "note": "Identificar tratamiento y traducir fechas. NO pedir datos del paciente todavia."
           },
           {
@@ -335,19 +332,29 @@
               "check_availability"
             ],
             "parallel": false,
-            "note": "Buscar horarios con treatmentId + fechas (condicion: treatment_resolved)"
+            "note": "Buscar horarios con treatmentId + fechas (condicion: treatment_resolved)",
+            "required": [
+              "hasResolvedTreatment"
+            ]
           },
           {
             "step": 4,
             "tools": [
-              "resolve_patient",
+              "resolve_patient"
+            ],
+            "parallel": false,
+            "note": "Solo cuando el paciente elige un slot: resolver identidad (condicion: slot_selected)"
+          },
+          {
+            "step": 5,
+            "tools": [
               "schedule_block"
             ],
             "parallel": false,
             "required": [
               "hasResolvedPatient"
             ],
-            "note": "Solo cuando el paciente elige un slot: resolver identidad y agendar (condicion: slot_selected)"
+            "note": "Agendar solo cuando el paciente elige un slot y la identidad esta resuelta (condicion: patient_resolved && slot_selected)"
           }
         ]
       },
