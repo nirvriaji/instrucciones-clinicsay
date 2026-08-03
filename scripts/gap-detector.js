@@ -2,8 +2,8 @@
 /**
  * gap-detector.js
  *
- * Compara todos los archivos de sedes/<nombre>/input/ (.md y .json) contra structured-logic.json
- * Detecta inconsistencias, información faltante, y genera gaps.json
+ * Compara todos los archivos de sedes/<nombre>/input/ (.md y .json) contra structured-logic.<mode>.json
+ * Detecta inconsistencias, información faltante, y genera gaps.<mode>.json
  *
  * Usage:
  *   node scripts/gap-detector.js --sede <SEDE> --mode <full|tasks-only>
@@ -40,7 +40,7 @@ function extractEntitiesFromAnotaciones(text) {
   };
 
   // Extract services from "Tratamientos y Servicios Disponibles" or "Tratamientos que se pueden agendar"
-  const servicesSection = text.match(/#\s*(?:Tratamientos y Servicios|Tratamientos que se pueden agendar|Servicios).*?\n([\s\S]*?)(?=\n#\s|\Z)/i);
+  const servicesSection = text.match(/#\s*(?:Tratamientos y Servicios|Tratamientos que se pueden agendar|Servicios).*?\n([\s\S]*?)(?=\n#\s|$)/i);
   if (servicesSection) {
     const lines = servicesSection[1].split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'));
     for (const line of lines) {
@@ -59,7 +59,7 @@ function extractEntitiesFromAnotaciones(text) {
   }
 
   // Extract professionals
-  const profSection = text.match(/#\s*(?:Profesionales asignados|Equipo médico).*?\n([\s\S]*?)(?=\n#\s|\Z)/i);
+  const profSection = text.match(/#\s*(?:Profesionales asignados|Equipo médico).*?\n([\s\S]*?)(?=\n#\s|$)/i);
   if (profSection) {
     const lines = profSection[1].split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'));
     for (const line of lines) {
@@ -99,7 +99,7 @@ function extractEntitiesFromAnotaciones(text) {
   if (hoursMatch) entities.hours = hoursMatch[1].trim();
 
   // Extract FAQ
-  const faqSection = text.match(/#\s*(?:Preguntas Frecuentes|FAQ).*?\n([\s\S]*?)(?=\n#\s|\Z)/i);
+  const faqSection = text.match(/#\s*(?:Preguntas Frecuentes|FAQ).*?\n([\s\S]*?)(?=\n#\s|$)/i);
   if (faqSection) {
     const lines = faqSection[1].split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'));
     for (const line of lines) {
@@ -116,19 +116,26 @@ function extractEntitiesFromAnotaciones(text) {
 function detectGaps(entities, json, mode) {
   const gaps = [];
 
-  // 1. Check services vs intents
+  // 1. Check services vs intents (legacy) OR serviceCatalog (current architecture:
+  //    services live in serviceCatalog.treatments; intents are generic)
   const intentIds = Object.keys(json.intents || {});
+  const catalogServiceNames = [
+    ...(json.serviceCatalog?.treatments || []).map(t => t.name),
+    ...(json.serviceCatalog?.packs || []).map(p => p.name),
+  ].filter(Boolean).map(n => n.toLowerCase());
   for (const svc of entities.services) {
     const svcId = svc.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     const hasIntent = intentIds.some(id => id.includes(svcId) || svcId.includes(id));
-    if (!hasIntent) {
+    const svcLower = svc.name.toLowerCase();
+    const inCatalog = catalogServiceNames.some(cn => cn.includes(svcLower) || svcLower.includes(cn));
+    if (!hasIntent && !inCatalog) {
       gaps.push({
         severity: 'error',
         category: 'missing_intent',
-        description: `Servicio "${svc.name}" mencionado en anotaciones pero no hay intent correspondiente en el JSON`,
+        description: `Servicio "${svc.name}" mencionado en anotaciones pero no está en serviceCatalog ni tiene intent correspondiente`,
         anotacion_ref: svc.raw.substring(0, 100),
-        json_path: 'intents',
-        suggestion: `Crear intent "${svcId}_inquiry" con descripción semántica`,
+        json_path: 'serviceCatalog.treatments',
+        suggestion: `Agregar "${svc.name}" a serviceCatalog.treatments con priceDescription y requiresConsultation`,
         question_for_advisor: `¿Confirmas que ofrecéis el servicio "${svc.name}"?`,
       });
     }
@@ -354,7 +361,7 @@ function main() {
     process.exit(1);
   }
 
-  const paths = getSedePaths(sede);
+  const paths = getSedePaths(sede, mode);
   const inputFiles = readInputFiles(paths.inputDir);
 
   if (inputFiles.files.length === 0) {
@@ -377,7 +384,7 @@ function main() {
   const gaps = detectGaps(entities, json, mode);
 
   // Save gaps
-  const gapsPath = paths.analysis.replace('analysis.json', 'gaps.json');
+  const gapsPath = paths.gaps;
   fs.writeFileSync(gapsPath, JSON.stringify({
     meta: {
       sede,

@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "sede": "demo",
+    "mode": "tasks-only",
+    "timestamp": "2026-08-03T04:11:23.203Z",
+    "inputFiles": [
+      "anotaciones.md"
+    ],
+    "inputFilesCount": 1,
+    "combinedTextLength": 4608
+  },
+  "summary": {
+    "total": 0,
+    "errors": 0,
+    "warnings": 0,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 7,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 4
+  },
+  "gaps": []
+}

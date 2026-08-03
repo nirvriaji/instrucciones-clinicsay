@@ -3,7 +3,7 @@
  * validate-and-save.js
  *
  * Validates structuredLogic draft against schema, cross-references, and mode compliance.
- * If valid: copies draft to structured-logic.json
+ * If valid: copies structured-logic.<mode>.draft.json to structured-logic.<mode>.json
  * If invalid: reports categorized errors and exits 1.
  *
  * Usage:
@@ -623,7 +623,7 @@ function main() {
     process.exit(1);
   }
 
-  const paths = getSedePaths(sede);
+  const paths = getSedePaths(sede, mode);
 
   // The draft is the active working document. Prefer it whenever present so
   // validation never succeeds against a stale final while a newer draft exists.

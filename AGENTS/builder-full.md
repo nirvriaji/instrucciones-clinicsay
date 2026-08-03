@@ -40,7 +40,7 @@ Your personality:
 │    (.md, .json, etc.)                                │
 │  • Sintetizas la información de todas las fuentes    │
 │  • Lees templates y prompts modulares               │
-│  • Generas structured-logic.json                    │
+│  • Generas structured-logic.full.json             │
 │  • Editas el JSON según correcciones del asesor   │
 └─────────────────────────────────────────────────────┘
                           │
@@ -70,8 +70,8 @@ sedes/
       <nombre>-original.json    ← Lógica estructurada previa (si existe)
       *.md / *.json / *.txt     ← Cualquier otro archivo de notas, instrucciones o lógica previa
     output/
-      structured-logic.json     ← Tú generas esto
-      gaps.json                 ← Scripts generan esto (tú lo lees)
+      structured-logic.full.json     ← Tú generas esto
+      gaps.full.json                 ← Scripts generan esto (tú lo lees)
 ```
 
 ### Archivos de referencia (tú los lees)
@@ -163,7 +163,7 @@ Cuando el asesor dice "vamos a trabajar en <nombre>":
 
 ### Paso 2: Generación del JSON por Secciones
 
-Evoluciona `sedes/<nombre>/output/structured-logic.draft.json` **sección por sección y chunk por chunk**, nunca todo de una vez:
+Evoluciona `sedes/<nombre>/output/structured-logic.full.draft.json` **sección por sección y chunk por chunk**, nunca todo de una vez:
 
 **Secuencia de generación (una sección a la vez):**
 1. **identity** — Generar SOLO con datos extraídos de los chunks.
@@ -187,7 +187,7 @@ Evoluciona `sedes/<nombre>/output/structured-logic.draft.json` **sección por se
 - Si un dato aparece en varios archivos con valores diferentes, **pregunta al asesor** cuál es el correcto. No asumas.
 - **NUNCA** rellenar huecos con inventiva. Si falta un dato, usar `null` o documentar como gap.
 
-**Guarda cada avance en:** `sedes/<nombre>/output/structured-logic.draft.json`. El validador promueve el draft válido al archivo final.
+**Guarda cada avance en:** `sedes/<nombre>/output/structured-logic.full.draft.json`. El validador promueve el draft válido al archivo final.
 
 ### Paso 3: Validación
 Ejecuta validador:
@@ -214,7 +214,7 @@ Ejecuta detector:
 node scripts/gap-detector.js --sede <nombre> --mode full
 ```
 
-Lee `output/gaps.json`:
+Lee `output/gaps.full.json`:
 - Si hay gaps: presenta las preguntas al asesor en lenguaje natural
 - Por cada gap: "Detecté que [X]. ¿Confirmas que [Y]?"
 - Si el asesor corrige: edita el JSON directamente
@@ -224,14 +224,14 @@ Lee `output/gaps.json`:
 ### Paso 5: Verificación Estructural
 Ejecuta:
 ```bash
-node scripts/check-structure.js --sede <nombre>
+node scripts/check-structure.js --sede <nombre> --mode full
 ```
 
 Asegura que todas las secciones existen y tienen contenido mínimo.
 
 ### Paso 6: Entrega
 Cuando validación + gaps + estructura pasan:
-> "✅ JSON generado, validado y auditado. Guardado en `sedes/<nombre>/output/structured-logic.json`
+> "✅ JSON generado, validado y auditado. Guardado en `sedes/<nombre>/output/structured-logic.full.json`
 > Resumen: N intents, M flows, K rules, J templates.
 > Gaps resueltos: X. Gaps pendientes: Y.
 > Copia este archivo al builder de instrucciones de tu clínica.
@@ -244,7 +244,7 @@ Cuando validación + gaps + estructura pasan:
 Cuando el asesor pide cambios (ej: "cambia el tono a más cálido"):
 
 1. Identifica qué campo(s) del JSON deben cambiar
-2. Edita directamente `output/structured-logic.json`
+2. Edita directamente `output/structured-logic.full.json`
 3. Vuelve a ejecutar validador
 4. Vuelve a ejecutar gap-detector
 5. Confirma al asesor: "Hecho. [Campo] ajustado a [valor]. Validado."
@@ -280,10 +280,10 @@ Si un valor no pertenece a ninguna categoría, **no se escribe**. Los placeholde
 Listar TODOS los archivos en `sedes/<nombre>/input/` sin importar extensión (.md, .json, .txt, etc.).
 
 #### Paso B: Crear el draft incremental
-Antes de leer input, copiar `_templates/base-full.json` a `sedes/<nombre>/output/structured-logic.draft.json`.
+Antes de leer input, copiar `_templates/base-full.json` a `sedes/<nombre>/output/structured-logic.full.draft.json`.
 
 - El draft es el documento vivo que evoluciona chunk por chunk.
-- No sobrescribir `structured-logic.json` durante el análisis.
+- No sobrescribir `structured-logic.full.json` durante el análisis.
 - Los valores genéricos del template son `BASELINE`; sustituir los datos particulares de clínica por valores `INPUT`/`ADVISOR` o `null` antes de entregar.
 - Si ya existe un draft, preguntar si debe continuarse o regenerarse; no asumir.
 
@@ -291,7 +291,7 @@ Antes de leer input, copiar `_templates/base-full.json` a `sedes/<nombre>/output
 Para cada archivo de input:
 1. Leer las primeras 100 líneas.
 2. Extraer TODA la información estructurable de esas 100 líneas.
-3. **Inmediatamente** escribir los datos extraídos en las secciones correspondientes de `structured-logic.draft.json`:
+3. **Inmediatamente** escribir los datos extraídos en las secciones correspondientes de `structured-logic.full.draft.json`:
    - Datos de identidad → rellenar `identity`
    - Reglas de estilo → rellenar `styleRules`
    - Intents → añadir a `intents`
@@ -330,9 +330,9 @@ Antes de entregar, el agente DEBE revisar bloque por bloque de los archivos de i
 - **Si algo del input no está en el JSON, preguntar al asesor antes de entregar.**
 
 #### Paso F: Validar y promover a final
-1. Confirmar que el validador está leyendo `structured-logic.draft.json`; debe priorizar el draft cuando existe y usar el final solo como fallback.
+1. Confirmar que el validador está leyendo `structured-logic.full.draft.json`; debe priorizar el draft cuando existe y usar el final solo como fallback.
 2. Ejecutar schema, cross-references, reglas de modo, gap detector y check-structure.
-3. Solo un draft válido puede promoverse a `structured-logic.json`.
+3. Solo un draft válido puede promoverse a `structured-logic.full.json`.
 4. Nunca declarar éxito basándose en la validación de un archivo distinto al draft trabajado.
 
 #### Evidencia obligatoria después de cada chunk
@@ -722,7 +722,7 @@ node scripts/validate-and-save.js --sede <SEDE> --mode full
 node scripts/gap-detector.js --sede <SEDE> --mode full
 
 # Verificar estructura
-node scripts/check-structure.js --sede <SEDE>
+node scripts/check-structure.js --sede <SEDE> --mode full
 ```
 
 ---
@@ -733,7 +733,7 @@ node scripts/check-structure.js --sede <SEDE>
 
 **Agente:** "Perfecto. Encontré estos archivos en `sedes/martinezbone/input/`: [...]. Crearé el draft desde el template y procesaré cada archivo en chunks de 100 líneas."
 
-[Agente crea `structured-logic.draft.json` desde el template]
+[Agente crea `structured-logic.full.draft.json` desde el template]
 
 **Agente:** "Procesado: martinezbone-original.md:1-100. Añadido/actualizado: identity, styleRules. Conflictos: ninguno. Sintaxis del draft: válida."
 

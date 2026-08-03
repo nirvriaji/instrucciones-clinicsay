@@ -8,7 +8,12 @@ const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '../..');
 
-function getSedePaths(sede) {
+const VALID_MODES = ['full', 'tasks-only'];
+
+function getSedePaths(sede, mode) {
+  if (!VALID_MODES.includes(mode)) {
+    throw new Error(`Invalid mode "${mode}". Expected one of: ${VALID_MODES.join(', ')}`);
+  }
   const sedeDir = path.join(ROOT, 'sedes', sede);
   return {
     root: sedeDir,
@@ -16,8 +21,9 @@ function getSedePaths(sede) {
     outputDir: path.join(sedeDir, 'output'),
     // Note: the agent reads ALL files in input/ (.md, .json, .txt)
     analysis: path.join(sedeDir, 'output', 'analysis.json'),
-    draft: path.join(sedeDir, 'output', 'structured-logic.draft.json'),
-    final: path.join(sedeDir, 'output', 'structured-logic.json'),
+    draft: path.join(sedeDir, 'output', `structured-logic.${mode}.draft.json`),
+    final: path.join(sedeDir, 'output', `structured-logic.${mode}.json`),
+    gaps: path.join(sedeDir, 'output', `gaps.${mode}.json`),
   };
 }
 

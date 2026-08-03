@@ -1,5 +1,6 @@
-# Generated outputs (ignore in git)
-*/output/*.json
+# Generated outputs (ignore in git; demo outputs are tracked as examples)
+sedes/*/output/*.json
+!sedes/demo/output/*.json
 
 # Node modules (if installed locally)
 node_modules/

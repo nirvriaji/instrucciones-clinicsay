@@ -183,9 +183,10 @@ El agente:
 
 ### Paso 4: Copia el JSON generado
 
-El JSON final estará en:
+El JSON final estará en (el nombre incluye el modo):
 ```
-sedes\mi-clinica\output\structured-logic.json
+sedes\mi-clinica\output\structured-logic.tasks-only.json   ← si trabajas en modo tasks-only
+sedes\mi-clinica\output\structured-logic.full.json         ← si trabajas en modo full
 ```
 
 ---
@@ -295,8 +296,8 @@ instrucciones-clinicsay/
         ├── input/
         │   └── *.md / *.json / *.txt  ← Tus notas (tú creas esto)
         └── output/
-            ├── structured-logic.json  ← Output final (agente genera esto)
-            └── gaps.json              ← Reporte de gaps (scripts generan esto)
+            ├── structured-logic.<modo>.json  ← Output final (agente genera esto; <modo> = tasks-only | full)
+            └── gaps.<modo>.json              ← Reporte de gaps (scripts generan esto)
 ```
 
 ---
@@ -312,8 +313,8 @@ node scripts/validate-and-save.js --sede mi-clinica --mode tasks-only
 # Detectar gaps entre anotaciones y JSON (--mode es OBLIGATORIO)
 node scripts/gap-detector.js --sede mi-clinica --mode tasks-only
 
-# Verificar estructura completa
-node scripts/check-structure.js --sede mi-clinica
+# Verificar estructura completa (--mode es OBLIGATORIO)
+node scripts/check-structure.js --sede mi-clinica --mode tasks-only
 ```
 
 ### Errores vs. warnings (advisory)

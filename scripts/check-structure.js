@@ -6,7 +6,7 @@
  * y que cada sección tiene contenido mínimo.
  *
  * Usage:
- *   node scripts/check-structure.js --sede <SEDE>
+ *   node scripts/check-structure.js --sede <SEDE> --mode <full|tasks-only>
  */
 
 const fs = require('fs');
@@ -39,8 +39,10 @@ const MINIMUM_FAQ = 0; // FAQ puede estar vacío si no hay en anotaciones
 function parseArgs() {
   const args = process.argv.slice(2);
   const sedeIdx = args.indexOf('--sede');
+  const modeIdx = args.indexOf('--mode');
   return {
     sede: sedeIdx >= 0 ? args[sedeIdx + 1] : null,
+    mode: modeIdx >= 0 ? args[modeIdx + 1] : null,
   };
 }
 
@@ -184,13 +186,13 @@ function checkContent(data) {
 }
 
 function main() {
-  const { sede } = parseArgs();
-  if (!sede) {
-    logger.error('Usage: node scripts/check-structure.js --sede <SEDE>');
+  const { sede, mode } = parseArgs();
+  if (!sede || !mode || (mode !== 'full' && mode !== 'tasks-only')) {
+    logger.error('Usage: node scripts/check-structure.js --sede <SEDE> --mode <full|tasks-only>');
     process.exit(1);
   }
 
-  const paths = getSedePaths(sede);
+  const paths = getSedePaths(sede, mode);
   // Check the active draft when present; fall back to the final otherwise.
   const jsonPath = getActiveJsonPath(paths);
 
