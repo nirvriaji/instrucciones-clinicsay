@@ -12,7 +12,6 @@
 
 const fs = require('fs');
 const { getSedePaths, getSchemaPath, getActiveJsonPath } = require('./lib/paths');
-const { validateMode } = require('./lib/mode-enforcer');
 const { ALL_TOOLS } = require('./lib/tool-registry');
 const { extractAllowedKeys } = require('./lib/schema-key-extractor');
 const logger = require('./lib/logger');
@@ -43,7 +42,8 @@ function parseArgs() {
   const modeIdx = args.indexOf('--mode');
   return {
     sede: sedeIdx >= 0 ? args[sedeIdx + 1] : null,
-    mode: modeIdx >= 0 ? args[modeIdx + 1] : 'full',
+    // Mode is mandatory (no fallback), matching the backend validator.
+    mode: modeIdx >= 0 ? args[modeIdx + 1] : null,
   };
 }
 
@@ -616,50 +616,9 @@ function validateCrossReferences(data, errors) {
   }
 }
 
-function validateMinimumIntents(data, mode, errors) {
-  const requiredIntents = [
-    'appointment_confirmation',
-    'appointment_cancellation',
-    'appointment_inquiry',
-    'scheduling_request',
-    'general_inquiry',
-    'human_follow_up',
-    'farewell',
-  ];
-  const present = new Set(Object.keys(data.intents || {}));
-  for (const req of requiredIntents) {
-    if (!present.has(req)) {
-      errors.push({ category: 'business', message: `Missing required intent: "${req}"` });
-    }
-  }
-
-  // Mode-specific critical flows
-  if (mode === 'full') {
-    const flows = data.toolOrchestration?.flows || {};
-    const hasBookingFlow = Object.values(flows).some(f =>
-      f.intent === 'scheduling_request' &&
-      f.steps?.some(s => s.tools?.includes('schedule_block'))
-    );
-    if (!hasBookingFlow) {
-      errors.push({ category: 'business', message: 'Full mode requires at least one scheduling flow with "schedule_block" tool' });
-    }
-  }
-
-  if (mode === 'tasks-only') {
-    const flows = data.toolOrchestration?.flows || {};
-    const hasTaskFlow = Object.values(flows).some(f =>
-      f.intent === 'scheduling_request' &&
-      f.steps?.some(s => s.tools?.includes('create_task'))
-    );
-    if (!hasTaskFlow) {
-      errors.push({ category: 'business', message: 'Tasks-only mode requires scheduling_request flow to use "create_task" tool' });
-    }
-  }
-}
-
 function main() {
   const { sede, mode } = parseArgs();
-  if (!sede) {
+  if (!sede || !mode || (mode !== 'full' && mode !== 'tasks-only')) {
     logger.error('Usage: node scripts/validate-and-save.js --sede <SEDE> --mode <full|tasks-only>');
     process.exit(1);
   }
@@ -678,6 +637,9 @@ function main() {
   const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
 
   // ── Backend-real validation (replicated, not imported from external repo) ──
+  // Output shape: { valid, errors, gaps, qualityScore }
+  //   - errors: blocking (prevent saving)
+  //   - gaps: NON-blocking (severity high|medium|low|advisory; advisory = canonical mode notes)
   const { execSync } = require('child_process');
   const path = require('path');
   const validatorScript = path.join(__dirname, 'lib', 'backend-validator', 'run-validation.ts');
@@ -695,30 +657,26 @@ function main() {
     try {
       backendResult = JSON.parse(stdout);
     } catch {
-      // If tsx is not available, fall back to the legacy JS validator with a warning
-      logger.warn('Backend validator (tsx) not available. Falling back to legacy JS validator. Results may differ from production.');
+      // Emergency structural fallback when tsx is unavailable.
+      // Minimal structural checks ONLY — mode/business rules belong to the
+      // replicated backend validator (single source of truth).
+      logger.warn('Backend validator (tsx) not available. Falling back to minimal structural checks. Results may differ from production.');
       logger.warn(`tsx stderr: ${stderr}`);
       const errors = [];
       validateSchema(data, errors);
       validateCrossReferences(data, errors);
-      validateMinimumIntents(data, mode, errors);
-      const modeErrors = validateMode(data, mode);
-      for (const e of modeErrors) {
-        errors.push({ category: 'mode', message: e });
-      }
       backendResult = {
         valid: errors.length === 0,
         errors: errors.map(e => e.message || e),
+        gaps: [],
+        qualityScore: { score: 0, max: 94, gaps: ['minimal fallback active; run with tsx for full validation'] },
       };
     }
   }
 
-  // Also run legacy mode enforcer for additional business rules
-  const modeErrors = validateMode(data, mode);
   const allErrors = [...(backendResult.errors || [])];
-  for (const e of modeErrors) {
-    allErrors.push(e);
-  }
+  const gaps = backendResult.gaps || [];
+  const qualityScore = backendResult.qualityScore || null;
 
   if (backendResult.valid && allErrors.length === 0) {
     // Valid: promote the exact draft that was validated.
@@ -731,6 +689,18 @@ function main() {
       logger.info(`Promoted draft to ${paths.final}`);
     }
 
+    // Non-blocking gaps: educate, never block (backend advisory philosophy)
+    if (gaps.length > 0) {
+      logger.warn(`⚠️  ${gaps.length} warning(s) — NO bloqueantes:`);
+      for (const g of gaps) {
+        const sev = (g.severity || 'info').toUpperCase();
+        logger.warn(`    [${sev}] ${g.description || g}`);
+      }
+    }
+    if (qualityScore) {
+      logger.info(`Quality score: ${qualityScore.score}/${qualityScore.max}`);
+    }
+
     // Print summary
     const summary = {
       status: 'valid',
@@ -739,6 +709,8 @@ function main() {
       flows: Object.keys(data.toolOrchestration?.flows || {}).length,
       rules: (data.rules || []).length,
       templates: Object.keys(data.responseTemplates || {}).length,
+      warnings: gaps.map(g => ({ severity: g.severity, type: g.type, description: g.description })),
+      qualityScore,
       file: paths.final,
     };
     console.log(JSON.stringify(summary, null, 2));

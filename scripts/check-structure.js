@@ -205,7 +205,7 @@ function main() {
 
   // Check sections exist
   for (const section of REQUIRED_SECTIONS) {
-    const required = ['version', 'capabilities', 'intents', 'toolOrchestration', 'rules'].includes(section);
+    const required = ['version', 'capabilities', 'intents', 'toolOrchestration', 'rules', 'serviceCatalog'].includes(section);
     allErrors = allErrors.concat(checkSection(data, section, required));
   }
 

@@ -132,25 +132,28 @@ export const TOOL_CREATE_TASK: ChatToolDefinition = {
 
 export const TOOL_LOOKUP_PATIENT: ChatToolDefinition = {
   name: 'lookup_patient',
+  strict: true,
   description:
     'Look up patient information by phone number, first name, or last name. ' +
     'Returns personal data and scheduled appointments. Use to identify the patient or review their history.',
   parameters: {
     type: 'object',
+    additionalProperties: false,
     properties: {
       phone: {
         type: 'string',
-        description: 'Phone number to search (optional if firstName/lastName provided).',
+        description: 'Phone number to search. Required. Send empty string if not known — the system will search by name.',
       },
       firstName: {
         type: 'string',
-        description: 'Patient first name (optional if phone provided).',
+        description: 'Patient first name. Required. Send empty string if not known — the system will search by phone.',
       },
       lastName: {
         type: 'string',
-        description: 'Patient last name (optional if phone provided).',
+        description: 'Patient last name. Required. Send empty string if not known — the system will search by phone.',
       },
     },
+    required: ['phone', 'firstName', 'lastName'],
   },
 };
 

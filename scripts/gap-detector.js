@@ -20,7 +20,8 @@ function parseArgs() {
   const modeIdx = args.indexOf('--mode');
   return {
     sede: sedeIdx >= 0 ? args[sedeIdx + 1] : null,
-    mode: modeIdx >= 0 ? args[modeIdx + 1] : 'full',
+    // Mode is mandatory (no fallback), matching the backend validator.
+    mode: modeIdx >= 0 ? args[modeIdx + 1] : null,
   };
 }
 
@@ -348,7 +349,7 @@ function readInputFiles(inputDir) {
 
 function main() {
   const { sede, mode } = parseArgs();
-  if (!sede) {
+  if (!sede || !mode || (mode !== 'full' && mode !== 'tasks-only')) {
     logger.error('Usage: node scripts/gap-detector.js --sede <SEDE> --mode <full|tasks-only>');
     process.exit(1);
   }

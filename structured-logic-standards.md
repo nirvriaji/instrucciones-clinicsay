@@ -166,7 +166,7 @@ type ToolFlow = {
   step: number;               // Step number (1-based)
   tools: string[];            // Tool names to execute in this step
   parallel: boolean;          // Execute in parallel?
-  required?: string[];         // Capability flags required for this step (e.g., ["scheduling", "protocols"]). EMPTY [] if none. NEVER tool names — a tool name here will SILENTLY block execution.
+  required?: string[];         // Capability flags required for this step (e.g., ["hasResolvedPatient", "hasSelectedSlot"]). EMPTY [] if none. NEVER tool names — a tool name here will SILENTLY block execution.
   note?: string;              // Explanatory note for the LLM
   // NOTE: condition is NOT supported by the backend schema. Use 'note' for conditional guidance.
 }
@@ -377,7 +377,7 @@ Declare at least these intents in the catalog. The exact ids below are the canon
 ### Flows and Steps
 - Flow `intent` must exist in the catalog and should be unique per flow (one flow per intent).
 - `description` differentiates this flow from similar ones ("NEW session" vs. "move an ALREADY BOOKED appointment" vs. "confirm attendance").
-- Order steps logically (identify patient → resolve entities → check availability → act).
+- Order steps logically (resolve entities → check availability → act). **Canonical full-mode booking pattern:** the patient is resolved LAST — `resolve_patient` + `schedule_block` share the final step, executed only when the patient picks a slot (see `_templates/base-full.json`). Do NOT ask for patient data up front.
 - `parallel: true` only when tools have no dependencies between them.
 - Flows using `manage_schedule_block_status` MUST set `responseTemplate`.
 
@@ -404,6 +404,27 @@ Declare at least these intents in the catalog. The exact ids below are the canon
 - `ToolStep.tools` are strings matching the available tools for the bot mode.
 - `Protocol.responseTemplate` is a non-empty string if the protocol exists.
 - Flows using `query_knowledge_base` or `query_protocol` MUST NOT use a literal `responseTemplate` (set `responseTemplateMode: "model"` if needed).
+
+---
+
+## Advisory Mode Warnings (non-blocking)
+
+Validation has **two tiers**:
+
+1. **Blocking errors** (`errors`) — schema, type, and cross-reference violations. These prevent saving.
+2. **Non-blocking gaps** (`gaps`) — quality and mode notes with severity `high | medium | low | advisory`. They are **educational**: the validator informs the advisor but never blocks the save.
+
+**`redirectToTask: true` on `scheduling_request` rules and `create_task` in tasks-only scheduling/reschedule flows are NOT mandatory.** The advisor decides. When the JSON deviates from the typical mode pattern, the validator emits an advisory `mode_note` (Spanish, starting with "Para tu información:…") explaining the canonical pattern so the advisor can confirm the deviation is intentional.
+
+Canonical mode notes (`detectModeAdvisoryGaps`):
+
+| Case | Advisory note (summary) |
+|---|---|
+| **full + `scheduling_request` without scheduling tools** | The typical full pattern books directly (`resolve_patient`, `resolve_treatment`, `check_availability`, `schedule_block`). If reception validates every request manually, fine — ensure `create_task` captures name, last name, phone, treatment, and preferred date. |
+| **full without `schedule_block` anywhere** | Typical full mode books directly. If all appointments go through reception, `tasks-only` may describe your operation better. |
+| **tasks-only + `resolve_patient`/`resolve_treatment`** | Not typical (no direct booking). Keep only if intentional (e.g., the human task already gets the resolved `patientId`). |
+| **tasks-only + `scheduling_request` rule without `redirectToTask`** | The bot will answer without creating a human task. Fine for informational replies — ensure the patient knows their next step. |
+| **any mode + `create_task` without `resolve_patient`/`lookup_patient`** | `create_task` ALWAYS needs patient name, last name, and phone. Ensure the bot collects them beforehand (or a prior flow step did). |
 
 ---
 

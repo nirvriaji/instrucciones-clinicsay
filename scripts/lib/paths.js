@@ -21,10 +21,6 @@ function getSedePaths(sede) {
   };
 }
 
-function getTemplatesPath() {
-  return path.join(ROOT, '_templates');
-}
-
 function getSchemaPath() {
   return path.join(__dirname, 'schemas', 'structured-logic-schema.json');
 }
@@ -37,4 +33,4 @@ function getActiveJsonPath(paths, existsSync = fs.existsSync) {
   return existsSync(paths.draft) ? paths.draft : paths.final;
 }
 
-module.exports = { ROOT, getSedePaths, getTemplatesPath, getSchemaPath, getActiveJsonPath };
+module.exports = { ROOT, getSedePaths, getSchemaPath, getActiveJsonPath };

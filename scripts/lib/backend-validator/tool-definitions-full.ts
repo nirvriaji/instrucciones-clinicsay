@@ -271,32 +271,40 @@ export const TOOL_CREATE_TASK: ChatToolDefinition = {
 
 export const TOOL_RESOLVE_PATIENT: ChatToolDefinition = {
   name: 'resolve_patient',
+  strict: true,
   description:
     'Identify or create a patient before booking. ' +
     'Use BEFORE schedule_block when patient identity is not confirmed. ' +
     'Returns the resolved patient ID, name, and phone. ' +
-    'If the patient is new, it creates them automatically. ' +
+    'If the patient is not found, returns not_found — the bot must ask the patient if they are new. ' +
+    'Only when the patient explicitly confirms they are new, set confirmNew=true to create them. ' +
     'If data is missing, returns what fields are needed.',
   parameters: {
     type: 'object',
+    additionalProperties: false,
     properties: {
       firstName: {
         type: 'string',
-        description: 'Patient first name. Optional if not yet known — the system will ask.',
+        description: 'Patient first name. Required. Send empty string if not yet known — the system will ask.',
       },
       lastName: {
         type: 'string',
-        description: 'Patient last name. Optional if not yet known.',
+        description: 'Patient last name. Required. Send empty string if not yet known — the system will ask.',
       },
       phone: {
         type: 'string',
-        description: 'Patient phone number (with or without country code). Optional if not yet known.',
+        description: 'Patient phone number (with or without country code). Required. Send empty string if not yet known — the system will ask. If isForInterlocutor=true, the system auto-fills this from the caller\'s contact.',
       },
       isForInterlocutor: {
         type: 'boolean',
         description: 'Set to true if the booking is for the person chatting. The system will use the caller phone.',
       },
+      confirmNew: {
+        type: 'boolean',
+        description: 'Set to true ONLY if the patient explicitly confirmed they are new and want to register. Do NOT set this on the first call.',
+      },
     },
+    required: ['firstName', 'lastName', 'phone', 'isForInterlocutor', 'confirmNew'],
   },
 };
 
@@ -371,6 +379,7 @@ export const TOOL_LOOKUP_PATIENT: ChatToolDefinition = {
         description: 'Patient last name (optional if phone provided).',
       },
     },
+    required: ['phone', 'firstName', 'lastName'],
   },
 };
 

@@ -159,7 +159,7 @@ Evoluciona `sedes/<nombre>/output/structured-logic.draft.json` **sección por se
 3. **capabilities** — `{ sensitiveSituations: false, protocols: false }` (default)
 4. **intents** — Crear baseline (12 mínimos del template) + por servicio usando SOLO datos de los chunks.
 5. **toolOrchestration.flows** — Mapear intents a flows SIN scheduling tools. DEBE incluir flow `farewell` con `allowsSilence: true`.
-6. **rules** — Crear rules por intent. `scheduling_request` y `appointment_reschedule_request` DEBEN tener `redirectToTask: true`.
+6. **rules** — Crear rules por intent. Patrón típico en tasks-only: `scheduling_request` y `appointment_reschedule_request` con `redirectToTask: true` (**NO obligatorio** — si la clínica prefiere respuesta informativa sin tarea, omítelo a propósito; el validador mostrará una nota advisory no bloqueante para confirmar que la desviación es intencional).
 7. **responseTemplates** — Crear templates. OBLIGATORIOS: `information_not_available`, `out_of_scope`, `farewell`. Mínimo 15 templates recomendados.
 8. **faq** — Extraer de #Preguntas Frecuentes de los chunks.
 9. **serviceCatalog** — OBLIGATORIO. Extraer tratamientos del input con `name`, `priceDescription`, `requiresConsultation`. Mínimo 1 tratamiento.
@@ -180,7 +180,7 @@ Evoluciona `sedes/<nombre>/output/structured-logic.draft.json` **sección por se
 - NUNCA uses `resolve_patient`, `resolve_professional`, `resolve_treatment`
 - Tools permitidas por backend, schema y registry: `create_task`, `manage_schedule_block_status`, `manage_all_schedule_blocks_for_date`, `lookup_patient`, `query_protocol`, `query_knowledge_base`.
 - `query_knowledge_base` busca semánticamente en `protocols`, `faq`, `responseTemplates` y `rules`. Debe estar disponible en flows informativos y usarse solo cuando la respuesta no esté ya en contexto. No sustituye tools de pacientes, citas o tareas.
-- `scheduling_request` flow: SIEMPRE usa `create_task` (escalation a humanos)
+- `scheduling_request` flow: patrón típico es `create_task` (escalation a humanos). Si la clínica prefiere otra aproximación (ej. respuesta puramente informativa), es válido — el validador emitirá una nota advisory no bloqueante; confírmala con el asesor.
 - `appointment_confirmation` flow: usa `manage_schedule_block_status` (gestión de citas existentes)
 - `appointment_cancellation` flow: usa `manage_schedule_block_status` + `create_task` (cancelar + notificar)
 - Templates DEBEN gestionar expectativas: "Un miembro de nuestro equipo se pondrá en contacto..."
@@ -198,6 +198,13 @@ Si hay errores:
 - CORRIGE directamente el JSON (edita el archivo)
 - Vuelve a ejecutar validador
 - Repite hasta que diga ✅
+
+Si el validador da ✅ pero muestra **warnings (NO bloqueantes)**:
+- LEE cada warning (severities: `MEDIUM`, `ADVISORY`, etc.)
+- Los `ADVISORY` (`mode_note`) son notas canónicas del modo: describen el patrón típico y preguntan si tu desviación es intencional
+- Preséntalos al asesor en lenguaje natural: "El validador sugiere que [patrón típico]. Tu configuración actual [desviación]. ¿Es intencional?"
+- Si el asesor confirma la desviación: continúa (el warning no bloquea)
+- Si el asesor quiere alinearse con el patrón: edita el JSON y revalida
 
 ### Paso 4: Detección de Gaps
 Ejecuta detector:
@@ -344,9 +351,9 @@ Sintaxis del draft: válida
 4. **TASKS-ONLY específicos (NON-NEGOTIABLE):**
    - NUNCA uses `check_availability`, `schedule_block`, `resolve_availability_query`
    - NUNCA uses `resolve_patient`, `resolve_professional`, `resolve_treatment`
-   - `scheduling_request` flow SIEMPRE usa `create_task`
+   - `scheduling_request` flow: patrón típico es `create_task` (si la clínica elige otra aproximación, el advisory lo confirmará — no es bloqueante)
    - Templates DEBEN decir "te contactará nuestro equipo" (no "tu cita está agendada")
-   - `redirectToTask: true` en rule de `scheduling_request`
+   - `redirectToTask: true` en rule de `scheduling_request` es el patrón típico (no obligatorio; su ausencia solo genera una nota advisory)
 5. **NUNCA pongas tool names en `required`.** En tasks-only usar `required: []`, salvo que el schema y capabilities canónicos definan explícitamente otra capability válida. Los tool names van exclusivamente en `tools` y `allowedTools`.
 6. **VALIDACIÓN ESTRICTA DE SCHEMA (NON-NEGOTIABLE):** El backend rechaza CUALQUIER propiedad que no esté en el schema autorizado (additionalProperties: false en TODOS los niveles). Si el validador local no detecta una propiedad desconocida, DEBES corregir el validador local antes de seguir. NUNCA asumas que el JSON es válido solo porque pasó el validador local si el validador local no es estricto. Propiedades comunes que se cuelan y rompen el backend: `products`, `shipping`, `id` en protocols (debe ser `name`), `steps` en protocols (debe ser `sections`), `condition` en steps (deprecated, debe ir en `note`).
 7. **El asesor crea la estructura.** Si no hay archivos en `sedes/<nombre>/input/`, instruir al asesor que cree las carpetas y coloque ahí sus notas. Tú NO debes crear directorios ni archivos automáticamente.
@@ -364,8 +371,8 @@ Después de generar TODAS las secciones del JSON y antes de declararlo completo,
 - [ ] `appointment_cancellation` flow usa `manage_schedule_block_status` (solo step 1; NO `create_task` en step 2, a menos que el asesor lo solicite explícitamente).
 - [ ] `human_follow_up` flow usa `create_task`.
 - [ ] `farewell` flow existe con `allowsSilence: true` y `steps: []` o `[{step:1, tools:[], parallel:false}]`.
-- [ ] Rule de `scheduling_request` tiene `redirectToTask: true`.
-- [ ] Rule de `appointment_reschedule_request` tiene `redirectToTask: true`.
+- [ ] Rule de `scheduling_request` tiene `redirectToTask: true` (patrón típico) — si se omite intencionadamente, la nota advisory del validador está confirmada con el asesor.
+- [ ] Rule de `appointment_reschedule_request` tiene `redirectToTask: true` (patrón típico) — si se omite intencionadamente, la nota advisory está confirmada con el asesor.
 - [ ] `serviceCatalog` existe con al menos 1 tratamiento con `name` no vacío.
 - [ ] `responseTemplates` incluye `information_not_available`, `out_of_scope`, `farewell`.
 - [ ] `conversationResumption` existe con `instructions` para continuous, short_break, same_period, recent, distant.

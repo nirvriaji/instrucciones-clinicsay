@@ -264,7 +264,7 @@ instrucciones-clinicsay/
 ├── README.md                        ← Este archivo (manual del asesor)
 ├── structured-logic-standards.md    ← Estándares del dominio (referencia técnica)
 ├── scripts/
-│   ├── prompts/                     ← Prompts modulares (8 guías)
+│   ├── prompts/                     ← Prompts modulares (7 guías)
 │   │   ├── generate-identity.md
 │   │   ├── generate-intents.md
 │   │   ├── generate-flows.md
@@ -300,14 +300,33 @@ instrucciones-clinicsay/
 Normalmente el agente ejecuta estos scripts automáticamente, pero puedes correrlos manualmente si tienes Node.js instalado:
 
 ```bash
-# Validar JSON y guardar como final
+# Validar JSON y guardar como final (--mode es OBLIGATORIO)
 node scripts/validate-and-save.js --sede mi-clinica --mode tasks-only
 
-# Detectar gaps entre anotaciones y JSON
+# Detectar gaps entre anotaciones y JSON (--mode es OBLIGATORIO)
 node scripts/gap-detector.js --sede mi-clinica --mode tasks-only
 
 # Verificar estructura completa
 node scripts/check-structure.js --sede mi-clinica
+```
+
+### Errores vs. warnings (advisory)
+
+Desde la sincronización con el backend, el validador distingue dos niveles:
+
+- **❌ Errores (bloqueantes):** violaciones de schema, tipos o cross-references. Impiden guardar el JSON final. Corrige y revalida.
+- **⚠️ Warnings (NO bloqueantes):** notas de calidad y de modo con severidad `high | medium | low | advisory`. El JSON se guarda igualmente.
+
+Los warnings `ADVISORY` (`mode_note`) son **notas canónicas del modo**: describen el patrón típico (ej. "en tasks-only lo común es `redirectToTask: true`") para que confirmes si tu desviación es intencional. **El validador educa, no bloquea:** cosas como `redirectToTask` en rules o `create_task` en flows de scheduling ya NO son obligatorias — el asesor decide.
+
+Ejemplo de salida válida con warnings:
+
+```text
+[INFO] ✅ Valid structuredLogic (tasks-only mode)
+[WARN] ⚠️  2 warning(s) — NO bloqueantes:
+[WARN]     [MEDIUM] Flows missing responseTemplate: general_inquiry.
+[WARN]     [ADVISORY] Para tu información: la herramienta create_task SIEMPRE requiere nombre...
+[INFO] Quality score: 84/94
 ```
 
 ---
@@ -324,6 +343,21 @@ node scripts/check-structure.js --sede mi-clinica
 
 ---
 
+## 🔄 Sincronización con el backend (mantenimiento)
+
+Este repo es **independiente**: la réplica del validador vive en `scripts/lib/backend-validator/` (copia local, imports relativos, cero dependencias del repo backend). Cuando el backend cambie, hay que resincronizar:
+
+| Artefacto | Fuente canónica en backend | Cómo regenerar |
+|---|---|---|
+| Validador (`*.ts`, `validators/`, `advisory/`) | `src/domain/chatbot-instruction-builder/` | Copiar archivos y normalizar imports (`'../chat/'` → `'./'`, `'../../chat/'` → `'../'`) |
+| Tool definitions | `src/domain/chat/tool-definitions-*.ts` | Copiar y normalizar `'../../ports/secondary/chat/'` → `'./'` |
+| `_templates/base-*.json` | `buildDefaultStructuredLogicForMode(mode)` en `src/domain/chat/default-structured-logic.ts` | `npx tsx -e "import {buildDefaultStructuredLogicForMode as b} from '<backend>/src/domain/chat/default-structured-logic'; import fs from 'fs'; fs.writeFileSync('_templates/base-full.json', JSON.stringify(b('full'), null, 2)); fs.writeFileSync('_templates/base-tasks-only.json', JSON.stringify(b('tasks-only'), null, 2));"` |
+| `scripts/lib/schemas/structured-logic-schema.json` | `StructuredLogicJsonSchema` en `structured-logic-json-schema.ts` | `npx tsx -e "import {StructuredLogicJsonSchema as S} from './scripts/lib/backend-validator/structured-logic-json-schema'; import fs from 'fs'; fs.writeFileSync('scripts/lib/schemas/structured-logic-schema.json', JSON.stringify(S, null, 2));"` |
+
+**Verificación de paridad:** tras copiar, `diff` por archivo (con la normalización de imports aplicada al original) debe dar 0 líneas. Después, valida los templates: `npx tsx scripts/lib/backend-validator/run-validation.ts _templates/base-<mode>.json <mode>`.
+
+---
+
 ## 🆘 Solución de problemas
 
 ### "No encuentro anotaciones"
@@ -334,6 +368,11 @@ El agente te los explicará en español. Causas comunes:
 - Falta un intent requerido (ej. `scheduling_request`)
 - Un flow referencia un intent que no existe en el catálogo
 - Modo tasks-only usando tools de scheduling
+
+### Warnings advisory
+El agente te los presentará como sugerencias, no como errores:
+- "El validador sugiere que en modo tasks-only lo típico es `redirectToTask: true`. Tu regla no lo tiene. ¿Es intencional?"
+- "Tu configuración full no usa `schedule_block`. ¿Prefieres que todas las citas pasen por recepción (modo tasks-only)?"
 
 ### Gap detection
 El agente preguntará cosas como:

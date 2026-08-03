@@ -51,19 +51,19 @@ Responder directamente si la información ya está en contexto; invocar la tool 
 allowedTools: ["query_knowledge_base"]
 ```
 
-**FULL MODE:**
+**FULL MODE (patrón canónico — ver `_templates/base-full.json`):**
 ```
-Nuevo paciente:
-  Step 1: resolve_patient (obligatorio)
-  Step 2: resolve_treatment + resolve_professional + resolve_availability_query (paralelos si no dependen)
-  Step 3: check_availability (requiere fechas resueltas)
-  Step 4: schedule_block (requiere paciente + disponibilidad)
+Nuevo paciente (new_patient_booking, selection.excludedCapabilities: ["hasResolvedPatient"]):
+  Step 1: resolve_treatment + resolve_availability_query (paralelos)
+  Step 2: resolve_professional (solo si el paciente nombra un doctor)
+  Step 3: check_availability (con treatmentId + fechas)
+  Step 4: resolve_patient + schedule_block (SOLO cuando el paciente elige slot)
+  ⚠️ El paciente se identifica AL FINAL, no al principio. NO pedir datos personales antes de mostrar horarios.
 
-Paciente existente:
-  Step 1: lookup_patient + resolve_treatment + resolve_professional
-  Step 2: resolve_availability_query
-  Step 3: check_availability
-  Step 4: schedule_block
+Paciente existente (existing_patient_rebooking, selection.requiredCapabilities: ["hasResolvedPatient"]):
+  Step 1: lookup_patient + resolve_treatment (paralelos)
+  Step 2: check_availability
+  Step 3: schedule_block
 ```
 
 **TASKS-ONLY MODE:**
@@ -77,7 +77,7 @@ Cualquier solicitud de agendamiento:
 - `step`: número secuencial (1, 2, 3...)
 - `tools`: array de strings (tool names)
 - `parallel`: `true` solo si las tools no dependen entre sí
-- `required`: array de **capability flags** (features booleanas) que deben estar activas para permitir este step. NUNCA tool names. Ejemplo: `["scheduling"]` si el step requiere que la clínica tenga scheduling activo. Si no hay requirements de capabilities, usar `[]`.
+- `required`: array de **capability flags** que deben estar presentes para ejecutar este step. NUNCA tool names. Flags válidas: `hasResolvedTreatment`, `hasResolvedPatient`, `hasResolvedProfessional`, `hasShownSlots`, `hasSelectedSlot`, `hasCreatedAppointment`, `hasCreatedTask`, `hasResolvedAvailabilityQuery`. Ejemplo: `["hasResolvedPatient"]` en el step final de booking. Si no hay requirements, usar `[]`.
 - `note`: explicación para el LLM de qué hacer en este step
 - **NO usar `condition` dentro de steps.** El schema del backend solo permite: `step`, `tools`, `parallel`, `required`, `note`. Si un step tiene una condición (ej: "solo si tiene múltiples citas"), escríbela en el campo `note`.
 
@@ -92,10 +92,10 @@ Cualquier solicitud de agendamiento:
 }
 ```
 
-- **Dependencias críticas:**
-  - `resolve_patient` DEBE ir antes de `schedule_block`
+- **Dependencias críticas (patrón canónico):**
   - `check_availability` DEBE ir antes de `schedule_block`
   - `resolve_availability_query` DEBE ir antes de `check_availability`
+  - `resolve_patient` se ejecuta **junto a** `schedule_block` en el último step (el paciente se identifica al elegir slot, no antes). En bookings de paciente nuevo NO va en step 1.
 
 ### 5. responseTemplate
 - **OBLIGATORIO** en flows que usan `manage_schedule_block_status`
@@ -116,7 +116,7 @@ Cualquier solicitud de agendamiento:
 ❌ **schedule_block sin resolve_patient previo**: Violación de dependencia
 ❌ **responseTemplate en flow informativo**: No es necesario, el LLM responde naturalmente
 ❌ **parallel=true con dependencias**: Si step 2 usa resultado de step 1, parallel debe ser false
-❌ **`required` con tool names**: `required` debe contener capabilities booleanas (ej: `["scheduling"]`) o `[]`, NUNCA nombres de tools como `["create_task"]` o `["manage_schedule_block_status"]` → BLOQUEA LA EJECUCIÓN DE TOOLS
+❌ **`required` con tool names**: `required` debe contener capability flags (ej: `["hasResolvedPatient"]`) o `[]`, NUNCA nombres de tools como `["create_task"]` o `["manage_schedule_block_status"]` → BLOQUEA LA EJECUCIÓN DE TOOLS
 
 ## Ejemplo de Output Correcto (FULL MODE)
 
@@ -124,35 +124,36 @@ Cualquier solicitud de agendamiento:
 {
   "new_patient_booking": {
     "intent": "scheduling_request",
-    "description": "Paciente SIN historial previo que quiere reservar su primera sesión o consulta. Requiere creación de paciente antes de agendar.",
+    "description": "Paciente que NO tiene historial previo quiere reservar su primera sesion o consulta.",
+    "selection": {
+      "excludedCapabilities": ["hasResolvedPatient"]
+    },
     "steps": [
       {
         "step": 1,
-        "tools": ["resolve_patient"],
-        "parallel": false,
-        "required": [],
-        "note": "Crear o identificar paciente. Obligatorio antes de agendar."
+        "tools": ["resolve_treatment", "resolve_availability_query"],
+        "parallel": true,
+        "required": ["hasResolvedTreatment"],
+        "note": "Identificar tratamiento y traducir fechas. NO pedir datos del paciente todavia."
       },
       {
         "step": 2,
-        "tools": ["resolve_treatment", "resolve_professional", "resolve_availability_query"],
-        "parallel": true,
-        "required": [],
-        "note": "Identificar tratamiento (obligatorio), profesional (opcional) y convertir fecha natural a concreta."
+        "tools": ["resolve_professional"],
+        "parallel": false,
+        "note": "Si el paciente nombra un doctor, resolverlo (condicion: patient_mentions_doctor_name)"
       },
       {
         "step": 3,
         "tools": ["check_availability"],
         "parallel": false,
-        "required": [],
-        "note": "Consultar disponibilidad con los parámetros resueltos."
+        "note": "Buscar horarios con treatmentId + fechas (condicion: treatment_resolved)"
       },
       {
         "step": 4,
-        "tools": ["schedule_block"],
+        "tools": ["resolve_patient", "schedule_block"],
         "parallel": false,
-        "required": [],
-        "note": "Crear la cita con el slot elegido. Solo después de check_availability."
+        "required": ["hasResolvedPatient"],
+        "note": "Solo cuando el paciente elige un slot: resolver identidad y agendar (condicion: slot_selected)"
       }
     ]
   },
@@ -200,7 +201,7 @@ Cualquier solicitud de agendamiento:
 
 ## Checklist antes de entregar
 - [ ] Un flow por cada intent que requiere acción
-- [ ] En full mode: flows de booking con secuencia correcta (resolve → check → schedule)
+- [ ] En full mode: flows de booking con patrón canónico (entidades → disponibilidad → paciente+agenda al final; `selection` para distinguir nuevo/existente)
 - [ ] En tasks-only mode: NINGUNA scheduling tool (check_availability, schedule_block, etc.)
 - [ ] responseTemplate presente en flows de manage_schedule_block_status
 - [ ] allowedTools incluye exactamente las tools del flow (si se usa)

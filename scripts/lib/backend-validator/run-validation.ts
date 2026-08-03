@@ -1,26 +1,46 @@
 /**
- * run-backend-validation.ts
+ * run-validation.ts
  *
  * Wrapper para ejecutar el validador replicado del backend.
- * Lee JSON desde stdin o archivo y emite resultado JSON a stdout.
+ * Emite resultado JSON a stdout:
+ *   - errors: bloqueantes (impiden guardar)
+ *   - gaps: NO bloqueantes (incluye severity 'advisory' con notas canónicas del modo)
+ *   - qualityScore: puntuación de calidad del borrador
+ *
+ * El modo es OBLIGATORIO (sin fallback), igual que en el backend.
  *
  * Uso:
- *   npx tsx scripts/lib/backend-validator/run-validation.ts <json-path> <mode>
+ *   npx tsx scripts/lib/backend-validator/run-validation.ts <json-path> <full|tasks-only>
+ *
+ * Exit codes: 0 = válido · 1 = inválido · 2 = error de uso
  */
 
-import { validateStructuredLogic, ValidationResult } from './validator';
+import { validateStructuredLogic, detectGaps, generateQualityScore } from './validator';
+import type { StructuredLogic, StructuredLogicChatMode } from './structured-logic';
 import fs from 'fs';
 
 const jsonPath = process.argv[2];
-const mode = (process.argv[3] as any) || 'tasks-only';
+const mode = process.argv[3] as StructuredLogicChatMode | undefined;
 
 if (!jsonPath || !fs.existsSync(jsonPath)) {
-  console.error('Usage: npx tsx run-validation.ts <json-path> <mode>');
-  process.exit(1);
+  console.error('Usage: npx tsx run-validation.ts <json-path> <full|tasks-only>');
+  process.exit(2);
+}
+
+if (!mode || (mode !== 'full' && mode !== 'tasks-only')) {
+  console.error('mode is required and must be "full" or "tasks-only"');
+  process.exit(2);
 }
 
 const logic = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-const result: ValidationResult = validateStructuredLogic(logic, mode);
+const { valid, errors } = validateStructuredLogic(logic, mode);
 
-console.log(JSON.stringify(result));
-process.exit(result.valid ? 0 : 1);
+// Igual que BuilderAgent.validateDraft en el backend: los gaps solo se calculan
+// cuando el borrador es válido (detectGaps asume estructura completa).
+const gaps = valid ? detectGaps(logic as StructuredLogic, mode) : [];
+const qualityScore = valid
+  ? generateQualityScore(logic as StructuredLogic)
+  : { score: 0, max: 94, gaps: ['structuredLogic is invalid; fix validation errors first'] };
+
+console.log(JSON.stringify({ valid, errors, gaps, qualityScore }));
+process.exit(valid ? 0 : 1);
