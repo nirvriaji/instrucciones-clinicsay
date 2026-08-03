@@ -32,6 +32,11 @@ export const StructuredLogicJsonSchema = {
       properties: {
         sensitiveSituations: { type: 'boolean' },
         protocols: { type: 'boolean' },
+        bookingMode: {
+          type: ['string', 'null'],
+          enum: ['direct', 'confirm-first'],
+          description: 'Modo de agendamiento de la clínica: direct = agendar al elegir slot (default recomendado); confirm-first = pedir confirmación explícita antes de schedule_block.',
+        },
       },
       required: ['sensitiveSituations', 'protocols'],
     },

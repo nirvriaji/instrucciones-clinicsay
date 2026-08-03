@@ -136,9 +136,14 @@ type IntentDefinition = {
 {
   sensitiveSituations: boolean;  // Handles delicate situations?
   protocols: boolean;         // Has specific protocols?
+  bookingMode?: "direct" | "confirm-first" | null;  // Optional per-clinic booking behavior
 }
 ```
 > **NOTE:** `scheduling` capability is derived from the external chat mode (`'full'` or `'tasks-only'`), **NOT** stored in the JSON. The backend computes it at runtime. Do NOT add `scheduling`, `products`, `shipping`, or `reminders` to `capabilities`.
+>
+> **`bookingMode`** (optional, per clinic): `direct` = book as soon as the patient picks a slot (recommended default — `schedule_block`'s result IS the confirmation); `confirm-first` = ask for explicit confirmation before booking. Decided per sede in its JSON (clinic config, NOT conversation state).
+
+> **CONFIRM GATE (deterministic, backend):** the `confirm_appointment` flow declares `selection.requiredCapabilities: ["hasActiveAppointment"]`. The capability is computed from data (future non-cancelled block or reminder link), never inferred — so a bare "sí" without a real appointment can never reach the confirmation flow (no fake confirms).
 
 ### `ToolOrchestration` and `ToolFlow`
 

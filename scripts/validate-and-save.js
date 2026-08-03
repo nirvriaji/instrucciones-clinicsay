@@ -581,7 +581,7 @@ function validateSchema(data, errors) {
 const VALID_STEP_CAPABILITIES = new Set([
   'hasResolvedTreatment', 'hasResolvedPatient', 'hasResolvedProfessional',
   'hasShownSlots', 'hasSelectedSlot', 'hasCreatedAppointment', 'hasCreatedTask',
-  'hasResolvedAvailabilityQuery',
+  'hasResolvedAvailabilityQuery', 'hasActiveAppointment',
 ]);
 const CAPABILITY_ESTABLISHERS = {
   hasResolvedTreatment: ['resolve_treatment'],
@@ -592,6 +592,7 @@ const CAPABILITY_ESTABLISHERS = {
   hasCreatedAppointment: ['schedule_block'],
   hasCreatedTask: ['create_task'],
   hasResolvedAvailabilityQuery: ['resolve_availability_query'],
+  hasActiveAppointment: [], // deterministic, computed from conversation context (not a tool)
 };
 
 function levenshtein(a, b) {

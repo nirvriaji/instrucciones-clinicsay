@@ -208,7 +208,7 @@
   },
   "intents": {
     "appointment_confirmation": {
-      "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
+      "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es scheduling_request (continuar el agendamiento).",
       "examples": [
         "confirmo",
         "ahí estaré"
@@ -408,7 +408,12 @@
           }
         ],
         "responseTemplate": "Perfecto, hemos confirmado tu cita. Nos vemos pronto.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "literal",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        }
       },
       "cancel_appointment": {
         "intent": "appointment_cancellation",

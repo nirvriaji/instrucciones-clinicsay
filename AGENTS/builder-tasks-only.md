@@ -585,20 +585,23 @@ Marca la cita como confirmada. Es una acción directa con `manage_schedule_block
 ```json
 {
   "intent": "appointment_confirmation",
-  "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
+  "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es scheduling_request (continuar el agendamiento).",
+  "selection": { "requiredCapabilities": ["hasActiveAppointment"] },
   "steps": [
     {
       "step": 1,
       "tools": ["manage_schedule_block_status"],
       "parallel": false,
       "required": [],
-      "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). Confirmar todas las citas de ese día sin preguntar cuál; no nombrar tratamientos en la respuesta."
+      "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). Confirmar todas las citas de ese día sin preguntar cuál; no nombrar tratamientos en la respuesta. El gate determinista de selection impide activar este flow sin cita real (nunca confirmar aire)."
     }
   ],
   "responseTemplate": "Tu cita ha quedado confirmada. Te esperamos.",
   "allowedTools": ["manage_schedule_block_status"]
 }
 ```
+
+> **GATE DETERMINISTA (obligatorio):** `confirm_appointment` SIEMPRE lleva `selection.requiredCapabilities: ["hasActiveAppointment"]`. Sin cita real, el flow es inelegible y un "sí" desnudo NUNCA produce confirmación falsa.
 
 #### Flow: `cancel_existing_appointment`
 

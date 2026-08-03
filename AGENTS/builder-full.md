@@ -597,14 +597,19 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 ```json
 {
   "intent": "appointment_confirmation",
-  "description": "El paciente confirma asistencia a una cita existente, especialmente como respuesta a un recordatorio.",
+  "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es scheduling_request (continuar el agendamiento).",
+  "selection": { "requiredCapabilities": ["hasActiveAppointment"] },
   "steps": [
-    { "step": 1, "tools": ["manage_schedule_block_status"], "parallel": false, "required": [], "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). La confirmación no requiere tarea de seguimiento." }
+    { "step": 1, "tools": ["manage_schedule_block_status"], "parallel": false, "required": [], "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). La confirmación no requiere tarea de seguimiento. El gate determinista de selection impide activar este flow sin cita real (nunca confirmar aire)." }
   ],
   "responseTemplate": "Tu cita ha quedado confirmada. Te esperamos.",
   "allowedTools": ["manage_schedule_block_status"]
 }
 ```
+
+> **GATE DETERMINISTA (obligatorio):** `confirm_appointment` SIEMPRE lleva `selection.requiredCapabilities: ["hasActiveAppointment"]`. Sin cita real (bloque futuro no cancelado o link de recordatorio), el flow es inelegible y un "sí" desnudo NUNCA produce confirmación falsa. La capability `hasActiveAppointment` es turn-start, computada por el backend desde el contexto — válida también en `selection` de otros flows.
+>
+> **`bookingMode` (config por sede, en `capabilities`):** `direct` = agendar al elegir slot (default recomendado: la respuesta de `schedule_block` ES la confirmación); `confirm-first` = pedir confirmación explícita antes de agendar. Va en el JSON de cada clínica, no en el estado de conversación.
 
 #### Flow: `cancel_existing_appointment`
 

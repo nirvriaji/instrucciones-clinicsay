@@ -22,7 +22,7 @@ export const CRITICAL_INTENTS: Array<{ category: string; description: string }> 
  * Capabilities that are available before the tool cycle starts and are therefore
  * safe to use in flow.selection.
  */
-export const TURN_START_CAPABILITIES = ['hasResolvedPatient'] as const;
+export const TURN_START_CAPABILITIES = ['hasResolvedPatient', 'hasActiveAppointment'] as const;
 export const TURN_START_CAPABILITY_SET = new Set<string>(TURN_START_CAPABILITIES);
 
 export const VALID_CAPABILITIES = new Set([
@@ -34,6 +34,7 @@ export const VALID_CAPABILITIES = new Set([
   'hasCreatedAppointment',
   'hasCreatedTask',
   'hasResolvedAvailabilityQuery',
+  'hasActiveAppointment',
 ]);
 
 /**
@@ -51,6 +52,7 @@ export const CAPABILITY_ESTABLISHERS: Record<string, string[]> = {
   hasCreatedAppointment: ['schedule_block'],
   hasCreatedTask: ['create_task'],
   hasResolvedAvailabilityQuery: ['resolve_availability_query'],
+  hasActiveAppointment: [], // deterministic, computed from conversation context (not a tool)
 };
 
 /**
