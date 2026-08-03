@@ -32,6 +32,20 @@ El agente ejecuta scripts de validación (`validate-and-save.js`, `gap-detector.
 
 ---
 
+## Instalación en Linux / macOS
+
+Ejecuta el script de sincronización incluido en el repo:
+
+```bash
+bash scripts/sync-agents.sh
+```
+
+Copia `builder-full.md` y `builder-tasks-only.md` a `~/.config/opencode/agents/` (o al directorio que pases como argumento). Después, **reinicia opencode** — los agentes se cargan al arrancar.
+
+> 💡 **No hace falta editar rutas:** los prompts de los agentes localizan la raíz del repo dinámicamente (bloque "⚠️ RUTA DEL REPO" al inicio de cada agente). La misma copia funciona en cualquier máquina.
+
+---
+
 ## Instalación en Windows
 
 ### 1. Ubicación de los agentes
@@ -148,5 +162,9 @@ El agente ejecutará automáticamente:
 
 Cuando haya nuevas versiones de estos agentes:
 1. Descarga la última versión del repo
-2. Sobrescribe los archivos en `%APPDATA%\opencode\agents\`
+2. Sobrescribe los archivos en el directorio de agentes:
+   - **Linux/macOS:** `bash scripts/sync-agents.sh`
+   - **Windows:** copia los archivos a `%APPDATA%\opencode\agents\` (paso 2 de la instalación)
 3. Reinicia opencode desktop
+
+> 💡 Los agentes resuelven la ruta del repo dinámicamente en tiempo de ejecución; actualizar nunca requiere editar rutas dentro de los `.md`.

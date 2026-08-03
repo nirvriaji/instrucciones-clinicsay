@@ -1,8 +1,13 @@
 # [AGENT] Clinicsay Builder — FULL Mode v3.0 (Agente Generador/Editor)
 
 > **Arquitectura:** Agente LLM genera/edita JSON directamente. Scripts solo validan y detectan gaps.
-> **Location:** `~/clinicsay-instructions/`
+> **Location:** la raíz de este repo — **NO hay ruta fija garantizada**; resuélvela primero (ver aviso abajo).
 > **Rule:** TÚ generas el JSON. Los scripts solo validan estructura y detectan inconsistencias.
+>
+> **⚠️ RUTA DEL REPO (resuélvela ANTES de cualquier comando):** este repo puede estar descargado en cualquier máquina y carpeta (ej. Windows: `C:\Users\<usuario>\Documents\instrucciones-clinicsay`; Linux/macOS: cualquier ruta como `/root/instrucciones-clinicsay` o `~/Documents/instrucciones-clinicsay`).
+> 1. **Localiza la raíz del repo:** es la carpeta que contiene `sedes/`, `scripts/`, `_templates/` y `AGENTS/`. Si estás leyendo este archivo desde el repo, su carpeta padre de `AGENTS/` es la raíz. Si no la encuentras, pregunta al asesor dónde descargó el repo.
+> 2. **Usa esa ruta absoluta (en adelante `<RAIZ_REPO>`) en TODOS los comandos y rutas:** `node <RAIZ_REPO>/scripts/...`, `<RAIZ_REPO>/sedes/<nombre>/...`.
+> 3. **En Windows** adapta los comandos de consola: en PowerShell/CMD usa `mkdir C:\...\sedes\<nombre>\input` (sin `-p`) o sugiere Git Bash/WSL.
 
 ---
 
@@ -127,8 +132,8 @@ Cuando el asesor dice "vamos a trabajar en <nombre>":
      a. Informar al asesor: "No encuentro archivos en `sedes/<nombre>/input/`. Por favor, crea la estructura de carpetas y coloca ahí tus notas."
      b. Instruir al asesor:
         ```
-        mkdir -p ~/clinicsay-instructions/sedes/<nombre>/input
-        mkdir -p ~/clinicsay-instructions/sedes/<nombre>/output
+        mkdir -p <RAIZ_REPO>/sedes/<nombre>/input
+        mkdir -p <RAIZ_REPO>/sedes/<nombre>/output
         ```
       c. Explicar el formato esperado: "Puedes incluir: archivos de texto (`.md`, `.txt`) con la información general de la clínica, un archivo `.json` con lógica estructurada previa (si la tienes), u otros archivos de texto o JSON con información adicional. Puedes usar `sedes/demo/input/` como ejemplo."
      d. Esperar a que el asesor cree los archivos. NO crear directorios ni archivos automáticamente.
@@ -693,8 +698,8 @@ No declarar un gap como falso positivo sin citar el texto fuente y la ruta exact
 ### Archivo no encontrado
 "No encuentro archivos en `sedes/<nombre>/input/`. Por favor, crea la estructura de carpetas:
 ```
-mkdir -p ~/clinicsay-instructions/sedes/<nombre>/input
-mkdir -p ~/clinicsay-instructions/sedes/<nombre>/output
+mkdir -p <RAIZ_REPO>/sedes/<nombre>/input
+mkdir -p <RAIZ_REPO>/sedes/<nombre>/output
 ```
 Luego coloca ahí tus notas. Puedes incluir:
 - Archivos de texto (`.md`, `.txt`) con la información general de la clínica

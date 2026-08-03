@@ -64,6 +64,11 @@ Si ves "node is not recognized", reinicia PowerShell/CMD o tu equipo.
 
 Los agentes son las "system instructions" que le dicen a la IA cómo generar el JSON.
 
+> **Linux/macOS:** ejecuta `bash scripts/sync-agents.sh` y reinicia opencode. ¡Listo!
+> **Windows:** sigue los pasos de abajo.
+>
+> 💡 **No hace falta editar rutas:** los agentes localizan la raíz del repo dinámicamente (bloque "⚠️ RUTA DEL REPO" al inicio de cada prompt), en cualquier máquina y carpeta donde se descargue el repo.
+
 **Ruta destino en Windows:**
 
 ```
@@ -276,6 +281,7 @@ instrucciones-clinicsay/
 │   ├── validate-and-save.js       ← Validador principal
 │   ├── gap-detector.js            ← Detector de gaps
 │   ├── check-structure.js         ← Verificador de estructura
+│   ├── sync-agents.sh             ← Instala/actualiza agentes en opencode (Linux/macOS)
 │   └── lib/                        ← Librerías de soporte
 ├── _templates/
 │   ├── base-full.json              ← Template estructural full
