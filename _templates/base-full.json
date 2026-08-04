@@ -260,7 +260,7 @@
       ]
     },
     "appointment_reschedule_request": {
-      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, (c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), (d) \"restablecer\" una cita tras cancelarla en el mismo turno de conversacion. Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs).",
+      "description": "El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. NO usar cuando el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita (eso es scheduling_request, continuar el agendamiento). Incluye: cambiar de día, adelantar o atrasar la hora, corregir el titular. Ejemplos válidos: \"muévela al jueves\", \"cámbiamela a la tarde\", \"adelántala una hora\".",
       "examples": [
         "¿podemos cambiar mi cita al jueves?",
         "muevela a la tarde",
@@ -437,7 +437,12 @@
           }
         ],
         "responseTemplate": "Entendido, hemos cancelado tu cita. Si necesitas otra, avisanos.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "literal",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        }
       },
       "reschedule_appointment": {
         "intent": "appointment_reschedule_request",
@@ -470,7 +475,12 @@
           }
         ],
         "responseTemplate": "He movido tu cita. Te esperamos en la nueva fecha y hora.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "literal",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        }
       },
       "on_the_way": {
         "intent": "patient_running_late",
@@ -486,7 +496,12 @@
           }
         ],
         "responseTemplate": "Gracias por avisar. Ajustamos tu cita segun el retraso.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "literal",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        }
       },
       "reschedule_inquiry": {
         "intent": "appointment_reschedule_inquiry",
@@ -507,7 +522,12 @@
         "description": "Paciente indica que quiere mantener la cita tal como esta.",
         "steps": [],
         "responseTemplate": "keep_appointment",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "literal",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        }
       },
       "farewell": {
         "intent": "farewell",

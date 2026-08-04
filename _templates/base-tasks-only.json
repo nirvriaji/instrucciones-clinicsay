@@ -248,7 +248,7 @@
       ]
     },
     "appointment_reschedule_request": {
-      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, (c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), (d) \"restablecer\" una cita tras cancelarla en el mismo turno de conversacion. Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs).",
+      "description": "El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. NO usar cuando el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita (eso es scheduling_request, continuar el agendamiento). Incluye: cambiar de día, adelantar o atrasar la hora, corregir el titular. Ejemplos válidos: \"muévela al jueves\", \"cámbiamela a la tarde\", \"adelántala una hora\".",
       "examples": [
         "¿podemos cambiar mi cita al jueves?",
         "muevela a la tarde",
@@ -340,7 +340,12 @@
             "note": "Marcar CANCELADA. El campo \"reason\" es obligatorio; usar \"Solicitud del paciente\". NO preguntar motivo al paciente."
           }
         ],
-        "responseTemplate": "appointment_cancelled"
+        "responseTemplate": "appointment_cancelled",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        }
       },
       "mark_on_the_way": {
         "intent": "patient_running_late",
@@ -356,7 +361,12 @@
             "note": "Marcar EN_CAMINO"
           }
         ],
-        "responseTemplate": "on_the_way"
+        "responseTemplate": "on_the_way",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        }
       },
       "reschedule_existing_appointment": {
         "intent": "appointment_reschedule_request",
@@ -373,7 +383,12 @@
             "note": "Cancelar cita actual (reason=\"Solicitud del paciente\", NO preguntar motivo) + crear tarea para seguimiento humano. Para correccion de titular: cancelar cita actual, crear tarea indicando nuevo paciente y mismo treatmentId. Para restablecer tras cancelacion en este turno: usar datos del historial de tool outputs."
           }
         ],
-        "responseTemplate": "change_requested"
+        "responseTemplate": "change_requested",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        }
       },
       "reschedule_inquiry": {
         "intent": "appointment_reschedule_inquiry",
@@ -394,7 +409,12 @@
         "description": "Paciente indica que quiere mantener la cita tal como esta.",
         "steps": [],
         "responseTemplate": "Perfecto, tu cita sigue confirmada.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "literal",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        }
       },
       "farewell": {
         "intent": "farewell",

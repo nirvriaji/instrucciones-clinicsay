@@ -607,7 +607,20 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 }
 ```
 
-> **GATE DETERMINISTA (obligatorio):** `confirm_appointment` SIEMPRE lleva `selection.requiredCapabilities: ["hasActiveAppointment"]`. Sin cita real (bloque futuro no cancelado o link de recordatorio), el flow es inelegible y un "sí" desnudo NUNCA produce confirmación falsa. La capability `hasActiveAppointment` es turn-start, computada por el backend desde el contexto — válida también en `selection` de otros flows.
+> **GATE DETERMINISTA DEL CICLO DE VIDA DE CITAS (obligatorio):** los 4 flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requiredCapabilities: ["hasActiveAppointment"]`:
+> - `confirm_appointment` (confirmar)
+> - `reschedule_appointment` (mover/reagendar)
+> - `cancel_appointment` (cancelar)
+> - `on_the_way` (patient_running_late)
+> - `keep_appointment_flow` ("tu cita sigue confirmada")
+>
+> Sin cita real (bloque futuro no cancelado o link de recordatorio), el flow es **inelegible por construcción**: un "sí" desnudo NUNCA produce acción ni mensaje falso ("He movido tu cita", "He cancelado tu cita", "¡Muchas gracias!", "tu cita sigue confirmada"). La capability es turn-start, computada por el backend desde el contexto (nunca del LLM).
+>
+> **NO llevan gate** (no escriben): `reschedule_inquiry`, `cancellation_inquiry` (solo consultan). **NO se aplica** a flujos custom de clases (`pilates_class_request` y similares — dominio distinto con su propia lógica).
+>
+> **Fallback elegante:** cuando todos son inelegibles, el LLM responde conversacionalmente y puede usar la plantilla `no_appointments` ("No aparecen citas programadas. ¿Puedo ayudarte con algo más?") — nunca afirma una acción que no ocurrió.
+>
+> **Descripción de `appointment_reschedule_request` (sin ambigüedad):** debe excluir explícitamente "el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita" — eso es `scheduling_request` (continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente.
 >
 > **`bookingMode` (config por sede, en `capabilities`):** `direct` = agendar al elegir slot (default recomendado: la respuesta de `schedule_block` ES la confirmación); `confirm-first` = pedir confirmación explícita antes de agendar. Va en el JSON de cada clínica, no en el estado de conversación.
 

@@ -143,7 +143,7 @@ type IntentDefinition = {
 >
 > **`bookingMode`** (optional, per clinic): `direct` = book as soon as the patient picks a slot (recommended default — `schedule_block`'s result IS the confirmation); `confirm-first` = ask for explicit confirmation before booking. Decided per sede in its JSON (clinic config, NOT conversation state).
 
-> **CONFIRM GATE (deterministic, backend):** the `confirm_appointment` flow declares `selection.requiredCapabilities: ["hasActiveAppointment"]`. The capability is computed from data (future non-cancelled block or reminder link), never inferred — so a bare "sí" without a real appointment can never reach the confirmation flow (no fake confirms).
+> **APPOINTMENT LIFECYCLE GATE (deterministic, backend):** every flow that ACTS on an existing appointment declares `selection.requiredCapabilities: ["hasActiveAppointment"]`: `confirm_appointment`, `reschedule_appointment`, `cancel_appointment`, `on_the_way` (patient_running_late), `keep_appointment_flow`. The capability is computed from data (future non-cancelled block or reminder link), never inferred — so without a real appointment those flows are ineligible by construction and no fake action/message can be produced ("He movido tu cita", "¡Muchas gracias!", "tu cita sigue confirmada"). Inquiry flows (`reschedule_inquiry`, `cancellation_inquiry`) do NOT carry the gate (they write nothing), and custom class flows are out of scope (different domain). Fallback when all are ineligible: conversational answer, optionally via the `no_appointments` template — never a false claim.
 
 ### `ToolOrchestration` and `ToolFlow`
 

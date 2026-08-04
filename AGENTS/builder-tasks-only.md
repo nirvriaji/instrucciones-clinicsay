@@ -601,7 +601,20 @@ Marca la cita como confirmada. Es una acción directa con `manage_schedule_block
 }
 ```
 
-> **GATE DETERMINISTA (obligatorio):** `confirm_appointment` SIEMPRE lleva `selection.requiredCapabilities: ["hasActiveAppointment"]`. Sin cita real, el flow es inelegible y un "sí" desnudo NUNCA produce confirmación falsa.
+> **GATE DETERMINISTA DEL CICLO DE VIDA DE CITAS (obligatorio):** los 4 flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requiredCapabilities: ["hasActiveAppointment"]`:
+> - `confirm_existing_appointment` (confirmar)
+> - `reschedule_existing_appointment` (mover/reagendar)
+> - `cancel_existing_appointment` (cancelar)
+> - `mark_on_the_way` (patient_running_late)
+> - `keep_appointment_flow` ("tu cita sigue confirmada")
+>
+> Sin cita real (bloque futuro no cancelado o link de recordatorio), el flow es **inelegible por construcción**: un "sí" desnudo NUNCA produce acción ni mensaje falso ("He movido tu cita", "He cancelado tu cita", "¡Muchas gracias!", "tu cita sigue confirmada"). La capability es turn-start, computada por el backend desde el contexto (nunca del LLM).
+>
+> **NO llevan gate** (no escriben): `reschedule_inquiry`, `cancellation_inquiry`. **NO se aplica** a flujos custom de clases.
+>
+> **Fallback elegante:** cuando todos son inelegibles, el LLM responde conversacionalmente (puede usar `no_appointments` si existe) — nunca afirma una acción que no ocurrió.
+>
+> **Descripción de `appointment_reschedule_request` (sin ambigüedad):** excluir explícitamente "el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita" — eso es `scheduling_request`.
 
 #### Flow: `cancel_existing_appointment`
 
