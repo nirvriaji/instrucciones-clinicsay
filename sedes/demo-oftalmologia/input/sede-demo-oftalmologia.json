@@ -49,7 +49,7 @@
   "rules": [
     {
       "id": "ask_about_existing_appointment",
-      "note": "El backend inyecta las citas del paciente en el system prompt (ASSOCIATED_PATIENTS). El bot responde sin llamar tools.",
+      "note": "El bot responde sobre las citas del paciente usando la información de la conversación, sin llamar tools.",
       "action": "allow",
       "intent": "appointment_inquiry",
       "priority": 0,
@@ -57,7 +57,7 @@
     },
     {
       "id": "confirm_existing_appointment",
-      "note": "Permitir continuar para ejecutar manage_schedule_block_status (CONFIRMADA). La confirmación no requiere tarea de seguimiento.",
+      "note": "Permitir continuar. La confirmación se gestiona en la conversación, sin tools.",
       "action": "allow",
       "intent": "appointment_confirmation",
       "priority": 0,
@@ -65,15 +65,15 @@
     },
     {
       "id": "cancel_existing_appointment",
-      "note": "Permitir continuar para ejecutar el flow de cancelación.",
+      "note": "Permitir continuar. La cancelación se gestiona en la conversación, sin tools ni tarea.",
       "action": "allow",
       "intent": "appointment_cancellation",
       "priority": 0,
       "description": "El paciente solicita cancelar una o más citas existentes, o responde a un recordatorio indicando que no asistirá."
     },
     {
-      "id": "scheduling_request_to_task",
-      "note": "El bot no ejecuta scheduling directamente. Recopilar tratamiento, fechas/horarios preferidos, profesional si aplica, y crear una tarea para el equipo humano.",
+      "id": "scheduling_direct_booking",
+      "note": "El bot agenda la cita directamente en la conversación: recopila los datos y confirma con día y hora concretos. No crear tarea ni consultar agenda externa.",
       "action": "allow",
       "intent": "scheduling_request",
       "priority": 0,
@@ -115,7 +115,7 @@
     },
     {
       "id": "surgery_requires_evaluation",
-      "note": "Para cirugías láser o de cataratas, primero crear tarea para valoración oftalmológica. El equipo confirmará disponibilidad tras la revisión.",
+      "note": "Para cirugías láser o de cataratas, agendar primero la cita de VALORACIÓN (nunca la cirugía directamente), confirmando día y hora en la conversación. No crear tarea.",
       "action": "allow",
       "intent": "scheduling_request",
       "priority": 0,
@@ -384,8 +384,6 @@
   },
   "capabilities": {
     "protocols": false,
-    "reminders": false,
-    "scheduling": false,
     "sensitiveSituations": false
   },
   "errorCategories": [
@@ -437,11 +435,11 @@
       "text": "Buenos días, soy la Dra. Elena, oftalmóloga virtual de VistaClara. ¿En qué puedo ayudarle?"
     },
     "cancellation": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Su cita ha sido cancelada. Si desea reprogramar, podemos ayudarle."
     },
     "confirmation": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Su cita ha quedado confirmada. Le esperamos en Instituto Oftalmológico VistaClara."
     },
     "task_created": {
@@ -473,8 +471,8 @@
       "text": "Buenas tardes, soy la Dra. Elena, oftalmóloga virtual de VistaClara. ¿En qué puedo ayudarle?"
     },
     "scheduling_request": {
-      "mode": "literal",
-      "text": "Un miembro de nuestro equipo se pondrá en contacto con usted a la mayor brevedad posible para confirmar su cita. O si lo prefiere, puede llamar al 910 234 567."
+      "mode": "model",
+      "text": "¡Perfecto! Su cita ha quedado agendada. Le enviaremos un recordatorio antes de su visita. ¿Puedo ayudarle en algo más?"
     },
     "clinics_ceo_meeting": {
       "mode": "literal",
@@ -548,7 +546,7 @@
       "appointment_inquiry": {
         "steps": [
           {
-            "note": "Usa el contexto ASSOCIATED_PATIENTS para responder. Si no hay citas, indica que no hay citas programadas y ofrece ayuda.",
+            "note": "Responder sobre las citas del paciente usando la información de esta conversación. Si no consta ninguna cita en la conversación, indicar que no hay citas programadas y ofrecer agendar una. No llamar a ninguna tool.",
             "step": 1,
             "tools": [],
             "parallel": false,
@@ -562,74 +560,50 @@
       "any_scheduling_request": {
         "steps": [
           {
-            "note": "Recopilar nombre, apellidos, teléfono, tratamiento deseado, fechas/horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento. El bot no consulta la agenda ni muestra huecos disponibles.",
+            "note": "Agendar la cita directamente en esta conversación: recopilar nombre, tratamiento o motivo y fecha/hora preferida. Para cirugías láser o de cataratas, agendar primero la cita de VALORACIÓN (nunca la cirugía directamente). Si el paciente no propone fecha, ofrecer una opción concreta (día y hora). Confirmar la cita indicando siempre día y hora concretos. No llamar a ninguna tool: la cita queda gestionada en esta conversación. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
             "step": 1,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "scheduling_request",
         "description": "El paciente solicita agendar una nueva cita, reprogramar, adelantar o atrasar una cita existente, o consultar disponibilidad de huecos.",
-        "allowedTools": [
-          "create_task"
-        ],
-        "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto con usted a la mayor brevedad posible para confirmar su cita. O si lo prefiere, puede llamar al 910 234 567.",
-        "responseTemplateMode": "literal"
+        "allowedTools": [],
+        "responseTemplate": "¡Perfecto! Su cita ha quedado agendada. Le enviaremos un recordatorio antes de su visita. ¿Puedo ayudarle en algo más?",
+        "responseTemplateMode": "model"
       },
       "cancel_existing_appointment": {
         "steps": [
           {
-            "note": "Una sola cita: manage_schedule_block_status(CANCELADA). Varias el mismo día: manage_all_schedule_blocks_for_date (una llamada por cita).",
+            "note": "Cancelar la cita del paciente usando la información de esta conversación y confirmarle la cancelación. No llamar a ninguna tool ni crear tarea. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status",
-              "manage_all_schedule_blocks_for_date"
-            ],
-            "parallel": false,
-            "required": []
-          },
-          {
-            "note": "Crear TAREA por la cancelación para seguimiento humano. Incluir motivo si el paciente lo menciona.",
-            "step": 2,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_cancellation",
         "description": "El paciente solicita cancelar una o más citas existentes, o responde a un recordatorio indicando que no asistirá.",
-        "allowedTools": [
-          "manage_schedule_block_status",
-          "manage_all_schedule_blocks_for_date",
-          "create_task"
-        ],
+        "allowedTools": [],
         "responseTemplate": "Su cita ha sido cancelada. Si desea reprogramar, podemos ayudarle.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "confirm_existing_appointment": {
         "steps": [
           {
-            "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). Confirmar todas las citas de ese día sin preguntar cuál; no nombrar tratamientos en la respuesta.",
+            "note": "Confirmar la asistencia del paciente a su cita usando la información de esta conversación. No llamar a ninguna tool. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_confirmation",
         "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
-        "allowedTools": [
-          "manage_schedule_block_status"
-        ],
+        "allowedTools": [],
         "responseTemplate": "Su cita ha quedado confirmada. Le esperamos en Instituto Oftalmológico VistaClara.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       }
     }
   },
@@ -643,8 +617,8 @@
       "Teléfono de urgencias es el mismo que el general (inventado)."
     ],
     "notesForAdvisor": [
+      "MODO DEMO: el bot SIMULA todo el ciclo de citas de forma conversacional (agendar, consultar, confirmar y cancelar) sin tools de gestión real ni tareas; nada se registra en ningún sistema. Las tareas solo se crean en escalados humanos (human_follow_up, urgencias).",
       "Bot: Dra. Elena (oftalmóloga virtual). Tono especialista, usa 'usted'.",
-      "No se permite agendamiento directo: el bot recopila datos y crea tareas.",
       "CTA final de Clinicsay solo una vez tras interacción exitosa.",
       "No mencionar precio ni duración salvo solicitud explícita.",
       "Cirugías láser y de cataratas requieren valoración previa obligatoria.",

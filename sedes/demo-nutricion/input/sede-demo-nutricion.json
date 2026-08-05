@@ -49,7 +49,7 @@
   "rules": [
     {
       "id": "ask_about_existing_appointment",
-      "note": "El backend inyecta la información del cliente en el system prompt. El bot responde sin llamar tools. MPunti no agenda citas: interpretar como consulta sobre programas adquiridos.",
+      "note": "MODO DEMO CONVERSACIONAL: El bot responde sobre programas o packs usando la información del contexto de la conversación y el catálogo. No usa tools de consulta real. Todo es puramente conversacional.",
       "action": "allow",
       "intent": "appointment_inquiry",
       "priority": 0,
@@ -57,7 +57,7 @@
     },
     {
       "id": "confirm_existing_appointment",
-      "note": "MPunti no agenda citas. Si el cliente confirma una compra o pedido, responder desde el contexto sin crear tarea.",
+      "note": "MODO DEMO CONVERSACIONAL: El bot confirma la compra o sesión directamente en la conversación. No usa tools de gestión real ni crea tareas. La confirmación es puramente conversacional.",
       "action": "allow",
       "intent": "appointment_confirmation",
       "priority": 0,
@@ -65,20 +65,19 @@
     },
     {
       "id": "cancel_existing_appointment",
-      "note": "MPunti no agenda citas. Las cancelaciones de compra o suscripción van a tarea para gestión humana.",
+      "note": "MODO DEMO CONVERSACIONAL: El bot tramita la cancelación directamente en la conversación. No usa tools de gestión real ni crea tareas. La cancelación es puramente conversacional.",
       "action": "allow",
       "intent": "appointment_cancellation",
       "priority": 0,
       "description": "El cliente solicita cancelación de una compra o suscripción."
     },
     {
-      "id": "scheduling_request_to_task",
-      "note": "MPunti no agenda citas presenciales: se vende online. Identificar la necesidad del cliente (nutrición, entrenamiento, psicología), proporcionar el enlace adecuado (solo 1 por conversación) y crear tarea si requiere seguimiento personalizado.",
+      "id": "scheduling_direct_booking",
+      "note": "MODO DEMO CONVERSACIONAL: El bot simula el agendamiento/activación del programa directamente en la conversación, indicando día, hora o siguientes pasos. No usa tools de gestión real ni crea tareas. Todo es puramente conversacional.",
       "action": "allow",
       "intent": "scheduling_request",
       "priority": 0,
-      "description": "El cliente quiere información sobre programas o packs, o quiere empezar uno.",
-      "redirectToTask": true
+      "description": "El cliente quiere información sobre programas o packs, o quiere empezar uno."
     },
     {
       "id": "general_inquiry",
@@ -98,20 +97,11 @@
     },
     {
       "id": "patient_running_late",
-      "note": "MPunti no agenda citas presenciales. Si aplica a una sesión online ya acordada, gestionar desde el contexto.",
+      "note": "MODO DEMO CONVERSACIONAL: El bot responde tranquilizando al cliente directamente en la conversación. No usa tools de gestión real ni marca estados. Todo es puramente conversacional.",
       "action": "allow",
       "intent": "patient_running_late",
       "priority": 0,
       "description": "El cliente avisa que llegará tarde a una sesión online acordada."
-    },
-    {
-      "id": "no_online_booking",
-      "note": "MPunti no tiene citas: todo se gestiona como venta online o tarea para el equipo.",
-      "action": "allow",
-      "intent": "scheduling_request",
-      "priority": 0,
-      "description": "No hay agendamiento automático. Toda solicitud de inicio de programa va a tarea o a venta online directa.",
-      "redirectToTask": true
     },
     {
       "id": "derivation_protocol",
@@ -120,6 +110,46 @@
       "intent": "human_follow_up",
       "priority": 0,
       "description": "El cliente insiste varias veces en lo mismo, pide hablar con alguien, hay incidencia con una compra, o dudas que el bot no puede resolver."
+    },
+    {
+      "id": "reschedule_request",
+      "note": "MODO DEMO CONVERSACIONAL: El bot simula el cambio de sesión directamente en la conversación, confirmando nueva fecha/hora. No usa tools de gestión real ni crea tareas. Todo es puramente conversacional.",
+      "action": "allow",
+      "intent": "appointment_reschedule_request",
+      "priority": 0,
+      "description": "El cliente quiere mover una sesión online ya acordada a otra fecha u hora."
+    },
+    {
+      "id": "reschedule_inquiry",
+      "note": "Responder conversacionalmente sobre la posibilidad de cambiar la sesión.",
+      "action": "allow",
+      "intent": "appointment_reschedule_inquiry",
+      "priority": 0,
+      "description": "El cliente consulta sobre la posibilidad de reprogramar una sesión existente, sin confirmar el cambio todavía."
+    },
+    {
+      "id": "cancellation_inquiry",
+      "note": "Responder conversacionalmente sobre la posibilidad de cancelar.",
+      "action": "allow",
+      "intent": "appointment_cancellation_inquiry",
+      "priority": 0,
+      "description": "El cliente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente."
+    },
+    {
+      "id": "keep_appointment",
+      "note": "Confirmar que la sesión sigue activa.",
+      "action": "allow",
+      "intent": "keep_appointment",
+      "priority": 0,
+      "description": "El cliente indica que quiere mantener la sesión tal como está."
+    },
+    {
+      "id": "farewell",
+      "note": "Permitir al bot responder brevemente o callarse amablemente.",
+      "action": "allow",
+      "intent": "farewell",
+      "priority": 0,
+      "description": "El cliente se despide, agradece o cierra la conversación de forma amable."
     }
   ],
   "intents": {
@@ -152,7 +182,7 @@
         "¿cómo empiezo?",
         "información sobre nutrición"
       ],
-      "description": "El cliente quiere información sobre programas o packs, o quiere empezar uno. MPunti no agenda citas: el bot identifica la necesidad, proporciona el enlace adecuado y crea tarea si requiere seguimiento."
+      "description": "El cliente quiere información sobre programas o packs, o quiere empezar uno."
     },
     "appointment_inquiry": {
       "examples": [
@@ -205,6 +235,46 @@
         "pack psicología"
       ],
       "description": "El cliente pregunta por pack de psicología online."
+    },
+    "farewell": {
+      "examples": [
+        "adios",
+        "gracias",
+        "hasta luego",
+        "nos vemos",
+        "chao",
+        "ok"
+      ],
+      "description": "El cliente se despide, agradece o cierra la conversación de forma amable."
+    },
+    "appointment_reschedule_request": {
+      "examples": [
+        "¿podemos cambiar mi cita al jueves?",
+        "muévela a la tarde",
+        "adelántala a las 10h"
+      ],
+      "description": "El cliente quiere mover una sesión online ya acordada a otra fecha u hora."
+    },
+    "appointment_reschedule_inquiry": {
+      "examples": [
+        "¿Se puede cambiar mi cita?",
+        "¿Podría moverla a otro día?"
+      ],
+      "description": "El cliente consulta sobre la posibilidad de reprogramar una sesión existente, sin confirmar el cambio todavía."
+    },
+    "appointment_cancellation_inquiry": {
+      "examples": [
+        "¿Qué pasa si no puedo ir?",
+        "¿Cómo cancelo una cita?"
+      ],
+      "description": "El cliente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente."
+    },
+    "keep_appointment": {
+      "examples": [
+        "la dejo como está",
+        "mantenla"
+      ],
+      "description": "El cliente indica que quiere mantener la sesión tal como está."
     }
   },
   "version": "1.0",
@@ -280,8 +350,6 @@
   },
   "capabilities": {
     "protocols": false,
-    "reminders": false,
-    "scheduling": false,
     "sensitiveSituations": false
   },
   "errorCategories": [
@@ -326,7 +394,7 @@
   ],
   "responseTemplates": {
     "greeting": {
-      "mode": "model",
+      "mode": "literal",
       "text": "Hola, soy el asistente virtual de MPunti. ¿En qué puedo ayudarte?"
     },
     "task_created": {
@@ -369,6 +437,10 @@
       "mode": "literal",
       "text": "Te recomiendo el Pack de 4 sesiones de Psicología Online por 260€. Puedes verlo aquí: https://mpunti.es/products/pack-4-sesiones-de-psicologia-nathalia"
     },
+    "scheduling_request": {
+      "mode": "model",
+      "text": "¡Perfecto! He dejado preparada tu activación del programa recomendado. Recibirás los siguientes pasos para empezar. ¿Puedo ayudarte en algo más?"
+    },
     "clinics_ceo_meeting": {
       "mode": "literal",
       "text": "¿Quiere agendar una reunión con nuestro CEO Alberto Enguita? https://calendly.com/ed-alberto/ia"
@@ -388,6 +460,22 @@
     "product_single_consultation": {
       "mode": "literal",
       "text": "Te recomiendo la Consulta única inicial de nutrición por 145€. Puedes verla aquí: https://mpunti.es/products/nutricion-pack-inicial"
+    },
+    "information_not_available": {
+      "mode": "literal",
+      "text": "No tengo información sobre eso en este momento. ¿Quieres que lo consulte con el equipo?"
+    },
+    "out_of_scope": {
+      "mode": "literal",
+      "text": "Soy el asistente de MPunti y solo puedo ayudarte con nuestros programas de nutrición, entrenamiento y psicología. ¿En qué puedo ayudarte?"
+    },
+    "farewell": {
+      "mode": "literal",
+      "text": "Gracias por contactar con MPunti. Si necesitas algo más, estamos aquí."
+    },
+    "no_appointments": {
+      "mode": "literal",
+      "text": "No aparecen programas activos en este momento. ¿Puedo ayudarte con algo más?"
     }
   },
   "toolOrchestration": {
@@ -433,7 +521,7 @@
       "appointment_inquiry": {
         "steps": [
           {
-            "note": "Usa el contexto para responder sobre programas adquiridos. MPunti no agenda citas. Si no consta compra, indica que no aparecen programas y ofrece ayuda.",
+            "note": "Responder sobre programas o packs usando la información de esta conversación y del catálogo. No llamar a ninguna tool.",
             "step": 1,
             "tools": [],
             "parallel": false,
@@ -442,89 +530,166 @@
         ],
         "intent": "appointment_inquiry",
         "description": "El cliente consulta información sobre programas o packs que ya ha adquirido.",
-        "allowedTools": []
+        "allowedTools": [],
+        "responseTemplate": "no_appointments",
+        "responseTemplateMode": "literal"
       },
       "patient_running_late": {
         "steps": [
           {
-            "note": "MPunti no tiene citas presenciales. Si aplica a una sesión online acordada, gestionar desde el contexto sin crear tarea innecesaria.",
+            "note": "Responder al cliente que no se preocupe y que la sesión termina a la hora acordada. No llamar a ninguna tool. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "patient_running_late",
         "description": "El cliente avisa que llegará tarde a una sesión online acordada.",
-        "allowedTools": [
-          "manage_schedule_block_status"
-        ],
+        "allowedTools": [],
         "responseTemplate": "No te preocupes, solo ten en cuenta que tu sesión termina a la hora acordada. Te esperamos.",
         "responseTemplateMode": "literal"
       },
       "any_scheduling_request": {
         "steps": [
           {
-            "note": "MPunti no agenda citas: identificar la necesidad del cliente (nutrición, entrenamiento, psicología), proporcionar el enlace adecuado (solo 1 por conversación) y crear tarea si requiere seguimiento personalizado.",
+            "note": "Identificar la necesidad del cliente (nutrición, entrenamiento, psicología), recomendar el programa adecuado y confirmar su activación indicando los siguientes pasos. No llamar a ninguna tool: la activación queda gestionada en esta conversación. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
             "step": 1,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "scheduling_request",
         "description": "El cliente quiere información sobre programas o packs, o quiere empezar uno.",
-        "allowedTools": [
-          "create_task"
-        ],
-        "responseTemplate": "Te recomiendo el programa adecuado a tu necesidad. Si tienes dudas, nuestro equipo te contactará lo antes posible.",
-        "responseTemplateMode": "literal"
+        "allowedTools": [],
+        "responseTemplate": "¡Perfecto! He dejado preparada tu activación del programa recomendado. Recibirás los siguientes pasos para empezar. ¿Puedo ayudarte en algo más?",
+        "responseTemplateMode": "model"
       },
       "cancel_existing_appointment": {
         "steps": [
           {
-            "note": "MPunti no agenda citas: las cancelaciones de compra o suscripción van directamente a tarea para gestión humana. No usar manage_schedule_block_status salvo que exista una sesión online real en el contexto.",
+            "note": "Tramitar la cancelación de la compra o suscripción usando la información de esta conversación y confirmarla al cliente. No llamar a ninguna tool ni crear tarea. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
             "step": 1,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_cancellation",
         "description": "El cliente solicita cancelación de una compra o suscripción.",
-        "allowedTools": [
-          "create_task"
-        ],
-        "responseTemplate": "He registrado tu solicitud de cancelación. Nuestro equipo la revisará y te contactará lo antes posible.",
+        "allowedTools": [],
+        "responseTemplate": "Tu cancelación ha quedado tramitada. Si cambias de idea o necesitas algo más sobre tu programa, aquí estoy.",
         "responseTemplateMode": "literal"
       },
       "confirm_existing_appointment": {
         "steps": [
           {
-            "note": "MPunti no agenda citas. Si el cliente confirma una compra o pedido, responder desde el contexto sin crear tarea. Solo usar manage_schedule_block_status si existe una sesión online real identificada en el contexto.",
+            "note": "Confirmar lo que el cliente confirme (sesión online, compra de programa, etc.) usando la información de esta conversación. No llamar a ninguna tool. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_confirmation",
         "description": "El cliente confirma algo relacionado con un programa comprado o sesión online acordada.",
-        "allowedTools": [
-          "manage_schedule_block_status"
-        ],
+        "allowedTools": [],
         "responseTemplate": "Confirmado. Si necesitas algo más sobre tu programa, aquí estoy.",
+        "responseTemplateMode": "literal"
+      },
+      "farewell": {
+        "steps": [
+          {
+            "step": 1,
+            "tools": [],
+            "parallel": false,
+            "required": []
+          }
+        ],
+        "intent": "farewell",
+        "description": "El cliente se despide, agradece o cierra la conversación de forma amable.",
+        "responseTemplate": "Gracias por contactar con MPunti. Si necesitas algo más, estamos aquí.",
+        "responseTemplateMode": "literal",
+        "allowsSilence": true
+      },
+      "reschedule_existing_appointment": {
+        "steps": [
+          {
+            "note": "Confirmar el cambio de la sesión online usando la información de esta conversación. No llamar a ninguna tool. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
+            "step": 1,
+            "tools": [],
+            "parallel": false,
+            "required": []
+          }
+        ],
+        "intent": "appointment_reschedule_request",
+        "description": "El cliente quiere mover una sesión online ya acordada a otra fecha u hora.",
+        "allowedTools": [],
+        "responseTemplate": "Perfecto, he movido tu sesión a la nueva fecha y hora. Te esperamos.",
+        "responseTemplateMode": "literal"
+      },
+      "reschedule_inquiry": {
+        "steps": [],
+        "intent": "appointment_reschedule_inquiry",
+        "description": "El cliente consulta sobre la posibilidad de reprogramar una sesión existente, sin confirmar el cambio todavía.",
+        "responseTemplate": "¿Para qué fecha te gustaría cambiarla? Puedo gestionarlo ahora mismo.",
+        "responseTemplateMode": "literal"
+      },
+      "cancellation_inquiry": {
+        "steps": [],
+        "intent": "appointment_cancellation_inquiry",
+        "description": "El cliente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente.",
+        "responseTemplate": "¿Quieres que cancelemos la sesión o prefieres buscar otra fecha?",
+        "responseTemplateMode": "literal"
+      },
+      "keep_appointment_flow": {
+        "steps": [],
+        "intent": "keep_appointment",
+        "description": "El cliente indica que quiere mantener la sesión tal como está.",
+        "responseTemplate": "Perfecto, tu sesión sigue confirmada.",
         "responseTemplateMode": "literal"
       }
     }
+  },
+  "serviceCatalog": {
+    "treatments": [
+      {
+        "name": "Programa Vitalidad Nutrición+PNIE",
+        "description": "Programa de 4 meses de nutrición y PNIE",
+        "priceDescription": "350€",
+        "requiresConsultation": true,
+        "category": "Nutrición"
+      },
+      {
+        "name": "Continuación Programa Vitalidad",
+        "description": "Programa de continuación de 5 meses de nutrición y PNIE",
+        "priceDescription": "320€",
+        "requiresConsultation": false,
+        "category": "Nutrición"
+      },
+      {
+        "name": "Consulta única inicial nutrición",
+        "description": "Consulta única inicial de nutrición",
+        "priceDescription": "145€",
+        "requiresConsultation": true,
+        "category": "Nutrición"
+      },
+      {
+        "name": "Pack Entrenamiento 4 semanas",
+        "description": "Pack de entrenamiento personal de 4 semanas con Jorge",
+        "priceDescription": "110€",
+        "requiresConsultation": true,
+        "category": "Entrenamiento"
+      },
+      {
+        "name": "Pack Psicología Online 4 sesiones",
+        "description": "Pack de 4 sesiones de psicología online con Nathalia",
+        "priceDescription": "260€",
+        "requiresConsultation": true,
+        "category": "Psicología"
+      }
+    ]
   },
   "treatmentPolicyHints": [],
   "systemPromptInstructions": {
@@ -536,6 +701,7 @@
       "Horario de atención no especificado."
     ],
     "notesForAdvisor": [
+      "MODO DEMO CONVERSACIONAL: Este bot NO ejecuta ninguna acción real en sistemas de backend. Simula todo el ciclo de citas (agendar, consultar, confirmar, cancelar, reprogramar) puramente mediante texto en la conversación. No usa tools de gestión de citas (manage_schedule_block_status, check_availability, schedule_block) ni crea tareas administrativas. Las únicas tareas reales se crean exclusivamente en escalados humanos (human_follow_up, derivaciones por incidencia).",
       "MPunti: venta online de programas, no agenda citas presenciales.",
       "FIX APLICADO: el bot solo se presenta en el primer mensaje real de la conversación. Si el cliente saluda de nuevo y pregunta algo, responde directamente sin repetir la presentación.",
       "Solo 1 enlace por conversación.",
@@ -549,5 +715,14 @@
       "Probar el bot verificando que no repite el saludo en mensajes posteriores.",
       "Validar el JSON generado antes de desplegar."
     ]
+  },
+  "conversationResumption": {
+    "instructions": {
+      "continuous": "Continúa la conversación sin saludar. El cliente está respondiendo inmediatamente.",
+      "short_break": "Puedes reconocer la pausa con un tono natural (ej: 'perfecto, continuamos'), pero NO saludes de nuevo.",
+      "same_period": "Saludo muy breve opcional, máximo 2 palabras. Solo si encaja naturalmente con la respuesta principal.",
+      "recent": "Saluda brevemente reconociendo la ausencia (máximo 4 palabras), luego atiende la consulta principal inmediatamente. NO te presentes como nuevo.",
+      "distant": "Saluda reconociendo la ausencia de forma natural. NO te presentes como si fuera la primera vez. Puedes decir algo como 'Hola, hace tiempo que no hablamos'. Luego atiende la consulta principal."
+    }
   }
 }

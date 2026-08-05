@@ -37,7 +37,7 @@
     },
     {
       "id": "confirm_existing_appointment",
-      "note": "Permitir continuar para ejecutar manage_schedule_block_status (CONFIRMADA). La confirmación no requiere tarea de seguimiento.",
+      "note": "Permitir continuar. La confirmación se gestiona en la conversación, sin tools. Modo demo conversacional.",
       "action": "allow",
       "intent": "appointment_confirmation",
       "priority": 0,
@@ -45,20 +45,19 @@
     },
     {
       "id": "cancel_existing_appointment",
-      "note": "Permitir continuar para ejecutar el flow de cancelación.",
+      "note": "Permitir continuar. La cancelación se gestiona en la conversación, sin tools ni tarea. Modo demo conversacional.",
       "action": "allow",
       "intent": "appointment_cancellation",
       "priority": 0,
       "description": "El paciente solicita cancelar una o más citas existentes, o responde a un recordatorio indicando que no asistirá."
     },
     {
-      "id": "scheduling_request_to_task",
-      "note": "El bot no ejecuta scheduling directamente. Recopilar tratamiento, fechas/horarios preferidos, profesional si aplica, y crear una tarea para el equipo humano.",
+      "id": "scheduling_direct_booking",
+      "note": "El bot agenda la cita directamente en la conversación: recopila los datos y confirma con día y hora concretos. No crear tarea ni consultar agenda externa. Modo demo conversacional.",
       "action": "allow",
       "intent": "scheduling_request",
       "priority": 0,
-      "description": "El paciente solicita una nueva cita, reprogramar una cita existente, mover una cita dentro del mismo día, o preguntar por disponibilidad de huecos.",
-      "redirectToTask": true
+      "description": "El paciente solicita una nueva cita, reprogramar una cita existente, mover una cita dentro del mismo día o consultar disponibilidad de huecos."
     },
     {
       "id": "general_inquiry",
@@ -66,7 +65,7 @@
       "action": "allow",
       "intent": "general_inquiry",
       "priority": 0,
-      "description": "Preguntas generales sobre la clínica: horarios, ubicación, contacto, precios fijos, servicios, métodos de pago."
+      "description": "El paciente pregunta por tratamientos, precios fijos, médicos, contacto, horarios o servicios que no requieren agendar ni gestionar citas."
     },
     {
       "id": "human_follow_up",
@@ -104,120 +103,63 @@
   ],
   "intents": {
     "filling_inquiry": {
-      "examples": [
-        "empaste",
-        "obturación",
-        "caries"
-      ],
+      "examples": ["empaste", "obturación", "caries"],
       "description": "El paciente pregunta por obturación (empaste). Precio 50€, duración 30-40 minutos."
     },
     "general_inquiry": {
-      "examples": [
-        "¿qué horario tenéis?",
-        "¿dónde estáis?",
-        "¿cuánto cuesta la endodoncia?"
-      ],
+      "examples": ["¿qué horario tenéis?", "¿dónde estáis?", "¿cuánto cuesta la endodoncia?"],
       "description": "Preguntas generales sobre la clínica: horarios, ubicación, contacto, precios fijos, servicios, métodos de pago."
     },
     "human_follow_up": {
-      "examples": [
-        "quiero hablar con una persona",
-        "tengo una queja"
-      ],
+      "examples": ["quiero hablar con una persona", "tengo una queja"],
       "description": "Cualquier solicitud que requiera seguimiento humano y no encaje en los intents anteriores."
     },
     "implant_inquiry": {
-      "examples": [
-        "implantes",
-        "implante dental",
-        "corona sobre implante"
-      ],
+      "examples": ["implantes", "implante dental", "corona sobre implante"],
       "description": "El paciente pregunta por implantes dentales con corona. Precio 1.250€, duración 1-2 horas."
     },
     "urgency_contact": {
-      "examples": [
-        "tengo mucho dolor de muela",
-        "urgencia dental",
-        "infección"
-      ],
+      "examples": ["tengo mucho dolor de muela", "urgencia dental", "infección"],
       "description": "El paciente reporta dolor agudo, infección o urgencia dental que requiere atención inmediata."
     },
     "veneers_inquiry": {
-      "examples": [
-        "carillas",
-        "carillas estéticas",
-        "carillas de porcelana"
-      ],
+      "examples": ["carillas", "carillas estéticas", "carillas de porcelana"],
       "description": "El paciente pregunta por carillas estéticas. Precio 650€, duración 2-3 horas."
     },
     "extraction_inquiry": {
-      "examples": [
-        "extracción",
-        "quitar muela",
-        "sacar diente"
-      ],
+      "examples": ["extracción", "quitar muela", "sacar diente"],
       "description": "El paciente pregunta por extracción dental. Precio 60€, duración 30-40 minutos."
     },
     "invisalign_inquiry": {
-      "examples": [
-        "invisalign",
-        "ortodoncia invisible",
-        "férulas"
-      ],
+      "examples": ["invisalign", "ortodoncia invisible", "férulas"],
       "description": "El paciente pregunta por Invisalign (ortodoncia invisible). Precio 4.500€."
     },
     "scheduling_request": {
-      "examples": [
-        "quiero pedir cita",
-        "¿tenéis hueco el viernes?",
-        "quiero cambiar mi cita de día"
-      ],
-      "description": "El paciente quiere reservar una NUEVA cita, reprogramar una cita existente, mover una cita dentro del mismo día, o preguntar por disponibilidad de huecos. El bot no ejecuta scheduling directamente: recopila los datos necesarios y crea una tarea para que el equipo humano gestione el agendamiento."
+      "examples": ["quiero pedir cita", "¿tenéis hueco el viernes?", "quiero cambiar mi cita de día"],
+      "description": "El paciente quiere reservar una NUEVA cita, reprogramar una cita existente, mover una cita dentro del mismo día, o preguntar por disponibilidad de huecos. En modo demo conversacional, el bot simula la gestión sin tools reales."
     },
     "appointment_inquiry": {
-      "examples": [
-        "¿cuándo es mi cita?",
-        "¿tengo cita esta semana?"
-      ],
+      "examples": ["¿cuándo es mi cita?", "¿tengo cita esta semana?"],
       "description": "El paciente pregunta por citas que ya tiene reservadas (horarios, fechas, tratamientos). La información ya está en el contexto."
     },
     "endodontics_inquiry": {
-      "examples": [
-        "endodoncia",
-        "tratamiento de conductos",
-        "dolor de muela"
-      ],
+      "examples": ["endodoncia", "tratamiento de conductos", "dolor de muela"],
       "description": "El paciente pregunta por endodoncia (tratamiento de conductos). Precio 300€, realizado en 2 partes de 45 minutos cada una."
     },
     "prophylaxis_inquiry": {
-      "examples": [
-        "limpieza dental",
-        "profilaxis",
-        "higiene dental"
-      ],
+      "examples": ["limpieza dental", "profilaxis", "higiene dental"],
       "description": "El paciente pregunta por profilaxis (limpieza dental). Precio 50€, duración 30 minutos."
     },
     "teeth_whitening_inquiry": {
-      "examples": [
-        "blanqueamiento",
-        "dientes más blancos",
-        "blanquear"
-      ],
+      "examples": ["blanqueamiento", "dientes más blancos", "blanquear"],
       "description": "El paciente pregunta por blanqueamiento dental. Precio 330€, duración 2 horas."
     },
     "appointment_cancellation": {
-      "examples": [
-        "no puedo ir, cancélala",
-        "no asistiré mañana"
-      ],
+      "examples": ["no puedo ir, cancélala", "no asistiré mañana"],
       "description": "El paciente cancela una cita existente o indica que no podrá asistir."
     },
     "appointment_confirmation": {
-      "examples": [
-        "confirmo",
-        "ahí estaré",
-        "sí, asistiré"
-      ],
+      "examples": ["confirmo", "ahí estaré", "sí, asistiré"],
       "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio con un afirmativo breve."
     }
   },
@@ -257,10 +199,7 @@
     "noMarkdown": true,
     "emojiPolicy": "forbidden",
     "noAsterisks": true,
-    "avoidPhrases": [
-      "No sé",
-      "No puedo ayudarle con eso"
-    ],
+    "avoidPhrases": ["No sé", "No puedo ayudarle con eso"],
     "maxSentences": 3,
     "languagePolicy": "auto",
     "additionalRules": [
@@ -299,47 +238,26 @@
   },
   "capabilities": {
     "protocols": false,
-    "reminders": false,
-    "scheduling": false,
     "sensitiveSituations": false
   },
   "errorCategories": [
     {
       "id": "patient_not_found",
-      "keywords": [
-        "no registrado",
-        "nuevo paciente"
-      ],
+      "keywords": ["no registrado", "nuevo paciente"],
       "description": "No se encuentra al paciente en el sistema.",
-      "suggestions": [
-        "Verificar datos de contacto.",
-        "Crear tarea para registro manual."
-      ]
+      "suggestions": ["Verificar datos de contacto.", "Crear tarea para registro manual."]
     },
     {
       "id": "task_creation_failed",
-      "keywords": [
-        "error",
-        "fallo",
-        "tarea"
-      ],
+      "keywords": ["error", "fallo", "tarea"],
       "description": "No se pudo crear la tarea administrativa.",
-      "suggestions": [
-        "Reintentar creación de tarea.",
-        "Escalar a atención humana."
-      ]
+      "suggestions": ["Reintentar creación de tarea.", "Escalar a atención humana."]
     },
     {
       "id": "treatment_not_available",
-      "keywords": [
-        "no disponible",
-        "no lo hacemos"
-      ],
+      "keywords": ["no disponible", "no lo hacemos"],
       "description": "El paciente solicita un tratamiento que no está disponible en la clínica.",
-      "suggestions": [
-        "Proponer alternativa de la lista de tratamientos disponibles.",
-        "Derivar a tarea si requiere valoración especializada."
-      ]
+      "suggestions": ["Proponer alternativa de la lista de tratamientos disponibles.", "Derivar a tarea si requiere valoración especializada."]
     }
   ],
   "responseTemplates": {
@@ -352,11 +270,11 @@
       "text": "Buenos días, soy Natalia, asesora virtual de Clínica Dental Barrau. ¿En qué puedo ayudarle?"
     },
     "cancellation": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Su cita ha sido cancelada. Si desea reprogramar, podemos ayudarle."
     },
     "confirmation": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Su cita ha quedado confirmada. Le esperamos en Clínica Dental Barrau."
     },
     "task_created": {
@@ -388,8 +306,8 @@
       "text": "Buenas tardes, soy Natalia, asesora virtual de Clínica Dental Barrau. ¿En qué puedo ayudarle?"
     },
     "scheduling_request": {
-      "mode": "literal",
-      "text": "Un miembro de nuestro equipo se pondrá en contacto con usted a la mayor brevedad posible para confirmar su cita. O si lo prefiere, puede llamar al 673 46 80 75."
+      "mode": "model",
+      "text": "¡Perfecto! Su cita ha quedado agendada. Le enviaremos un recordatorio antes de su visita. ¿Puedo ayudarle en algo más?"
     },
     "clinics_ceo_meeting": {
       "mode": "literal",
@@ -407,36 +325,28 @@
           {
             "note": "Responder directamente si la información ya está en contexto. Si no está, usar query_knowledge_base para buscar en protocols, FAQ, responseTemplates y rules antes de responder.",
             "step": 1,
-            "tools": [
-              "query_knowledge_base"
-            ],
+            "tools": ["query_knowledge_base"],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "general_inquiry",
         "description": "Preguntas generales sobre la clínica, tratamientos, precios, horarios, ubicación o contacto.",
-        "allowedTools": [
-          "query_knowledge_base"
-        ]
+        "allowedTools": ["query_knowledge_base"]
       },
       "human_follow_up": {
         "steps": [
           {
             "note": "Crear tarea para seguimiento humano. Recopilar datos de contacto si no están disponibles.",
             "step": 1,
-            "tools": [
-              "create_task"
-            ],
+            "tools": ["create_task"],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "human_follow_up",
         "description": "Solicitudes que requieren seguimiento humano.",
-        "allowedTools": [
-          "create_task"
-        ],
+        "allowedTools": ["create_task"],
         "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto con usted a la mayor brevedad posible.",
         "responseTemplateMode": "literal"
       },
@@ -445,25 +355,21 @@
           {
             "note": "Crear tarea URGENTE para seguimiento inmediato. Informar al paciente que llame al 673 46 80 75 (urgencias) o 626 91 60 56 (fines de semana).",
             "step": 1,
-            "tools": [
-              "create_task"
-            ],
+            "tools": ["create_task"],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "urgency_contact",
         "description": "El paciente reporta dolor agudo, infección o urgencia dental.",
-        "allowedTools": [
-          "create_task"
-        ],
+        "allowedTools": ["create_task"],
         "responseTemplate": "Para urgencias contacte al 673 46 80 75. En fines de semana: 626 91 60 56. También hemos registrado su caso para que nuestro equipo le contacte.",
         "responseTemplateMode": "literal"
       },
       "appointment_inquiry": {
         "steps": [
           {
-            "note": "Usa el contexto ASSOCIATED_PATIENTS para responder. Si no hay citas, indica que no hay citas programadas y ofrece ayuda.",
+            "note": "Responder sobre las citas del paciente usando la información de esta conversación. Si no consta ninguna cita en la conversación, indicar que no hay citas programadas y ofrecer agendar una. No llamar a ninguna tool.",
             "step": 1,
             "tools": [],
             "parallel": false,
@@ -477,74 +383,50 @@
       "any_scheduling_request": {
         "steps": [
           {
-            "note": "Recopilar nombre, apellidos, teléfono, tratamiento deseado, fechas/horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento. El bot no consulta la agenda ni muestra huecos disponibles.",
+            "note": "Agendar la cita directamente en esta conversación: recopilar nombre, tratamiento deseado y fecha/hora preferida (y profesional si aplica). Si el paciente no propone fecha, ofrecer una opción concreta (día y hora). Confirmar la cita indicando siempre día y hora concretos. No llamar a ninguna tool: la cita queda gestionada en esta conversación. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva. Modo demo conversacional.",
             "step": 1,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "scheduling_request",
         "description": "El paciente solicita agendar una nueva cita, reprogramar, adelantar o atrasar una cita existente, o consultar disponibilidad de huecos.",
-        "allowedTools": [
-          "create_task"
-        ],
-        "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto con usted a la mayor brevedad posible para confirmar su cita. O si lo prefiere, puede llamar al 673 46 80 75.",
-        "responseTemplateMode": "literal"
+        "allowedTools": [],
+        "responseTemplate": "¡Perfecto! Su cita ha quedado agendada. Le enviaremos un recordatorio antes de su visita. ¿Puedo ayudarle en algo más?",
+        "responseTemplateMode": "model"
       },
       "cancel_existing_appointment": {
         "steps": [
           {
-            "note": "Una sola cita: manage_schedule_block_status(CANCELADA). Varias el mismo día: manage_all_schedule_blocks_for_date (una llamada por cita).",
+            "note": "Cancelar la cita del paciente usando la información de esta conversación y confirmarle la cancelación. No llamar a ninguna tool ni crear tarea. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva. Modo demo conversacional.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status",
-              "manage_all_schedule_blocks_for_date"
-            ],
-            "parallel": false,
-            "required": []
-          },
-          {
-            "note": "Crear TAREA por la cancelación para seguimiento humano. Incluir motivo si el paciente lo menciona.",
-            "step": 2,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_cancellation",
         "description": "El paciente solicita cancelar una o más citas existentes, o responde a un recordatorio indicando que no asistirá.",
-        "allowedTools": [
-          "manage_schedule_block_status",
-          "manage_all_schedule_blocks_for_date",
-          "create_task"
-        ],
+        "allowedTools": [],
         "responseTemplate": "Su cita ha sido cancelada. Si desea reprogramar, podemos ayudarle.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "confirm_existing_appointment": {
         "steps": [
           {
-            "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). Confirmar todas las citas de ese día sin preguntar cuál; no nombrar tratamientos en la respuesta.",
+            "note": "Confirmar la asistencia del paciente a su cita usando la información de esta conversación. No llamar a ninguna tool. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva. Modo demo conversacional.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_confirmation",
         "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
-        "allowedTools": [
-          "manage_schedule_block_status"
-        ],
+        "allowedTools": [],
         "responseTemplate": "Su cita ha quedado confirmada. Le esperamos en Clínica Dental Barrau.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       }
     }
   },
@@ -559,7 +441,7 @@
     ],
     "notesForAdvisor": [
       "Bot: Natalia (asesora virtual en Odontología).",
-      "No se permite agendamiento directo: el bot recopila datos y crea tareas.",
+      "MODO DEMO CONVERSACIONAL: el bot SIMULA todo el ciclo de citas (agendar, consultar, confirmar y cancelar) directamente en la conversación sin usar tools de gestión real ni crear tareas. Nada se registra en ningún sistema. Las tareas solo se crean en escalados humanos (human_follow_up, urgencias).",
       "No adelantar precio/duración salvo solicitud explícita.",
       "Hablar en idioma del paciente (catalán, rumano, etc.) cuando sea posible.",
       "Más de 40 tratamientos disponibles (catálogo completo en prompt).",

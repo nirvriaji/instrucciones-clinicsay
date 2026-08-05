@@ -52,7 +52,7 @@
     },
     {
       "id": "confirm_existing_appointment",
-      "note": "Permitir continuar para ejecutar manage_schedule_block_status (CONFIRMADA).",
+      "note": "Permitir continuar. La confirmación se gestiona en la conversación, sin tools. Modo demo conversacional.",
       "action": "allow",
       "intent": "appointment_confirmation",
       "priority": 0,
@@ -60,20 +60,19 @@
     },
     {
       "id": "cancel_existing_appointment",
-      "note": "Permitir continuar para ejecutar el flow de cancelación.",
+      "note": "Permitir continuar. La cancelación se gestiona en la conversación, sin tools ni tarea. Modo demo conversacional.",
       "action": "allow",
       "intent": "appointment_cancellation",
       "priority": 0,
       "description": "El usuario cancela una demo o reunión con un consultor."
     },
     {
-      "id": "scheduling_request_to_task",
-      "note": "El bot no ejecuta scheduling directamente. Recopilar datos y crear una tarea para el equipo comercial.",
+      "id": "scheduling_direct_booking",
+      "note": "El bot agenda la demo/reunión directamente en la conversación: recopila los datos y confirma con día y hora concretos. No crear tarea ni consultar agenda externa. Modo demo conversacional.",
       "action": "allow",
       "intent": "scheduling_request",
       "priority": 0,
-      "description": "El usuario solicita agendar una demo o reunión con un consultor de ClinicSay.",
-      "redirectToTask": true
+      "description": "El usuario solicita agendar una demo o reunión con un consultor de ClinicSay."
     },
     {
       "id": "general_inquiry",
@@ -93,7 +92,7 @@
     },
     {
       "id": "demo_request",
-      "note": "Permitir continuar para redirigir al enlace de demo.",
+      "note": "Redirigir al enlace de demo. No usar tools.",
       "action": "allow",
       "intent": "software_demo_request",
       "priority": 0,
@@ -110,87 +109,47 @@
   ],
   "intents": {
     "feature_inquiry": {
-      "examples": [
-        "¿qué funcionalidades tiene?",
-        "¿tiene agenda?",
-        "¿cómo funciona la firma digital?"
-      ],
+      "examples": ["¿qué funcionalidades tiene?", "¿tiene agenda?", "¿cómo funciona la firma digital?"],
       "description": "El usuario pregunta por funcionalidades específicas: agenda, historial, firma digital, facturación, presupuestos, stock, reportes, agentes IA."
     },
     "general_inquiry": {
-      "examples": [
-        "¿qué es ClinicSay?",
-        "¿cuánto cuesta?",
-        "¿tienen facturación?"
-      ],
+      "examples": ["¿qué es ClinicSay?", "¿cuánto cuesta?", "¿tienen facturación?"],
       "description": "Preguntas generales sobre ClinicSay: funcionalidades, precios, módulos, compatibilidad, soporte."
     },
     "human_follow_up": {
-      "examples": [
-        "quiero hablar con un comercial",
-        "tengo una queja"
-      ],
+      "examples": ["quiero hablar con un comercial", "tengo una queja"],
       "description": "Solicitudes que requieren seguimiento humano del equipo comercial."
     },
     "pricing_inquiry": {
-      "examples": [
-        "¿cuánto cuesta?",
-        "precio del software",
-        "planes disponibles"
-      ],
+      "examples": ["¿cuánto cuesta?", "precio del software", "planes disponibles"],
       "description": "El usuario pregunta por precios, planes o costes de ClinicSay. Precio desde 300€/mes."
     },
     "scheduling_request": {
-      "examples": [
-        "quiero una demo",
-        "agendar reunión",
-        "consultoría gratuita"
-      ],
-      "description": "El usuario quiere agendar una demo o reunión con un consultor de ClinicSay. El bot recopila datos y crea una tarea para que el equipo comercial gestione el agendamiento."
+      "examples": ["quiero una demo", "agendar reunión", "consultoría gratuita"],
+      "description": "El usuario quiere agendar una demo o reunión con un consultor de ClinicSay. En modo demo conversacional, el bot simula la gestión sin tools reales."
     },
     "appointment_inquiry": {
-      "examples": [
-        "¿cuándo es la demo?",
-        "¿a qué hora la reunión?"
-      ],
+      "examples": ["¿cuándo es la demo?", "¿a qué hora la reunión?"],
       "description": "No aplica: ClinicSay no gestiona citas médicas. El usuario pregunta sobre una demo o reunión ya acordada."
     },
     "integration_inquiry": {
-      "examples": [
-        "¿se integra con otros programas?",
-        "¿tiene API?",
-        "¿puedo conectarlo?"
-      ],
+      "examples": ["¿se integra con otros programas?", "¿tiene API?", "¿puedo conectarlo?"],
       "description": "El usuario pregunta si ClinicSay se integra con otros softwares por API. Respuesta: no, es software propio y completo."
     },
     "international_inquiry": {
-      "examples": [
-        "¿funciona fuera de España?",
-        "¿sirve para Latinoamérica?",
-        "¿está en inglés?"
-      ],
+      "examples": ["¿funciona fuera de España?", "¿sirve para Latinoamérica?", "¿está en inglés?"],
       "description": "El usuario pregunta si ClinicSay funciona fuera de España o si cumple con normativas internacionales."
     },
     "software_demo_request": {
-      "examples": [
-        "probar demo",
-        "demo gratuita",
-        "quiero ver el software"
-      ],
+      "examples": ["probar demo", "demo gratuita", "quiero ver el software"],
       "description": "El usuario quiere probar una demo del software ClinicSay."
     },
     "appointment_cancellation": {
-      "examples": [
-        "cancela la demo",
-        "no puedo asistir a la reunión"
-      ],
+      "examples": ["cancela la demo", "no puedo asistir a la reunión"],
       "description": "No aplica: ClinicSay no gestiona citas médicas. El usuario cancela una demo o reunión."
     },
     "appointment_confirmation": {
-      "examples": [
-        "confirmo demo",
-        "ahí estaré en la reunión"
-      ],
+      "examples": ["confirmo demo", "ahí estaré en la reunión"],
       "description": "No aplica: ClinicSay no gestiona citas médicas. El usuario confirma algo relacionado con una demo o reunión ya acordada."
     }
   },
@@ -230,10 +189,7 @@
     "noMarkdown": true,
     "emojiPolicy": "forbidden",
     "noAsterisks": true,
-    "avoidPhrases": [
-      "No sé",
-      "No puedo ayudarte con eso"
-    ],
+    "avoidPhrases": ["No sé", "No puedo ayudarte con eso"],
     "maxSentences": 2,
     "languagePolicy": "es",
     "additionalRules": [
@@ -270,35 +226,20 @@
   },
   "capabilities": {
     "protocols": false,
-    "reminders": false,
-    "scheduling": false,
     "sensitiveSituations": false
   },
   "errorCategories": [
     {
       "id": "patient_not_found",
-      "keywords": [
-        "no registrado",
-        "nuevo usuario"
-      ],
+      "keywords": ["no registrado", "nuevo usuario"],
       "description": "No se encuentra al usuario en el sistema de CRM/leads.",
-      "suggestions": [
-        "Verificar datos de contacto.",
-        "Crear tarea para registro manual."
-      ]
+      "suggestions": ["Verificar datos de contacto.", "Crear tarea para registro manual."]
     },
     {
       "id": "task_creation_failed",
-      "keywords": [
-        "error",
-        "fallo",
-        "tarea"
-      ],
+      "keywords": ["error", "fallo", "tarea"],
       "description": "No se pudo crear la tarea comercial.",
-      "suggestions": [
-        "Reintentar creación de tarea.",
-        "Escalar a equipo comercial."
-      ]
+      "suggestions": ["Reintentar creación de tarea.", "Escalar a equipo comercial."]
     }
   ],
   "responseTemplates": {
@@ -311,11 +252,11 @@
       "text": "Hola, soy el consultor virtual de ClinicSay. ¿En qué puedo ayudarte?"
     },
     "cancellation": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Reunión cancelada. Si deseas reprogramar, podemos ayudarte."
     },
     "confirmation": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Demo confirmada. Te esperamos en la reunión online."
     },
     "feature_list": {
@@ -335,8 +276,8 @@
       "text": "No aparecen reuniones programadas. ¿Puedo ayudarte con algo más?"
     },
     "scheduling_request": {
-      "mode": "literal",
-      "text": "Un consultor de ClinicSay se pondrá en contacto contigo a la mayor brevedad posible. Mientras tanto, puedes probar una demo aquí: https://clinicsay.com/probar-demo/"
+      "mode": "model",
+      "text": "¡Perfecto! Tu reunión ha quedado agendada. Te enviaremos un recordatorio antes de la sesión. ¿Puedo ayudarte en algo más?"
     }
   },
   "toolOrchestration": {
@@ -346,43 +287,35 @@
           {
             "note": "Responder directamente si la información ya está en contexto. Si no está, usar query_knowledge_base para buscar en FAQ, responseTemplates y rules antes de responder.",
             "step": 1,
-            "tools": [
-              "query_knowledge_base"
-            ],
+            "tools": ["query_knowledge_base"],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "general_inquiry",
         "description": "Preguntas generales sobre ClinicSay, sus funcionalidades, precios o compatibilidad.",
-        "allowedTools": [
-          "query_knowledge_base"
-        ]
+        "allowedTools": ["query_knowledge_base"]
       },
       "human_follow_up": {
         "steps": [
           {
             "note": "Crear tarea para que un consultor contacte al usuario. Recopilar datos de contacto si no están disponibles.",
             "step": 1,
-            "tools": [
-              "create_task"
-            ],
+            "tools": ["create_task"],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "human_follow_up",
         "description": "Solicitudes que requieren seguimiento humano del equipo comercial.",
-        "allowedTools": [
-          "create_task"
-        ],
+        "allowedTools": ["create_task"],
         "responseTemplate": "Un consultor de ClinicSay se pondrá en contacto contigo a la mayor brevedad posible.",
         "responseTemplateMode": "literal"
       },
       "appointment_inquiry": {
         "steps": [
           {
-            "note": "Usa el contexto ASSOCIATED_PATIENTS para responder sobre citas comerciales. Si no hay citas, indica que no hay reuniones programadas.",
+            "note": "Responder sobre las reuniones/demos del usuario usando la información de esta conversación. Si no consta ninguna reunión en la conversación, indicar que no hay reuniones programadas y ofrecer agendar una. No llamar a ninguna tool.",
             "step": 1,
             "tools": [],
             "parallel": false,
@@ -396,71 +329,81 @@
       "any_scheduling_request": {
         "steps": [
           {
-            "note": "Recopilar nombre, apellidos, teléfono, email, nombre de clínica/empresa, interés principal (demo/consultoría), y crear una tarea para que el equipo comercial gestione el agendamiento.",
+            "note": "Agendar la reunión/demo directamente en esta conversación: recopilar nombre, interés principal (demo/consultoría) y fecha/hora preferida. Si el usuario no propone fecha, ofrecer una opción concreta (día y hora). Confirmar la reunión indicando siempre día y hora concretos. No llamar a ninguna tool: la reunión queda gestionada en esta conversación. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva. Modo demo conversacional.",
             "step": 1,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "scheduling_request",
         "description": "El usuario solicita agendar una demo o reunión con un consultor de ClinicSay.",
-        "allowedTools": [
-          "create_task"
-        ],
-        "responseTemplate": "Un consultor de ClinicSay se pondrá en contacto contigo a la mayor brevedad posible. Mientras tanto, puedes probar una demo aquí: https://clinicsay.com/probar-demo/",
-        "responseTemplateMode": "literal"
+        "allowedTools": [],
+        "responseTemplate": "¡Perfecto! Tu reunión ha quedado agendada. Te enviaremos un recordatorio antes de la sesión. ¿Puedo ayudarte en algo más?",
+        "responseTemplateMode": "model"
       },
       "cancel_existing_appointment": {
         "steps": [
           {
-            "note": "Marcar CANCELADA la reunión/demo del día.",
+            "note": "Cancelar la reunión/demo del usuario usando la información de esta conversación y confirmarle la cancelación. No llamar a ninguna tool ni crear tarea. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva. Modo demo conversacional.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status"
-            ],
-            "parallel": false,
-            "required": []
-          },
-          {
-            "note": "Crear tarea para que el equipo comercial contacte al usuario y reprograme si aplica.",
-            "step": 2,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_cancellation",
         "description": "El usuario cancela una demo o reunión con un consultor de ClinicSay.",
-        "allowedTools": [
-          "manage_schedule_block_status",
-          "create_task"
-        ],
+        "allowedTools": [],
         "responseTemplate": "Reunión cancelada. Si deseas reprogramar, podemos ayudarte.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "confirm_existing_appointment": {
         "steps": [
           {
-            "note": "Marcar CONFIRMADA la reunión/demo del día. No confirmar tratamientos médicos; este es un asistente comercial.",
+            "note": "Confirmar la asistencia del usuario a su reunión/demo usando la información de esta conversación. No llamar a ninguna tool. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva. Modo demo conversacional.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_confirmation",
         "description": "El usuario confirma asistencia a una demo o reunión ya acordada con un consultor de ClinicSay.",
-        "allowedTools": [
-          "manage_schedule_block_status"
-        ],
+        "allowedTools": [],
         "responseTemplate": "Demo confirmada. Te esperamos en la reunión online.",
+        "responseTemplateMode": "model"
+      },
+      "software_demo_request": {
+        "intent": "software_demo_request",
+        "description": "El usuario quiere probar una demo del software ClinicSay.",
+        "steps": [
+          {
+            "step": 1,
+            "tools": [],
+            "parallel": false,
+            "required": [],
+            "note": "Redirigir al enlace de demo. No usar tools."
+          }
+        ],
+        "allowedTools": [],
+        "responseTemplate": "Puedes probar una demo gratuita aquí: https://clinicsay.com/probar-demo/ o agendar una consultoría personalizada con Jesús Basquero: https://calendly.com/jesusbasquero/consultoria-clinicsay",
+        "responseTemplateMode": "literal"
+      },
+      "pricing_inquiry": {
+        "intent": "pricing_inquiry",
+        "description": "El usuario pregunta por precios o planes de ClinicSay.",
+        "steps": [
+          {
+            "step": 1,
+            "tools": [],
+            "parallel": false,
+            "required": [],
+            "note": "Responder con precio desde 300€/mes y ofrecer demo. No usar tools."
+          }
+        ],
+        "allowedTools": [],
+        "responseTemplate": "ClinicSay tiene un precio desde 300€/mes. Incluye todos los módulos: agenda, historial médico, firma digital, facturación AEAT/Verifactu, stock, reportes y agentes IA. ¿Te gustaría una demo personalizada?",
         "responseTemplateMode": "literal"
       }
     }
@@ -475,6 +418,7 @@
     ],
     "notesForAdvisor": [
       "Bot: Consultor (comercial). Este es un asistente de software, NO médico.",
+      "MODO DEMO CONVERSACIONAL: el bot SIMULA todo el ciclo de reuniones/demos (agendar, consultar, confirmar y cancelar) directamente en la conversación sin usar tools de gestión real ni crear tareas. Nada se registra en ningún sistema. Las tareas solo se crean en escalados humanos (human_follow_up).",
       "NO agendar citas médicas. Solo demos y reuniones comerciales.",
       "Links críticos: demo https://clinicsay.com/probar-demo/ | consultoría https://calendly.com/jesusbasquero/consultoria-clinicsay",
       "Precio: desde 300€/mes. Todos los módulos incluidos.",

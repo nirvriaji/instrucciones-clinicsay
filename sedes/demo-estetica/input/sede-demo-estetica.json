@@ -11,7 +11,7 @@
       "condition": null
     },
     {
-      "answer": "No, la cita debe gestionarse con nosotros directamente. Déjeme recoger sus datos y nuestro equipo le contactará.",
+      "answer": "Sí, por supuesto. Dígame qué tratamiento necesita y qué día y hora le vienen bien, y se la agendo ahora mismo.",
       "question": "¿Se pueden pedir citas online?",
       "condition": null
     },
@@ -127,7 +127,7 @@
     },
     {
       "id": "confirm_existing_appointment",
-      "note": "Permitir continuar para ejecutar manage_schedule_block_status (CONFIRMADA). La confirmación no requiere tarea de seguimiento.",
+      "note": "Permitir continuar. La confirmación se gestiona en la conversación, sin tools.",
       "action": "allow",
       "intent": "appointment_confirmation",
       "priority": 0,
@@ -135,20 +135,19 @@
     },
     {
       "id": "cancel_existing_appointment",
-      "note": "Permitir continuar para ejecutar el flow de cancelación.",
+      "note": "Permitir continuar. La cancelación se gestiona en la conversación, sin tools ni tarea.",
       "action": "allow",
       "intent": "appointment_cancellation",
       "priority": 0,
       "description": "El paciente solicita cancelar una o más citas existentes, o responde a un recordatorio indicando que no asistirá."
     },
     {
-      "id": "scheduling_request_to_task",
-      "note": "El bot no ejecuta scheduling directamente. Recopilar tratamiento, fechas/horarios preferidos, profesional si aplica, y crear una tarea para el equipo humano.",
+      "id": "scheduling_direct_booking",
+      "note": "El bot agenda la cita directamente en la conversación: recopila los datos y confirma con día y hora concretos. No crear tarea ni consultar agenda externa.",
       "action": "allow",
       "intent": "scheduling_request",
       "priority": 0,
-      "description": "El paciente solicita una nueva cita, reprogramar una cita existente, mover una cita dentro del mismo día, o preguntar por disponibilidad de huecos.",
-      "redirectToTask": true
+      "description": "El paciente solicita una nueva cita, reprogramar una existente, moverla dentro del mismo día o consultar disponibilidad de huecos."
     },
     {
       "id": "general_inquiry",
@@ -168,20 +167,19 @@
     },
     {
       "id": "patient_running_late",
-      "note": "Permitir marcar cita como EN CAMINO y notificar al paciente sobre el horario.",
+      "note": "Permitir continuar. El bot tranquiliza al paciente en la conversación, sin tools.",
       "action": "allow",
       "intent": "patient_running_late",
       "priority": 0,
       "description": "El paciente avisa que llegará tarde a una cita confirmada."
     },
     {
-      "id": "no_online_booking",
-      "note": "Cualquier solicitud de cita debe ir a tarea para gestión humana directa.",
+      "id": "all_reschedule_to_task",
+      "note": "El bot gestiona la reprogramación directamente en la conversación, confirmando día y hora concretos. No crear tarea ni consultar agenda externa.",
       "action": "allow",
-      "intent": "scheduling_request",
+      "intent": "appointment_reschedule_request",
       "priority": 0,
-      "description": "La clínica no permite citas online. Todas las citas deben gestionarse directamente con el centro.",
-      "redirectToTask": true
+      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye adelantar/atrasar mismo día, corrección de titular y restablecer tras cancelación en este turno."
     },
     {
       "id": "derivation_protocol",
@@ -432,7 +430,7 @@
       "Solo mencionar tratamientos cuando el usuario pregunte",
       "Si pide algo no disponible, proponer alternativa de la lista",
       "CTA final de Clinicsay solo una vez tras interacción exitosa",
-      "No se pueden pedir citas online; gestionar con la clínica directamente",
+      "Las citas se agendan directamente en la conversación, indicando siempre día y hora concretos.",
       "La clínica está cerrada sábados, domingos y festivos. Antes de agendar, comprobar que el día/hora propuesto está dentro del horario de apertura (L-V 10:00-20:00)"
     ],
     "mandatoryPhrases": [],
@@ -462,8 +460,6 @@
   },
   "capabilities": {
     "protocols": false,
-    "reminders": false,
-    "scheduling": false,
     "sensitiveSituations": false
   },
   "errorCategories": [
@@ -516,11 +512,11 @@
       "text": "Buenos días, soy Natalia, asesora virtual de Clínicas Mecuid. ¿En qué puedo ayudarle?"
     },
     "cancellation": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Su cita ha sido cancelada. Si desea reprogramar, podemos ayudarle."
     },
     "confirmation": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Su cita ha quedado confirmada. Le esperamos en Clínicas Mecuid."
     },
     "running_late": {
@@ -556,8 +552,8 @@
       "text": "Buenas tardes, soy Natalia, asesora virtual de Clínicas Mecuid. ¿En qué puedo ayudarle?"
     },
     "scheduling_request": {
-      "mode": "literal",
-      "text": "Un miembro de nuestro equipo se pondrá en contacto con usted a la mayor brevedad posible para confirmar su cita. O si lo prefiere, puede llamar al 651 11 22 33."
+      "mode": "model",
+      "text": "¡Perfecto! Su cita ha quedado agendada. Le enviaremos un recordatorio antes de su visita. ¿Puedo ayudarle en algo más?"
     },
     "clinics_ceo_meeting": {
       "mode": "literal",
@@ -629,94 +625,66 @@
       "patient_running_late": {
         "steps": [
           {
-            "note": "Marcar la cita como EN CAMINO si aplica. Responder al paciente que no se preocupe pero que la cita termina a la hora acordada.",
+            "note": "Responder al paciente que no se preocupe y que su cita termina a la hora acordada. No llamar a ninguna tool. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "patient_running_late",
         "description": "El paciente avisa que llegará tarde a una cita confirmada.",
-        "allowedTools": [
-          "manage_schedule_block_status"
-        ],
+        "allowedTools": [],
         "responseTemplate": "No se preocupe, solo tenga en cuenta que su cita termina a la hora acordada. Le esperamos.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "any_scheduling_request": {
         "steps": [
           {
-            "note": "Recopilar nombre, apellidos, teléfono, tratamiento deseado, fechas/horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento. El bot no consulta la agenda ni muestra huecos disponibles.",
+            "note": "Agendar la cita directamente en esta conversación: recopilar nombre, tratamiento deseado y fecha/hora preferida (y profesional si aplica). Si el paciente no propone fecha, ofrecer una opción concreta (día y hora). Confirmar la cita indicando siempre día y hora concretos. No llamar a ninguna tool: la cita queda gestionada en esta conversación. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva. Nunca derivar al equipo humano por disponibilidad: ofrecer siempre una alternativa concreta de día y hora.",
             "step": 1,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "scheduling_request",
-        "description": "El paciente solicita agendar una nueva cita, reprogramar, adelantar o atrasar una cita existente, o consultar disponibilidad de huecos.",
-        "allowedTools": [
-          "create_task"
-        ],
-        "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto con usted a la mayor brevedad posible para confirmar su cita. O si lo prefiere, puede llamar al 651 11 22 33.",
-        "responseTemplateMode": "literal"
+        "description": "El paciente solicita agendar una nueva cita, reprogramar una existente, moverla dentro del mismo día o consultar disponibilidad.",
+        "allowedTools": [],
+        "responseTemplate": "¡Perfecto! Su cita ha quedado agendada. Le enviaremos un recordatorio antes de su visita. ¿Puedo ayudarle en algo más?",
+        "responseTemplateMode": "model"
       },
       "cancel_existing_appointment": {
         "steps": [
           {
-            "note": "Una sola cita: manage_schedule_block_status(CANCELADA). Varias el mismo día: manage_all_schedule_blocks_for_date (una llamada por cita).",
+            "note": "Cancelar la cita del paciente usando la información de esta conversación y confirmarle la cancelación. No llamar a ninguna tool ni crear tarea. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva. Si la cita no consta en la conversación, indicar que no hay citas registradas en esta conversación y ofrecer agendar una; no derivar al equipo humano.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status",
-              "manage_all_schedule_blocks_for_date"
-            ],
-            "parallel": false,
-            "required": []
-          },
-          {
-            "note": "Crear TAREA por la cancelación para seguimiento humano. Incluir motivo si el paciente lo menciona.",
-            "step": 2,
-            "tools": [
-              "create_task"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_cancellation",
         "description": "El paciente solicita cancelar una o más citas existentes, o responde a un recordatorio indicando que no asistirá.",
-        "allowedTools": [
-          "manage_schedule_block_status",
-          "manage_all_schedule_blocks_for_date",
-          "create_task"
-        ],
+        "allowedTools": [],
         "responseTemplate": "Su cita ha sido cancelada. Si desea reprogramar, podemos ayudarle.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "confirm_existing_appointment": {
         "steps": [
           {
-            "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). Confirmar todas las citas de ese día sin preguntar cuál; no nombrar tratamientos en la respuesta.",
+            "note": "Confirmar la asistencia del paciente a su cita usando la información de esta conversación. No llamar a ninguna tool. Actuar en todo momento como el asistente oficial: toda gestión confirmada en esta conversación es definitiva.",
             "step": 1,
-            "tools": [
-              "manage_schedule_block_status"
-            ],
+            "tools": [],
             "parallel": false,
             "required": []
           }
         ],
         "intent": "appointment_confirmation",
         "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
-        "allowedTools": [
-          "manage_schedule_block_status"
-        ],
+        "allowedTools": [],
         "responseTemplate": "Su cita ha quedado confirmada. Le esperamos en Clínicas Mecuid.",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       }
     }
   },
@@ -729,9 +697,9 @@
       "No se indica si hay señales de reserva para cirugías."
     ],
     "notesForAdvisor": [
+      "MODO DEMO: el bot SIMULA todo el ciclo de citas de forma conversacional (agendar, consultar, confirmar y cancelar) sin tools de gestión real ni tareas; nada se registra en ningún sistema. Las tareas solo se crean en escalados humanos (human_follow_up, urgencias).",
       "Bot: Natalia (asesora virtual). Tono experta, usa 'usted'.",
       "FIX APLICADO: el bot solo se presenta en el primer mensaje real de la conversación. Si el paciente saluda de nuevo y pregunta algo, responde directamente sin repetir la presentación.",
-      "La clínica no permite citas online; todas las solicitudes de agendamiento van a tarea.",
       "No mencionar precio ni duración salvo solicitud explícita.",
       "Solo mencionar tratamientos cuando el usuario pregunte; proponer alternativa si pide algo no disponible.",
       "1ª consulta gratuita. Financiación hasta 60 meses.",
