@@ -1,0 +1,20 @@
+{
+  "name": "instrucciones-clinicsay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JSON:API instruction builder assets and sede configurations for clinicsay chatbot",
+  "type": "module",
+  "scripts": {
+    "fetch:sedes": "tsx scripts/fetch-sedes-from-db.ts",
+    "test:anti-circular": "node --test scripts/tests/anti-circular.test.js",
+    "validate:full": "tsx scripts/lib/backend-validator/run-validation.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.11",
+    "typescript": "^5.8.2"
+  }
+}

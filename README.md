@@ -47,10 +47,11 @@ npm --version    # Debe mostrar 10.x.x
 
 #### 2.3. Verificar la instalación
 
-Dentro de la carpeta del repo, ejecuta:
+Dentro de la carpeta del repo, instala las dependencias y verifica que Node.js funciona:
 
 ```powershell
 cd C:\Users\<TuUsuario>\Documents\instrucciones-clinicsay
+npm install
 node scripts/validate-and-save.js --sede demo --mode tasks-only
 ```
 
@@ -121,6 +122,40 @@ En opencode desktop, selecciona el agente:
 ---
 
 ## 🚀 Uso rápido
+
+### Paso 0: Importar JSON existente desde el backend (opcional)
+
+Si la clínica ya tiene configurado un chatbot en el backend de Clinicsay, puedes descargar automáticamente sus JSONs de `full` y `tasks-only` para usarlos como punto de partida.
+
+1. Copia `.env.example` a `.env` y rellena `DATABASE_URL`:
+   ```powershell
+   copy .env.example .env
+   ```
+   Ejemplos incluidos:
+   - Local: `postgresql://clinicsay:clinicsay@localhost:5432/clinicsay?schema=public`
+   - Integration: tu URL de Aiven
+
+2. Instala las dependencias de Node (solo la primera vez):
+   ```powershell
+   npm install
+   ```
+
+3. Ejecuta el script:
+   ```powershell
+   make fetch-sedes
+   # o, sin make:
+   npx tsx scripts/fetch-sedes-from-db.ts
+   ```
+
+El script creará automáticamente:
+
+```
+sedes\<site-slug>\input\structured-logic.full.json
+sedes\<site-slug>\input\structured-logic.tasks-only.json
+sedes\<site-slug>\output\
+```
+
+Solo se traen los bots activos de tipo `CHAT_BOT`. Si un bot no tiene `full` o `tasks-only` configurado, se omite ese archivo con un aviso.
 
 ### Paso 1: Prepara tus notas
 
