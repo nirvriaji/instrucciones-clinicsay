@@ -157,6 +157,8 @@ sedes\<site-slug>\output\
 
 Solo se traen los bots activos de tipo `CHAT_BOT`. Si un bot no tiene `full` o `tasks-only` configurado, se omite ese archivo con un aviso.
 
+> ⚠️ **El script limpia las carpetas `input/` y `output/` de cada sede procesada** antes de escribir: `input/` quedará solo con los dos JSONs descargados, y `output/` quedará vacío para el siguiente paso de generación.
+
 ### Paso 1: Prepara tus notas
 
 Crea la carpeta para tu clínica dentro del repo:

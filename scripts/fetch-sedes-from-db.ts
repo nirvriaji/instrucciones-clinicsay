@@ -61,6 +61,17 @@ function writeJsonPretty(filePath: string, data: unknown): void {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
+/**
+ * Remove all contents of a directory and recreate it empty.
+ * The directory itself is preserved so relative paths stay valid.
+ */
+function cleanDirectory(dir: string): void {
+  if (fs.existsSync(dir)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(dir, { recursive: true });
+}
+
 function warnMissing(metadata: Record<string, unknown>, botId: string, siteSlug: string, key: string): void {
   if (metadata[key] === undefined || metadata[key] === null) {
     console.warn(`  ⚠️  Bot ${botId} (site ${siteSlug}) has no '${key}' in metadata. Skipped.`);
@@ -124,8 +135,10 @@ async function main() {
       const inputDir = path.join(sedeDir, 'input');
       const outputDir = path.join(sedeDir, 'output');
 
-      fs.mkdirSync(inputDir, { recursive: true });
-      fs.mkdirSync(outputDir, { recursive: true });
+      // Clean both folders so input/ only contains the downloaded JSONs
+      // and output/ is empty for the next generation step.
+      cleanDirectory(inputDir);
+      cleanDirectory(outputDir);
 
       console.log(`[${siteSlug}] ${siteName} (bot ${botId})`);
 
