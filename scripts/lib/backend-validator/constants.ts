@@ -12,10 +12,10 @@ import type { StructuredLogicChatMode } from './structured-logic';
  * Single source of truth shared by `validateStructuredLogic` (blocking) and
  * `detectGaps` (advisory).
  */
-export const CRITICAL_INTENTS: Array<{ category: string; description: string }> = [
-  { category: 'appointment_confirmation', description: 'confirmation of existing appointments' },
-  { category: 'appointment_cancellation', description: 'cancellation of existing appointments' },
-  { category: 'scheduling_request', description: 'scheduling of new appointments' },
+export const CRITICAL_INTENTS: Array<{ category: string; aliases?: string[]; description: string }> = [
+  { category: 'existing_appointment_confirmation', aliases: ['appointment_confirmation'], description: 'confirmation of existing appointments' },
+  { category: 'existing_appointment_cancellation', aliases: ['appointment_cancellation'], description: 'cancellation of existing appointments' },
+  { category: 'new_appointment_scheduling', aliases: ['scheduling_request'], description: 'scheduling of new appointments' },
 ];
 
 /**

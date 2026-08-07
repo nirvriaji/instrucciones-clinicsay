@@ -10,10 +10,10 @@
 
 ### 1. Un flow por intent crítico
 Cada intent que requiere acción del bot DEBE tener al menos un flow:
-- `appointment_confirmation` → flow de confirmación
-- `appointment_cancellation` → flow de cancelación
-- `appointment_inquiry` → flow de consulta (sin tools)
-- `scheduling_request` → flow de agendamiento (modo dependiente)
+- `existing_appointment_confirmation` → flow de confirmación
+- `existing_appointment_cancellation` → flow de cancelación
+- `existing_appointment_inquiry` → flow de consulta (sin tools)
+- `new_appointment_scheduling` → flow de agendamiento (modo dependiente)
 - `general_inquiry` → flow informativo con `query_knowledge_base` disponible como fallback semántico
 - `human_follow_up` → flow de tarea
 
@@ -53,19 +53,18 @@ allowedTools: ["query_knowledge_base"]
 
 **FULL MODE (patrón canónico — ver `_templates/base-full.json`):**
 ```
-Nuevo paciente (new_patient_booking, selection.excludedCapabilities: ["hasResolvedPatient"]):
+Nueva cita (new_appointment_scheduling, selection.excludedCapabilities: ["hasResolvedPatient"]):
   Step 1: resolve_treatment + resolve_availability_query (paralelos, required: [])
-  Step 2: resolve_professional (solo si el paciente nombra un doctor)
-  Step 3: check_availability (con treatmentId + fechas, required: ["hasResolvedTreatment"])
-  Step 4: resolve_patient (SOLO cuando el paciente elige slot, required: [])
-  Step 5: schedule_block (required: ["hasResolvedPatient"])
+  Step 2: check_availability (con treatmentId + fechas, required: ["hasResolvedTreatment"])
+  Step 3: resolve_patient (SOLO cuando el paciente elige slot, required: [])
+  Step 4: schedule_block (required: ["hasResolvedPatient"])
   ⚠️ El paciente se identifica AL FINAL, no al principio. NO pedir datos personales antes de mostrar horarios.
   ⚠️ INVARIANTE ANTI-CIRCULAR: 'required' solo consume capabilities establecidas por steps ANTERIORES; un step NUNCA requiere lo que establece su propia tool (el validador lo rechaza como error bloqueante).
 
-Paciente existente (existing_patient_rebooking, selection.requiredCapabilities: ["hasResolvedPatient"]):
-  Step 1: lookup_patient + resolve_treatment (paralelos)
-  Step 2: check_availability
-  Step 3: schedule_block
+Reprogramar cita existente (existing_appointment_rescheduling, selection.requiredCapabilities: ["hasActiveAppointment"]):
+  Step 1: resolve_availability_query (resolver nuevas fechas, NO cancelar todavía)
+  Step 2: check_availability (buscar nuevos horarios)
+  Step 3: schedule_block (agendar la nueva cita; la antigua se cancela automáticamente después)
 ```
 
 **TASKS-ONLY MODE:**
@@ -124,9 +123,9 @@ Cualquier solicitud de agendamiento:
 
 ```json
 {
-  "new_patient_booking": {
-    "intent": "scheduling_request",
-    "description": "Paciente que NO tiene historial previo quiere reservar su primera sesion o consulta.",
+  "new_appointment_scheduling": {
+    "intent": "new_appointment_scheduling",
+    "description": "El paciente (o alguien en su nombre) quiere reservar una NUEVA cita. Tambien incluye 'restablecer' una cita cancelada en este mismo turno de conversacion.",
     "selection": {
       "excludedCapabilities": ["hasResolvedPatient"]
     },
@@ -140,26 +139,20 @@ Cualquier solicitud de agendamiento:
       },
       {
         "step": 2,
-        "tools": ["resolve_professional"],
-        "parallel": false,
-        "note": "Si el paciente nombra un doctor, resolverlo (condicion: patient_mentions_doctor_name)"
-      },
-      {
-        "step": 3,
         "tools": ["check_availability"],
         "parallel": false,
         "required": ["hasResolvedTreatment"],
         "note": "Buscar horarios con treatmentId + fechas (condicion: treatment_resolved)"
       },
       {
-        "step": 4,
+        "step": 3,
         "tools": ["resolve_patient"],
         "parallel": false,
         "required": [],
         "note": "Solo cuando el paciente elige un slot: resolver identidad (condicion: slot_selected)"
       },
       {
-        "step": 5,
+        "step": 4,
         "tools": ["schedule_block"],
         "parallel": false,
         "required": ["hasResolvedPatient"],
@@ -168,8 +161,8 @@ Cualquier solicitud de agendamiento:
     ]
   },
   "confirm_existing_appointment": {
-    "intent": "appointment_confirmation",
-    "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es scheduling_request (continuar el agendamiento).",
+    "intent": "existing_appointment_confirmation",
+    "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es new_appointment_scheduling (continuar el agendamiento).",
     "selection": {
       "requiredCapabilities": ["hasActiveAppointment"]
     },
@@ -208,7 +201,7 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 - **Determinista y del backend:** la capability se computa de datos (bloque futuro no cancelado o link de recordatorio), NUNCA del LLM.
 - **Sin cita real, el flow es inelegible por construcción:** un "sí" desnudo NUNCA produce acción ni mensaje falso ("He movido tu cita", "He cancelado tu cita", "¡Muchas gracias!", "tu cita sigue confirmada").
 - **NO llevan gate** (no escriben): `reschedule_inquiry`, `cancellation_inquiry`. **NO se aplica** a flujos custom de clases (ej: Pilates — dominio distinto).
-- **`appointment_reschedule_request` (descripción sin ambigüedad):** excluir explícitamente "el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita" — eso es `scheduling_request` (continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente: "muévela al jueves", "cámbiamela a la tarde", "adelántala una hora".
+- **`existing_appointment_rescheduling` (descripción sin ambigüedad):** excluir explícitamente "el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita" — eso es `new_appointment_scheduling` (continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente: "muévela al jueves", "cámbiamela a la tarde", "adelántala una hora".
 - **Fallback elegante:** cuando todos son inelegibles, el LLM responde conversacionalmente (puede usar la plantilla `no_appointments` si existe) — nunca afirma una acción que no ocurrió.
 ```
 
@@ -217,7 +210,7 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 ```json
 {
   "any_scheduling_request": {
-    "intent": "scheduling_request",
+    "intent": "new_appointment_scheduling",
     "description": "El paciente solicita agendar una nueva cita, reprogramar, o consultar disponibilidad. El bot NO agenda directamente: recopila datos y crea tarea para equipo humano.",
     "steps": [
       {
@@ -245,4 +238,4 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 - [ ] parallel=true solo cuando steps son independientes
 - [ ] Notes explicativas para cada step
 - [ ] **GATE ciclo de vida: los 5 flujos de acción sobre cita existente (confirm, reschedule, cancel, running-late, keep) llevan `selection.requiredCapabilities: ["hasActiveAppointment"]`**
-- [ ] `appointment_reschedule_request` excluye "elegir hora de opciones propuestas para cita nueva" en su descripción
+- [ ] `existing_appointment_rescheduling` excluye "elegir hora de opciones propuestas para cita nueva" en su descripción

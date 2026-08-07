@@ -13,18 +13,18 @@ Crea exactamente estos 12 intents canónicos como mínimo (copia los del templat
 
 | ID | Descripción |
 |---|---|
-| `appointment_confirmation` | El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es `scheduling_request` (continuar el agendamiento). |
-| `appointment_cancellation` | El paciente cancela una cita existente o indica que no podrá asistir. |
-| `appointment_inquiry` | El paciente pregunta por citas que ya tiene reservadas (horarios, fechas, tratamientos). La información ya está en el contexto. |
-| `scheduling_request` | El paciente quiere reservar una NUEVA cita o consultar disponibilidad. |
+| `existing_appointment_confirmation` | El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es `new_appointment_scheduling` (continuar el agendamiento). |
+| `existing_appointment_cancellation` | El paciente cancela una cita existente o indica que no podrá asistir. |
+| `existing_appointment_inquiry` | El paciente pregunta por citas que ya tiene reservadas (horarios, fechas, tratamientos). La información ya está en el contexto. |
+| `new_appointment_scheduling` | El paciente quiere reservar una NUEVA cita o consultar disponibilidad. |
 | `general_inquiry` | Preguntas generales sobre la clínica: horarios, ubicación, contacto, precios fijos, servicios. |
 | `human_follow_up` | Solicitudes que requieren seguimiento humano y no encajan en los intents anteriores. |
 | `farewell` | El paciente se despide, agradece o cierra la conversación de forma amable. |
-| `appointment_reschedule_request` | El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. NO usar cuando el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita (eso es `scheduling_request`, continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente: "muévela al jueves", "cámbiamela a la tarde", "adelántala una hora". |
-| `patient_running_late` | El paciente avisa que llegará tarde a una cita confirmada. |
-| `appointment_reschedule_inquiry` | El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía. |
-| `appointment_cancellation_inquiry` | El paciente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente. |
-| `keep_appointment` | El paciente indica que quiere mantener la cita tal como está. |
+| `existing_appointment_rescheduling` | El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. NO usar cuando el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita (eso es `new_appointment_scheduling`, continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente: "muévela al jueves", "cámbiamela a la tarde", "adelántala una hora". |
+| `existing_appointment_delay_notice` | El paciente avisa que llegará tarde a una cita confirmada. |
+| `existing_appointment_reschedule_inquiry` | El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía. |
+| `existing_appointment_cancellation_inquiry` | El paciente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente. |
+| `existing_appointment_keep` | El paciente indica que quiere mantener la cita tal como está. |
 
 ### 3. Intents por servicio
 Por cada servicio/tratamiento mencionado en `# Tratamientos y Servicios Disponibles`:
@@ -64,8 +64,8 @@ Incluye 2-3 ejemplos realistas por intent. Los ejemplos son frases que un pacien
 
 ```json
 {
-  "appointment_confirmation": {
-    "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es scheduling_request (continuar el agendamiento).",
+  "existing_appointment_confirmation": {
+    "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es new_appointment_scheduling (continuar el agendamiento).",
     "examples": ["confirmo", "ahí estaré", "sí, asistiré"]
   },
   "endolift_evaluation_inquiry": {

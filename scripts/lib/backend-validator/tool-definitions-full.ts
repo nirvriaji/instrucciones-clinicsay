@@ -276,8 +276,8 @@ export const TOOL_RESOLVE_PATIENT: ChatToolDefinition = {
     'Identify or create a patient before booking. ' +
     'Use BEFORE schedule_block when patient identity is not confirmed. ' +
     'Returns the resolved patient ID, name, and phone. ' +
-    'If the patient is not found, returns not_found — the bot must ask the patient if they are new. ' +
-    'Only when the patient explicitly confirms they are new, set confirmNew=true to create them. ' +
+    'If the patient is not found, the system automatically creates a new patient record. ' +
+    'The bot does NOT need to ask if the patient is new — the system handles it. ' +
     'If data is missing, returns what fields are needed.',
   parameters: {
     type: 'object',
@@ -293,18 +293,18 @@ export const TOOL_RESOLVE_PATIENT: ChatToolDefinition = {
       },
       phone: {
         type: 'string',
-        description: 'Patient phone number (with or without country code). Required. Send empty string if not yet known — the system will ask. If isForInterlocutor=true, the system auto-fills this from the caller\'s contact.',
+        description: 'Patient phone number (with or without country code). Required. Send empty string if not yet known — the system will ask.',
       },
       isForInterlocutor: {
         type: 'boolean',
-        description: 'Set to true if the booking is for the person chatting. The system will use the caller phone.',
+        description: 'Set to true if the caller is booking on behalf of someone else (third-party). Used for audit/logging only — does NOT auto-fill any data.',
       },
-      confirmNew: {
+      useInterlocutorPhone: {
         type: 'boolean',
-        description: 'Set to true ONLY if the patient explicitly confirmed they are new and want to register. Do NOT set this on the first call.',
+        description: 'Set to true ONLY when the caller explicitly asks to use their own phone number (e.g. "a este número", "mi número"). When true, the system uses the Kommo caller phone instead of the patient phone.',
       },
     },
-    required: ['firstName', 'lastName', 'phone', 'isForInterlocutor', 'confirmNew'],
+    required: ['firstName', 'lastName', 'phone', 'isForInterlocutor'],
   },
 };
 

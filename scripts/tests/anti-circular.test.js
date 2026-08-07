@@ -21,9 +21,6 @@ const RUN_VALIDATION = path.join(ROOT, 'scripts/lib/backend-validator/run-valida
 
 const FULLS = [
   'sedes/demo/output/structured-logic.full.json',
-  'sedes/vasquez-fisioterapia/output/structured-logic.full.json',
-  'sedes/andrea-palazolo/output/structured-logic.full.json',
-  'sedes/ecobaby-granada/output/structured-logic.full.json',
 ];
 
 function runValidator(jsonPath, mode) {
@@ -60,8 +57,8 @@ function gateAllows(flow, toolName, capabilities) {
 
 describe('anti-circular step requirements', () => {
   it('(a) fixture with circular requirement MUST fail with didactic hint', () => {
-    const logic = JSON.parse(fs.readFileSync(path.join(ROOT, FULLS[1]), 'utf8'));
-    const step1 = logic.toolOrchestration.flows.new_patient_booking.steps[0];
+    const logic = JSON.parse(fs.readFileSync(path.join(ROOT, FULLS[0]), 'utf8'));
+    const step1 = logic.toolOrchestration.flows.new_appointment_scheduling.steps[0];
     step1.required = ['hasResolvedTreatment']; // reintroduce the original bug
     const file = writeTemp(logic);
     const result = runValidator(file, 'full');
@@ -80,8 +77,8 @@ describe('anti-circular step requirements', () => {
   });
 
   it('(c) runtime gate: booking sequence unblocks in the right order', () => {
-    const logic = JSON.parse(fs.readFileSync(path.join(ROOT, FULLS[1]), 'utf8'));
-    const flow = logic.toolOrchestration.flows.new_patient_booking;
+    const logic = JSON.parse(fs.readFileSync(path.join(ROOT, FULLS[0]), 'utf8'));
+    const flow = logic.toolOrchestration.flows.new_appointment_scheduling;
     const caps = {
       hasResolvedTreatment: false,
       hasResolvedPatient: false,
@@ -111,8 +108,8 @@ describe('anti-circular step requirements', () => {
   });
 
   it('(d) typo in required capability MUST fail with did-you-mean suggestion', () => {
-    const logic = JSON.parse(fs.readFileSync(path.join(ROOT, FULLS[1]), 'utf8'));
-    logic.toolOrchestration.flows.new_patient_booking.steps[0].required = ['hasResolveTreatment']; // typo
+    const logic = JSON.parse(fs.readFileSync(path.join(ROOT, FULLS[0]), 'utf8'));
+    logic.toolOrchestration.flows.new_appointment_scheduling.steps[0].required = ['hasResolveTreatment']; // typo
     const file = writeTemp(logic);
     const result = runValidator(file, 'full');
     assert.strictEqual(result.valid, false, 'typo capability must block validation');

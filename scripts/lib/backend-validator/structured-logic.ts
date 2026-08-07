@@ -411,22 +411,22 @@ export type StructuredLogic = {
  * Reuse these canonical ids so flows, rules and classifier stay aligned.
  */
 export const BASELINE_INTENTS: IntentCatalog = {
-  appointment_confirmation: {
+  existing_appointment_confirmation: {
     description: 'El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.',
     examples: ['confirmo', 'ahí estaré'],
   },
-  appointment_cancellation: {
+  existing_appointment_cancellation: {
     description:
       'El paciente cancela una cita existente o indica que no podrá asistir. ' +
       'NO preguntar el motivo al paciente. El campo "reason" es obligatorio en la tool; usar "Solicitud del paciente". ' +
-      'Si el paciente cancela y luego pide "restablecer" en el mismo turno, tratar como scheduling_request (reagendar).',
+      'Si el paciente cancela y luego pide "restablecer" en el mismo turno, tratar como new_appointment_scheduling (reagendar).',
     examples: ['cancela mi cita', 'no puedo ir mañana', 'anula la sesion'],
   },
-  appointment_inquiry: {
+  existing_appointment_inquiry: {
     description: 'El paciente pregunta por citas que ya tiene reservadas (horarios, fechas). La información ya está en el contexto.',
     examples: ['¿cuándo es mi cita?'],
   },
-  scheduling_request: {
+  new_appointment_scheduling: {
     description:
       'El paciente quiere reservar una NUEVA cita o consultar disponibilidad. ' +
       'También incluye "restablecer" una cita que acaba de cancelar en este mismo turno de conversacion, ' +
@@ -445,7 +445,7 @@ export const BASELINE_INTENTS: IntentCatalog = {
     description: 'El paciente se despide, agradece o cierra la conversación de forma amable.',
     examples: ['adios', 'gracias', 'hasta luego', 'nos vemos', 'chao', 'ok'],
   },
-  appointment_reschedule_request: {
+  existing_appointment_rescheduling: {
     description:
       'El paciente quiere MOVER una cita ya agendada a otra fecha u hora. ' +
       'Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, ' +
@@ -461,19 +461,19 @@ export const BASELINE_INTENTS: IntentCatalog = {
       'restablecer la cita que acabo de cancelar',
     ],
   },
-  patient_running_late: {
+  existing_appointment_delay_notice: {
     description: 'El paciente avisa que llegara tarde a una cita confirmada.',
     examples: ['voy con 10 minutos de retraso'],
   },
-  appointment_reschedule_inquiry: {
+  existing_appointment_reschedule_inquiry: {
     description: 'El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavia.',
     examples: ['¿Se puede cambiar mi cita?', '¿Podria moverla a otro dia?'],
   },
-  appointment_cancellation_inquiry: {
+  existing_appointment_cancellation_inquiry: {
     description: 'El paciente consulta sobre cancelacion o pregunta que pasaria si no puede asistir, sin ordenar la cancelacion directamente.',
     examples: ['¿Que pasa si no puedo ir?', '¿Como cancelo una cita?'],
   },
-  keep_appointment: {
+  existing_appointment_keep: {
     description: 'El paciente quiere mantener la cita actual y descartar cualquier propuesta de cambio o cancelacion.',
     examples: ['Dejala igual', 'Olvida el cambio', 'Mejor mantengamos la cita'],
   },

@@ -64,7 +64,7 @@ export function validateDomainRules(
   // 2c. Critical intents must be present (semantic validation)
   const presentIntents = new Set(Array.isArray(sl.rules) ? sl.rules.map((r) => r.intent) : []);
   const missingCategories = CRITICAL_INTENTS.filter(
-    (c) => !presentIntents.has(c.category)
+    (c) => !presentIntents.has(c.category) && !(c.aliases?.some((a) => presentIntents.has(a)))
   );
   if (missingCategories.length > 0) {
     errors.push(

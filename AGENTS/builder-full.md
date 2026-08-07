@@ -171,7 +171,7 @@ Evoluciona `sedes/<nombre>/output/structured-logic.full.draft.json` **sección p
 3. **capabilities** — `{ sensitiveSituations: false, protocols: false }` (default)
 4. **intents** — Crear baseline (12 mínimos del template) + por servicio usando SOLO datos de los chunks.
 5. **toolOrchestration.flows** — Mapear intents a flows con tools de full mode. DEBE incluir flow `farewell` con `allowsSilence: true`.
-6. **rules** — Crear rules por intent. `scheduling_request` NO debe tener `redirectToTask: true` en full mode.
+6. **rules** — Crear rules por intent. `new_appointment_scheduling` NO debe tener `redirectToTask: true` en full mode.
 7. **responseTemplates** — Crear templates. OBLIGATORIOS: `information_not_available`, `out_of_scope`, `farewell`.
 8. **faq** — Extraer de #Preguntas Frecuentes de los chunks.
 9. **serviceCatalog** — OBLIGATORIO. Extraer tratamientos del input con `name`, `priceDescription`, `requiresConsultation`. Mínimo 1 tratamiento.
@@ -353,7 +353,7 @@ Sintaxis del draft: válida
    - Seguir exactamente las capabilities del schema y `_templates/base-full.json`; no añadir `scheduling` por suposición si el template canónico no lo declara.
    - Tools permitidas por backend, schema y registry: `check_availability`, `resolve_availability_query`, `schedule_block`, `manage_schedule_block_status`, `manage_all_schedule_blocks_for_date`, `create_task`, `resolve_patient`, `resolve_professional`, `resolve_treatment`, `lookup_patient`, `query_protocol`, `query_knowledge_base`.
    - `query_knowledge_base` busca semánticamente en `protocols`, `faq`, `responseTemplates` y `rules`. Debe estar disponible en flows informativos y usarse solo cuando la respuesta no esté ya en contexto. No sustituye tools de pacientes, scheduling o tareas.
-   - Flows de booking (patrón canónico de 5 steps): entidades (`resolve_treatment`/`resolve_professional`/`resolve_availability_query`) → `check_availability` (`required: ["hasResolvedTreatment"]`) → `resolve_patient` (sin required) → `schedule_block` (`required: ["hasResolvedPatient"]`). Paciente nuevo: `selection.excludedCapabilities: ["hasResolvedPatient"]`; paciente existente: `selection.requiredCapabilities: ["hasResolvedPatient"]` + `lookup_patient` en step 1.
+    - Flows de booking (patrón canónico de 4 steps): entidades (`resolve_treatment` + `resolve_availability_query` paralelos) → `check_availability` (`required: ["hasResolvedTreatment"]`) → `resolve_patient` (sin required) → `schedule_block` (`required: ["hasResolvedPatient"]`). `new_appointment_scheduling` usa `selection.excludedCapabilities: ["hasResolvedPatient"]`.
 5. **NUNCA pongas tool names en `required`.** Usar `required: []`, salvo que el schema y capabilities canónicos definan explícitamente una capability válida. Los tool names van exclusivamente en `tools` y `allowedTools`.
 6. **VALIDACIÓN ESTRICTA DE SCHEMA (NON-NEGOTIABLE):** El backend rechaza CUALQUIER propiedad que no esté en el schema autorizado (additionalProperties: false en TODOS los niveles). Si el validador local no detecta una propiedad desconocida, DEBES corregir el validador local antes de seguir. NUNCA asumas que el JSON es válido solo porque pasó el validador local si el validador local no es estricto. Propiedades comunes que se cuelan y rompen el backend: `products`, `shipping`, `id` en protocols (debe ser `name`), `steps` en protocols (debe ser `sections`), `condition` en steps (deprecated, debe ir en `note`).
 7. **El asesor crea la estructura.** Si no hay archivos en `sedes/<nombre>/input/`, instruir al asesor que cree las carpetas y coloque ahí sus notas. Tú NO debes crear directorios ni archivos automáticamente.
@@ -366,16 +366,16 @@ Después de generar TODAS las secciones del JSON y antes de declararlo completo,
 
 **Checklist de verificación (MANDATORIO):**
 - [ ] `general_inquiry` flow tiene `query_knowledge_base` en `allowedTools` o en al menos un step.
-- [ ] `scheduling_request` flow usa tools de scheduling reales (`check_availability`, `resolve_availability_query`, `schedule_block`, `resolve_patient`, `resolve_professional`, `resolve_treatment`). En full mode el bot agenda directamente, NO usa `create_task` para scheduling.
-- [ ] `appointment_confirmation` flow usa `manage_schedule_block_status`.
-- [ ] `appointment_cancellation` flow usa `manage_schedule_block_status` o `manage_all_schedule_blocks_for_date`.
+- [ ] `new_appointment_scheduling` flow usa tools de scheduling reales (`check_availability`, `resolve_availability_query`, `schedule_block`, `resolve_patient`, `resolve_treatment`). En full mode el bot agenda directamente, NO usa `create_task` para scheduling.
+- [ ] `existing_appointment_confirmation` flow usa `manage_schedule_block_status`.
+- [ ] `existing_appointment_cancellation` flow usa `manage_schedule_block_status` o `manage_all_schedule_blocks_for_date`.
 - [ ] `human_follow_up` flow usa `create_task`.
 - [ ] `farewell` flow existe con `allowsSilence: true`.
-- [ ] Rule de `scheduling_request` NO tiene `redirectToTask: true` (en full mode se agenda directamente).
+- [ ] Rule de `new_appointment_scheduling` NO tiene `redirectToTask: true` (en full mode se agenda directamente).
 - [ ] `serviceCatalog` existe con al menos 1 tratamiento con `name`.
 - [ ] `responseTemplates` incluye `information_not_available`, `out_of_scope`, `farewell`.
 - [ ] `conversationResumption` existe con `instructions` para los 5 hitos.
-- [ ] Todos los baseline intents están presentes (12 del template): appointment_confirmation, appointment_cancellation, appointment_inquiry, scheduling_request, general_inquiry, human_follow_up, farewell, appointment_reschedule_request, patient_running_late, appointment_reschedule_inquiry, appointment_cancellation_inquiry, keep_appointment.
+- [ ] Todos los baseline intents están presentes (12 del template): existing_appointment_confirmation, existing_appointment_cancellation, existing_appointment_inquiry, new_appointment_scheduling, general_inquiry, human_follow_up, farewell, existing_appointment_rescheduling, existing_appointment_delay_notice, existing_appointment_reschedule_inquiry, existing_appointment_cancellation_inquiry, existing_appointment_keep.
 - [ ] Cada intent del catálogo tiene al menos 1 rule en `rules`.
 - [ ] Ningún step tiene tool names en `required` (debe ser `[]` o capability flags).
 - [ ] Ningún step requiere una capability que establece una tool del MISMO step (anti-circular: `resolve_treatment`/`resolve_patient`/`lookup_patient`/`resolve_professional`/`check_availability`/`schedule_block`/`create_task`/`resolve_availability_query` establecen; `required` solo consume lo de steps ANTERIORES).
@@ -395,7 +395,7 @@ Un catálogo completo produce este flujo correcto:
 ```
 Paciente: "confirmo"
   ↓
-classifier → `appointment_confirmation` (del catálogo)
+classifier → `existing_appointment_confirmation` (del catálogo)
   ↓
 flow `confirm_existing_appointment` activo
   ↓
@@ -413,27 +413,27 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
 ```json
 {
   "intents": {
-    "scheduling_request": {
+    "new_appointment_scheduling": {
       "description": "El paciente quiere reservar una NUEVA cita o consultar disponibilidad. El bot agenda directamente.",
       "examples": ["quiero pedir cita", "¿tenéis hueco el viernes por la tarde?"]
     },
-    "appointment_confirmation": {
+    "existing_appointment_confirmation": {
       "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
       "examples": ["confirmo", "ahí estaré"]
     },
-    "appointment_cancellation": {
+    "existing_appointment_cancellation": {
       "description": "El paciente cancela una cita existente o indica que no podrá asistir.",
       "examples": ["cancela mi cita", "no podré ir mañana"]
     },
-    "appointment_reschedule_request": {
+    "existing_appointment_rescheduling": {
       "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora.",
       "examples": ["¿podemos cambiar mi cita al jueves?", "muévela a la tarde"]
     },
-    "appointment_inquiry": {
+    "existing_appointment_inquiry": {
       "description": "El paciente pregunta por citas que ya tiene reservadas. La información ya está en el contexto.",
       "examples": ["¿cuándo es mi cita?"]
     },
-    "patient_running_late": {
+    "existing_appointment_delay_notice": {
       "description": "El paciente avisa que llegará tarde a una cita confirmada.",
       "examples": ["voy con 10 minutos de retraso"]
     },
@@ -449,15 +449,15 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
       "description": "El paciente se despide, agradece o cierra la conversación de forma amable.",
       "examples": ["adios", "gracias", "hasta luego", "nos vemos", "chao", "ok"]
     },
-    "appointment_reschedule_inquiry": {
+    "existing_appointment_reschedule_inquiry": {
       "description": "El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía.",
       "examples": ["¿Se puede cambiar mi cita?", "¿Podria moverla a otro dia?"]
     },
-    "appointment_cancellation_inquiry": {
+    "existing_appointment_cancellation_inquiry": {
       "description": "El paciente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente.",
       "examples": ["¿Que pasa si no puedo ir?", "¿Se puede cancelar?"]
     },
-    "keep_appointment": {
+    "existing_appointment_keep": {
       "description": "El paciente indica que quiere mantener la cita tal como está.",
       "examples": ["la dejo como esta", "mantenla"]
     }
@@ -478,28 +478,28 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
   "rules": [
     {
       "id": "ask_about_existing_appointment",
-      "intent": "appointment_inquiry",
+      "intent": "existing_appointment_inquiry",
       "description": "El paciente consulta información sobre citas que ya tiene reservadas (horarios, fechas, tratamientos).",
       "action": "allow",
       "note": "El backend inyecta las citas en el system prompt. Responder sin llamar tools."
     },
     {
       "id": "confirm_existing_appointment",
-      "intent": "appointment_confirmation",
+      "intent": "existing_appointment_confirmation",
       "description": "El paciente confirma asistencia a una cita existente.",
       "action": "allow",
       "note": "Ejecutar manage_schedule_block_status (CONFIRMADA). La confirmación no requiere tarea de seguimiento."
     },
     {
       "id": "cancel_existing_appointment",
-      "intent": "appointment_cancellation",
+      "intent": "existing_appointment_cancellation",
       "description": "El paciente cancela una cita existente o indica que no asistirá.",
       "action": "allow",
       "note": "Ejecutar el flow de cancelación."
     },
     {
-      "id": "scheduling_request",
-      "intent": "scheduling_request",
+      "id": "new_appointment_scheduling",
+      "intent": "new_appointment_scheduling",
       "description": "El paciente quiere reservar una NUEVA cita sin tener una previa para ese motivo.",
       "action": "allow",
       "note": "El bot puede agendar directamente siguiendo el flow de booking."
@@ -529,19 +529,19 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
 
 ### Flows y Steps
 
-- El `intent` del flow debe existir en el catálogo. Puede haber varios flows de booking que compartan `scheduling_request` (ej. `new_patient_booking` y `existing_patient_rebooking`); diferéncialos por `description`.
+- El `intent` del flow debe existir en el catálogo. Usa `new_appointment_scheduling` para citas nuevas y `existing_appointment_rescheduling` para mover citas existentes; diferéncialos por `description` y `selection`.
 - Ordena los steps con el patrón canónico (ver `_templates/base-full.json`):
-  - Paso 1: resolución de entidades (`resolve_treatment`, `resolve_availability_query`) — paralelos. En paciente existente: `lookup_patient` + `resolve_treatment`.
-  - Paso 2: profesional (`resolve_professional`, solo si el paciente nombra un doctor).
-  - Paso 3: disponibilidad (`check_availability`).
-  - Paso 4: identificación + creación (`resolve_patient` + `schedule_block`) — SOLO cuando el paciente elige slot.
+  - Paso 1: resolución de entidades (`resolve_treatment`, `resolve_availability_query`) — paralelos.
+  - Paso 2: disponibilidad (`check_availability`).
+  - Paso 3: identificación (`resolve_patient`) — SOLO cuando el paciente elige slot.
+  - Paso 4: agendamiento (`schedule_block`) — requiere `hasResolvedPatient`.
 - `parallel: true` solo cuando las tools no dependen entre sí.
 - Flows con `manage_schedule_block_status` DEBEN tener `responseTemplate`.
 
 #### responseTemplate en flows de gestión de citas
 - confirmación: "Tu cita ha quedado confirmada. Te esperamos."
 - cancelación: "Tu cita ha sido cancelada. Si deseas reprogramar, podemos ayudarte."
-- `patient_running_late`: "No te preocupes, si vienes con un poco de retraso te ajustamos la cita..."
+- `existing_appointment_delay_notice`: "No te preocupes, si vienes con un poco de retraso te ajustamos la cita..."
 
 #### Tool scoping con `allowedTools` (opcional pero recomendado)
 
@@ -550,45 +550,45 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
 Usa `allowedTools` para declarar explícitamente qué tools están disponibles en cada flow. La lista debe incluir exactamente las tools que el flow necesita:
 - `confirm_existing_appointment`: `allowedTools: ["manage_schedule_block_status"]` — el flow solo necesita confirmar la cita.
 - `cancel_existing_appointment`: `allowedTools: ["manage_schedule_block_status", "manage_all_schedule_blocks_for_date"]` — gestión de citas; añade `create_task` solo si la clínica requiere tarea de seguimiento.
-- `appointment_inquiry`: `allowedTools: []` — el bot responde desde el contexto, no usa tools.
-- `new_patient_booking`: no usar `allowedTools`; el flow necesita múltiples tools (`resolve_patient`, `resolve_treatment`, `check_availability`, `schedule_block`).
-- `existing_patient_rebooking`: no usar `allowedTools`; el flow necesita múltiples tools.
+- `existing_appointment_inquiry`: `allowedTools: []` — el bot responde desde el contexto, no usa tools.
+- `new_appointment_scheduling`: no usar `allowedTools`; el flow necesita múltiples tools (`resolve_patient`, `resolve_treatment`, `check_availability`, `schedule_block`).
+- `existing_appointment_rescheduling`: no usar `allowedTools`; el flow necesita múltiples tools.
 
 Regla: si `allowedTools` está presente, debe incluir exactamente las tools que el flow necesita, ni más ni menos.
 
-#### Flow: `new_patient_booking`
+#### Flow: `new_appointment_scheduling`
 
 ```json
 {
-  "intent": "scheduling_request",
-  "description": "Paciente que NO tiene historial previo quiere reservar su primera sesion o consulta.",
+  "intent": "new_appointment_scheduling",
+  "description": "El paciente (o alguien en su nombre) quiere reservar una NUEVA cita. Tambien incluye 'restablecer' una cita cancelada en este mismo turno de conversacion.",
   "selection": {
     "excludedCapabilities": ["hasResolvedPatient"]
   },
   "steps": [
     { "step": 1, "tools": ["resolve_treatment", "resolve_availability_query"], "parallel": true, "required": [], "note": "Identificar tratamiento y traducir fechas. NO pedir datos del paciente todavia." },
-    { "step": 2, "tools": ["resolve_professional"], "parallel": false, "note": "Si el paciente nombra un doctor, resolverlo (condicion: patient_mentions_doctor_name)" },
-    { "step": 3, "tools": ["check_availability"], "parallel": false, "required": ["hasResolvedTreatment"], "note": "Buscar horarios con treatmentId + fechas (condicion: treatment_resolved)" },
-    { "step": 4, "tools": ["resolve_patient"], "parallel": false, "required": [], "note": "Solo cuando el paciente elige un slot: resolver identidad (condicion: slot_selected)" },
-    { "step": 5, "tools": ["schedule_block"], "parallel": false, "required": ["hasResolvedPatient"], "note": "Agendar solo cuando el paciente elige un slot y la identidad esta resuelta (condicion: patient_resolved && slot_selected)" }
+    { "step": 2, "tools": ["check_availability"], "parallel": false, "required": ["hasResolvedTreatment"], "note": "Buscar horarios con treatmentId + fechas (condicion: treatment_resolved)" },
+    { "step": 3, "tools": ["resolve_patient"], "parallel": false, "required": [], "note": "Solo cuando el paciente elige un slot: resolver identidad (condicion: slot_selected)" },
+    { "step": 4, "tools": ["schedule_block"], "parallel": false, "required": ["hasResolvedPatient"], "note": "Agendar solo cuando el paciente elige un slot y la identidad esta resuelta (condicion: patient_resolved && slot_selected)" }
   ]
 }
 ```
 
-#### Flow: `existing_patient_rebooking`
+#### Flow: `existing_appointment_rescheduling`
 
 ```json
 {
-  "intent": "scheduling_request",
-  "description": "Paciente que YA tiene historial quiere reservar una sesion ADICIONAL, no mover una cita existente.",
+  "intent": "existing_appointment_rescheduling",
+  "description": "Paciente quiere cambiar la fecha u hora de una cita YA AGENDADA. Incluye: (a) mover a otro dia, (b) adelantar/atrasar el MISMO dia, (c) corregir titular manteniendo mismo tratamiento, (d) restablecer cita tras cancelar en este turno.",
   "selection": {
-    "requiredCapabilities": ["hasResolvedPatient"]
+    "requiredCapabilities": ["hasActiveAppointment"]
   },
   "steps": [
-    { "step": 1, "tools": ["lookup_patient", "resolve_treatment"], "parallel": true, "note": "Buscar paciente por telefono + identificar tratamiento" },
-    { "step": 2, "tools": ["check_availability"], "parallel": false, "note": "Buscar disponibilidad con paciente existente (condicion: patient_found && treatment_resolved)" },
-    { "step": 3, "tools": ["schedule_block"], "parallel": false, "note": "Agendar (condicion: slot_selected)" }
-  ]
+    { "step": 1, "tools": ["resolve_availability_query"], "parallel": false, "note": "Resolver las nuevas fechas que pide el paciente. NO cancelar todavia nada." },
+    { "step": 2, "tools": ["check_availability"], "parallel": false, "note": "Buscar nuevos horarios (condicion: dates_resolved). Mantener mismo professionalId de la cita original como preferencia." },
+    { "step": 3, "tools": ["schedule_block"], "parallel": false, "note": "Agendar la NUEVA cita (condicion: slot_selected). Mantener treatmentId original salvo que el paciente pida cambiarlo." }
+  ],
+  "allowedTools": ["resolve_availability_query", "check_availability", "schedule_block", "manage_schedule_block_status"]
 }
 ```
 
@@ -596,8 +596,8 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 
 ```json
 {
-  "intent": "appointment_confirmation",
-  "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es scheduling_request (continuar el agendamiento).",
+  "intent": "existing_appointment_confirmation",
+  "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es new_appointment_scheduling (continuar el agendamiento).",
   "selection": { "requiredCapabilities": ["hasActiveAppointment"] },
   "steps": [
     { "step": 1, "tools": ["manage_schedule_block_status"], "parallel": false, "required": [], "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). La confirmación no requiere tarea de seguimiento. El gate determinista de selection impide activar este flow sin cita real (nunca confirmar aire)." }
@@ -611,7 +611,7 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 > - `confirm_appointment` (confirmar)
 > - `reschedule_appointment` (mover/reagendar)
 > - `cancel_appointment` (cancelar)
-> - `on_the_way` (patient_running_late)
+> - `on_the_way` (existing_appointment_delay_notice)
 > - `keep_appointment_flow` ("tu cita sigue confirmada")
 >
 > Sin cita real (bloque futuro no cancelado o link de recordatorio), el flow es **inelegible por construcción**: un "sí" desnudo NUNCA produce acción ni mensaje falso ("He movido tu cita", "He cancelado tu cita", "¡Muchas gracias!", "tu cita sigue confirmada"). La capability es turn-start, computada por el backend desde el contexto (nunca del LLM).
@@ -620,7 +620,7 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 >
 > **Fallback elegante:** cuando todos son inelegibles, el LLM responde conversacionalmente y puede usar la plantilla `no_appointments` ("No aparecen citas programadas. ¿Puedo ayudarte con algo más?") — nunca afirma una acción que no ocurrió.
 >
-> **Descripción de `appointment_reschedule_request` (sin ambigüedad):** debe excluir explícitamente "el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita" — eso es `scheduling_request` (continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente.
+> **Descripción de `existing_appointment_rescheduling` (sin ambigüedad):** debe excluir explícitamente "el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita" — eso es `new_appointment_scheduling` (continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente.
 >
 > **`bookingMode` (config por sede, en `capabilities`):** `direct` = agendar al elegir slot (default recomendado: la respuesta de `schedule_block` ES la confirmación); `confirm-first` = pedir confirmación explícita antes de agendar. Va en el JSON de cada clínica, no en el estado de conversación.
 
@@ -628,7 +628,7 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 
 ```json
 {
-  "intent": "appointment_cancellation",
+  "intent": "existing_appointment_cancellation",
   "description": "El paciente comunica que no podrá asistir a una cita ya reservada y necesita anularla.",
   "steps": [
     { "step": 1, "tools": ["manage_schedule_block_status", "manage_all_schedule_blocks_for_date"], "parallel": false, "required": [], "note": "Una cita: CANCELADA. Varias el mismo día: gestionar en lote." }
@@ -638,11 +638,11 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 }
 ```
 
-#### Flow: `appointment_inquiry` (sin tools)
+#### Flow: `existing_appointment_inquiry` (sin tools)
 
 ```json
 {
-  "intent": "appointment_inquiry",
+  "intent": "existing_appointment_inquiry",
   "description": "El paciente consulta información sobre citas que ya tiene reservadas.",
   "steps": [
     { "step": 1, "tools": [], "parallel": false, "note": "Usa el contexto ASSOCIATED_PATIENTS para responder. Si no hay citas, indica que no hay citas programadas y ofrece ayuda." }
@@ -666,17 +666,17 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 - `Protocol.responseTemplate` string no vacío si existe.
 - Prohibido intent `price_inquiry` (usar `general_inquiry` + `serviceCatalog`).
 - Flows con `query_knowledge_base` o `query_protocol` NO deben tener `responseTemplate` con modo `literal`.
-- Flow `new_patient_booking` (patrón canónico): `resolve_patient` comparte el último step con `schedule_block` (nunca en step 1); `selection.excludedCapabilities: ["hasResolvedPatient"]`.
-- Flow `existing_patient_rebooking`: `lookup_patient` en step 1; `selection.requiredCapabilities: ["hasResolvedPatient"]`.
+- Flow `new_appointment_scheduling` (patrón canónico): `resolve_patient` en step 3 (antes de `schedule_block` en step 4); `selection.excludedCapabilities: ["hasResolvedPatient"]`.
+- Flow `existing_appointment_rescheduling`: `resolve_availability_query` en step 1; `selection.requiredCapabilities: ["hasActiveAppointment"]`.
 
 #### Intents/rules mínimos
-Deben existir intents y rules para: `appointment_confirmation`, `appointment_cancellation`, `appointment_inquiry`, `scheduling_request`, `general_inquiry`, `human_follow_up`, `farewell`.
+Deben existir intents y rules para: `existing_appointment_confirmation`, `existing_appointment_cancellation`, `existing_appointment_inquiry`, `new_appointment_scheduling`, `general_inquiry`, `human_follow_up`, `farewell`.
 
 #### Flows críticos
-- Flow de `appointment_confirmation`: existe y usa únicamente `manage_schedule_block_status`.
-- Flow de `appointment_cancellation`: existe con `manage_schedule_block_status`.
-- Flow de `appointment_inquiry`: existe con `tools: []` o `responseTemplate`.
-- `new_patient_booking`: existe con el patrón canónico (`resolve_patient` + `schedule_block` juntos en el último step).
+- Flow de `existing_appointment_confirmation`: existe y usa únicamente `manage_schedule_block_status`.
+- Flow de `existing_appointment_cancellation`: existe con `manage_schedule_block_status`.
+- Flow de `existing_appointment_inquiry`: existe con `tools: []` o `responseTemplate`.
+- `new_appointment_scheduling`: existe con el patrón canónico (`resolve_patient` + `schedule_block` juntos en el último step).
 - Flow de `farewell`: existe con `allowsSilence: true`.
 - Flow `general_inquiry` debe tener `query_knowledge_base` en `allowedTools` o steps.
 
@@ -686,8 +686,8 @@ Deben existir intents y rules para: `appointment_confirmation`, `appointment_can
 - [ ] Cada `intent` de flows y rules existe en el catálogo (sin referencias huérfanas).
 - [ ] `rules` tiene al menos 1 rule por intent (mínimo 7 rules para los intents críticos).
 - [ ] Flow de confirmación usa únicamente `manage_schedule_block_status`.
-- [ ] Flow de `appointment_inquiry` tiene `tools: []` o `responseTemplate`.
-- [ ] `new_patient_booking` sigue el patrón canónico (paciente identificado al final, con `selection`).
+- [ ] Flow de `existing_appointment_inquiry` tiene `tools: []` o `responseTemplate`.
+- [ ] `new_appointment_scheduling` sigue el patrón canónico (paciente identificado al final, con `selection`).
 - [ ] Dependencias correctas: `check_availability` → `schedule_block`; `resolve_patient` junto a `schedule_block` en el último step.
 - [ ] Flow de `farewell` tiene `allowsSilence: true`.
 - [ ] `serviceCatalog.treatments` tiene al menos 1 tratamiento con `name`.

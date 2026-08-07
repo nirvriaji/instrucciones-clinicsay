@@ -278,13 +278,15 @@ export function validateFlowsAndTools(
   // may design tasks-only flows with other approaches (e.g., informational responses).
   // Previously enforced as blocking; now advisory only via detectModeAdvisoryGaps.
 
-  // 6d5. appointment_reschedule_request flows in full must have manage_schedule_block_status (cancel step)
+  // 6d5. reschedule flows in full must have manage_schedule_block_status (cancel step)
   if (mode === 'full') {
-    const rescheduleFlows = Object.entries(flows).filter(([, flow]) => flow.intent === 'appointment_reschedule_request');
+    const rescheduleFlows = Object.entries(flows).filter(([, flow]) =>
+      flow.intent === 'appointment_reschedule_request' || flow.intent === 'existing_appointment_rescheduling'
+    );
     for (const [flowName, flow] of rescheduleFlows) {
       if (!flowUsesTool(flow, 'manage_schedule_block_status')) {
         errors.push(
-          `Flow "${flowName}" (intent: appointment_reschedule_request) in full mode must use "manage_schedule_block_status" ` +
+          `Flow "${flowName}" (intent: ${flow.intent}) in full mode must use "manage_schedule_block_status" ` +
             `(action: cancel) in allowedTools or steps before scheduling the new appointment. ` +
             `This prevents double-booking by canceling the existing appointment first.`
         );

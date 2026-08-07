@@ -36,9 +36,9 @@ export function detectModeAdvisoryGaps(
     'resolve_availability_query',
   ]);
 
-  // ── Caso A: Modo full + scheduling_request solo con create_task ──
+  // ── Caso A: Modo full + scheduling intent solo con create_task ──
   if (mode === 'full') {
-    const schedulingFlows = allFlows.filter((f) => f.intent === 'scheduling_request');
+    const schedulingFlows = allFlows.filter((f) => f.intent === 'scheduling_request' || f.intent === 'new_appointment_scheduling');
     if (schedulingFlows.length > 0) {
       const hasRealScheduling = schedulingFlows.some((f) =>
         (f.steps ?? []).some((s) => s.tools.some((t) => schedulingTools.has(t))),
@@ -48,8 +48,8 @@ export function detectModeAdvisoryGaps(
           severity: 'advisory',
           type: 'mode_note',
           description:
-            'Para tu información: en modo FULL, el patrón típico para agendar citas es un flujo de scheduling_request con herramientas de resolución y agendamiento (resolve_patient, resolve_treatment, check_availability, schedule_block) para que el paciente agende directamente sin intervención humana. ' +
-            'Tu flujo de scheduling_request no usa ninguna de estas herramientas. Si tu sede prefiere que recepción valide cada solicitud antes de agendar, está perfecto — solo asegúrate de que la tarea (create_task) incluya toda la información necesaria: nombre, apellido, teléfono, tratamiento y fecha preferida.',
+            'Para tu información: en modo FULL, el patrón típico para agendar citas es un flujo de new_appointment_scheduling con herramientas de resolución y agendamiento (resolve_patient, resolve_treatment, check_availability, schedule_block) para que el paciente agende directamente sin intervención humana. ' +
+            'Tu flujo de agendamiento no usa ninguna de estas herramientas. Si tu sede prefiere que recepción valide cada solicitud antes de agendar, está perfecto — solo asegúrate de que la tarea (create_task) incluya toda la información necesaria: nombre, apellido, teléfono, tratamiento y fecha preferida.',
         });
       }
     }
@@ -77,9 +77,9 @@ export function detectModeAdvisoryGaps(
     });
   }
 
-  // ── Caso D: Modo tasks-only + regla scheduling_request sin redirectToTask ──
+  // ── Caso D: Modo tasks-only + regla de agendamiento sin redirectToTask ──
   if (mode === 'tasks-only') {
-    const schedulingRules = (logic.rules ?? []).filter((r) => r.intent === 'scheduling_request');
+    const schedulingRules = (logic.rules ?? []).filter((r) => r.intent === 'scheduling_request' || r.intent === 'new_appointment_scheduling');
     if (schedulingRules.length > 0) {
       const anyHasRedirect = schedulingRules.some((r) => r.redirectToTask === true);
       if (!anyHasRedirect) {
@@ -87,7 +87,7 @@ export function detectModeAdvisoryGaps(
           severity: 'advisory',
           type: 'mode_note',
           description:
-            'Para tu información: en modo TASKS-ONLY lo común es que las reglas de scheduling_request tengan redirectToTask: true, porque este modo no permite agendar citas reales (no tiene check_availability ni schedule_block). ' +
+            'Para tu información: en modo TASKS-ONLY lo común es que las reglas de new_appointment_scheduling tengan redirectToTask: true, porque este modo no permite agendar citas reales (no tiene check_availability ni schedule_block). ' +
             'Si tu regla no tiene redirectToTask, el bot responderá sin crear tarea humana. Está bien si prefieres una respuesta informativa — solo asegúrate de que el paciente tenga claro cuál es su siguiente paso y que no quede esperando una acción del bot.',
         });
       }

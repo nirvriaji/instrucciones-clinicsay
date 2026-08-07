@@ -51,10 +51,10 @@ Describe en lenguaje natural CUÁNDO se activa esta regla:
 ### 5. Rules especiales por modo y contexto
 
 **Tasks-only mode:**
-- `scheduling_request`: `action: "allow"`, `redirectToTask: true` (patrón típico — **NO obligatorio**). Si la clínica prefiere que el bot responda de forma informativa sin crear tarea, omítelo a propósito: el validador mostrará una nota **advisory** (no bloqueante) para confirmar que la desviación es intencional.
+- `new_appointment_scheduling`: `action: "allow"`, `redirectToTask: true` (patrón típico — **NO obligatorio**). Si la clínica prefiere que el bot responda de forma informativa sin crear tarea, omítelo a propósito: el validador mostrará una nota **advisory** (no bloqueante) para confirmar que la desviación es intencional.
 
 **Full mode:**
-- `scheduling_request`: `action: "allow"`, `redirectToTask: null` (el bot agenda directamente)
+- `new_appointment_scheduling`: `action: "allow"`, `redirectToTask: null` (el bot agenda directamente)
 
 **Reglas de negocio de los archivos de input:**
 Si las los archivos de input mencionan restricciones específicas, CREA rules con `conditions`:
@@ -96,7 +96,7 @@ Operadores permitidos: `"equals"`, `"in"`, `"not_in"`, `"gt"`, `"lt"`, `"gte"`, 
 [
   {
     "id": "ask_about_existing_appointment",
-    "intent": "appointment_inquiry",
+    "intent": "existing_appointment_inquiry",
     "description": "El paciente consulta información sobre citas que ya tiene reservadas, como horarios, fechas o tratamientos programados.",
     "action": "allow",
     "priority": 0,
@@ -104,23 +104,23 @@ Operadores permitidos: `"equals"`, `"in"`, `"not_in"`, `"gt"`, `"lt"`, `"gte"`, 
   },
   {
     "id": "confirm_existing_appointment",
-    "intent": "appointment_confirmation",
+    "intent": "existing_appointment_confirmation",
     "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
     "action": "allow",
     "priority": 0,
-    "note": "GUARDA DE EXISTENCIA: marcar CONFIRMADA solo si existe una cita activa en el contexto ASSOCIATED_PATIENTS o es respuesta a un recordatorio (IS_REMINDER_REPLY). Si el paciente responde afirmativo a una fecha/hora PROPUESTA por el bot para la que NO existe cita activa, NO marcar CONFIRMADA: continuar el agendamiento con scheduling_request (resolve_patient y schedule_block). El gate determinista de selection.requiredCapabilities=[hasActiveAppointment] en el flow impide activarlo sin cita real."
+    "note": "GUARDA DE EXISTENCIA: marcar CONFIRMADA solo si existe una cita activa en el contexto ASSOCIATED_PATIENTS o es respuesta a un recordatorio (IS_REMINDER_REPLY). Si el paciente responde afirmativo a una fecha/hora PROPUESTA por el bot para la que NO existe cita activa, NO marcar CONFIRMADA: continuar el agendamiento con new_appointment_scheduling (resolve_patient y schedule_block). El gate determinista de selection.requiredCapabilities=[hasActiveAppointment] en el flow impide activarlo sin cita real."
   },
   {
     "id": "cancel_existing_appointment",
-    "intent": "appointment_cancellation",
+    "intent": "existing_appointment_cancellation",
     "description": "El paciente solicita cancelar una o más citas existentes, o responde a un recordatorio indicando que no asistirá.",
     "action": "allow",
     "priority": 0,
     "note": "Permitir continuar para ejecutar el flow de cancelación."
   },
   {
-    "id": "scheduling_request",
-    "intent": "scheduling_request",
+    "id": "new_appointment_scheduling",
+    "intent": "new_appointment_scheduling",
     "description": "El paciente solicita una nueva cita, reprogramar una cita existente, o consultar disponibilidad.",
     "action": "allow",
     "priority": 0,
@@ -129,7 +129,7 @@ Operadores permitidos: `"equals"`, `"in"`, `"not_in"`, `"gt"`, `"lt"`, `"gte"`, 
   },
   {
     "id": "endolift_no_fridays",
-    "intent": "scheduling_request",
+    "intent": "new_appointment_scheduling",
     "description": "El paciente solicita agendar Endolift. Esta regla aplica restricciones específicas del tratamiento.",
     "action": "block",
     "priority": 0,
@@ -152,7 +152,7 @@ Operadores permitidos: `"equals"`, `"in"`, `"not_in"`, `"gt"`, `"lt"`, `"gte"`, 
 - [ ] NINGUNA rule con action diferente de "allow" o "block"
 - [ ] Cada rule tiene `description` semántica
 - [ ] Cada `intent` referenciado existe en el catálogo
-- [ ] En tasks-only: `scheduling_request` tiene `redirectToTask: true` (patrón típico; si la clínica prefiere respuesta informativa sin tarea, omitirlo a propósito y confirmar que la nota advisory es esperada)
+- [ ] En tasks-only: `new_appointment_scheduling` tiene `redirectToTask: true` (patrón típico; si la clínica prefiere respuesta informativa sin tarea, omitirlo a propósito y confirmar que la nota advisory es esperada)
 - [ ] Reglas de negocio de los archivos de input convertidas a rules con conditions si aplica
 - [ ] `hidePrice: true` para intents de tratamientos donde no se menciona precio
 - [ ] **`priority` es un número entero ≥ 0 o `null`** (el backend acepta ambos; por defecto `0`)
