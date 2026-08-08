@@ -6,18 +6,8 @@
       "condition": null
     },
     {
-      "answer": "Lunes a miércoles: 10:00–15:00 y 15:30–19:00. Jueves y viernes: 09:00–15:00. Horario especial de verano: del 3 al 14 de agosto, horario de 9 a 15. Del 15 al 31 de agosto (ambos incluidos), cerrado por vacaciones. Nos incorporamos el martes 1 de septiembre.",
+      "answer": "Lunes a miércoles: 10:00–15:00 y 15:30–19:00. Jueves y viernes: 09:00–15:00.",
       "question": "¿Cuál es el horario de atención?",
-      "condition": null
-    },
-    {
-      "answer": "Del 3 al 14 de agosto, horario de 9 a 15. Del 15 al 31 de agosto (ambos incluidos), cerrado por vacaciones. Nos incorporamos el martes 1 de septiembre con el horario habitual.",
-      "question": "¿Cuál es el horario en agosto?",
-      "condition": null
-    },
-    {
-      "answer": "Cerramos por vacaciones del 15 al 31 de agosto, ambos incluidos. Nos incorporamos el martes 1 de septiembre. Las solicitudes recibidas durante el cierre se gestionarán a partir de esa fecha.",
-      "question": "¿Cuándo cierran por vacaciones?",
       "condition": null
     },
     {
@@ -26,8 +16,8 @@
       "condition": null
     },
     {
-      "answer": "Sí, puede llamarnos al 871 172 766 en nuestro horario de atención: Lunes a miércoles: 10:00–15:00 y 15:30–19:00. Jueves y viernes: 09:00–15:00. Horario especial de verano: del 3 al 14 de agosto, horario de 9 a 15. Del 15 al 31 de agosto (ambos incluidos), cerrado por vacaciones. Nos incorporamos el martes 1 de septiembre. WhatsApp: 622 897 067. Teléfono de urgencias: 622 611 069.",
-      "question": "¿Cuál es el teléfono de la clínica y en qué horario puedo llamar?",
+      "answer": "871 172 766. WhatsApp: 622 897 067. Teléfono de urgencias: 622 611 069.",
+      "question": "¿Cuál es el teléfono de la clínica?",
       "condition": null
     },
     {
@@ -144,16 +134,6 @@
       "answer": "La Terapia GBT (Guided Biofilm Therapy) utiliza tecnología AIRFLOW para eliminar biofilm de forma suave y efectiva, incluso en zonas sensibles. Es indolora y cuesta desde 95 € por sesión. Se recomienda cada 3–6 meses.",
       "question": "¿Qué es la Terapia GBT?",
       "condition": null
-    },
-    {
-      "answer": "Estas son las indicaciones para el día de antes de su cirugía:\n- Hoy puede hacer vida completamente normal. Únicamente le recomendamos evitar el consumo de alcohol durante el día de hoy.\n- Esta noche puede cenar con normalidad y mañana desayunar de forma habitual.\n- Si toma alguna medicación de forma habitual, mantenga su pauta normal y, cuando llegue a la clínica, indíquenos qué medicación ha tomado.\n- Le agradeceríamos que firmara los consentimientos informados antes de acudir a la cita, si todavía no lo ha hecho.\n- Mañana, en la clínica, le entregaremos una bolsa con todo lo necesario para su cirugía, por lo que no tiene que preocuparse de preparar nada.\n- Únicamente le recomendamos que tenga preparada en casa comida para los siete días posteriores a la cirugía: una dieta líquida o triturada, completamente lisa, sin trozos ni grumos.\nPor lo demás, no necesita realizar ninguna preparación especial.\nSi su cirugía es con sedación, las indicaciones son las mismas pero debe acudir en ayunas.",
-      "question": "¿Qué debo hacer el día antes de mi cirugía?",
-      "condition": null
-    },
-    {
-      "answer": "Depende del tipo de cirugía:\n- Con sedación: debe acudir en ayunas. El resto de indicaciones son las mismas: vida normal el día anterior evitando el alcohol, medicación habitual manteniendo su pauta, consentimientos firmados y comida triturada preparada para los siete días posteriores.\n- Sin sedación: no necesita ayuno; puede cenar con normalidad la noche anterior y desayunar de forma habitual.",
-      "question": "¿Tengo que ir en ayunas a mi cirugía?",
-      "condition": null
     }
   ],
   "rules": [
@@ -210,7 +190,7 @@
     },
     {
       "id": "scheduling_request_to_task",
-      "note": "El bot no ejecuta scheduling directamente. Para nuevas citas o consultas de disponibilidad, crear tarea con los datos del paciente. No consultar agenda, no sugerir horas ni franjas. Para mover la hora dentro del mismo día (adelantar o atrasar), NUNCA cancelar la cita original: informar de que se verificará la disponibilidad y crear tarea con la franja deseada. Para cambios de día o reprogramación, usar el flow de appointment_cancellation.",
+      "note": "El bot no ejecuta scheduling directamente. Para nuevas citas o consultas de disponibilidad, crear tarea con los datos del paciente. No consultar agenda, no sugerir horas ni franjas. Para cambios de citas existentes, usar el flow de appointment_cancellation.",
       "action": "allow",
       "intent": "scheduling_request",
       "reason": null,
@@ -220,41 +200,7 @@
       "conditions": null,
       "informOnly": null,
       "protocolId": null,
-      "description": "El paciente solicita una nueva cita, mover la hora de una cita dentro del mismo día (adelantar o atrasar), o preguntar por disponibilidad de huecos.",
-      "conditionLogic": null,
-      "redirectToTask": true,
-      "requiredFields": null
-    },
-    {
-      "id": "never_cancel_same_day_time_change",
-      "note": "REGLA ESTRICTA (NO CANCELAR): si el paciente pide adelantar o atrasar la hora de su cita sin indicar otro día, interpretar cambio dentro del mismo día. Bajo ninguna circunstancia cancelar ni eliminar la cita original del sistema. La única acción es informar amablemente de que se va a verificar la disponibilidad y crear la tarea de inmediato con la cita afectada y la franja deseada.",
-      "action": "allow",
-      "intent": "scheduling_request",
-      "reason": null,
-      "message": null,
-      "priority": 0,
-      "hidePrice": null,
-      "conditions": null,
-      "informOnly": null,
-      "protocolId": null,
-      "description": "El paciente pide adelantar o atrasar la hora de una cita existente dentro del mismo día; la cita original debe conservarse intacta y la solicitud se deriva a tarea humana.",
-      "conditionLogic": null,
-      "redirectToTask": true,
-      "requiredFields": null
-    },
-    {
-      "id": "same_professional_only",
-      "note": "Regla estricta de la clínica: no cambiar de profesional. Si el paciente tiene citas anteriores con un profesional (Dr. Zaragoza Lauber o Dra. Genestra Pons), anotar siempre ese mismo profesional en la tarea y no ofrecer ni sugerir nunca uno diferente.",
-      "action": "allow",
-      "intent": "scheduling_request",
-      "reason": null,
-      "message": null,
-      "priority": 0,
-      "hidePrice": null,
-      "conditions": null,
-      "informOnly": null,
-      "protocolId": null,
-      "description": "El paciente solicita cita o cambio de hora y tiene historial con un profesional de la clínica; la gestión se deriva siempre con ese mismo profesional.",
+      "description": "El paciente solicita una nueva cita, reprogramar una cita existente, mover una cita dentro del mismo día, o preguntar por disponibilidad de huecos.",
       "conditionLogic": null,
       "redirectToTask": true,
       "requiredFields": null
@@ -312,7 +258,7 @@
     },
     {
       "id": "urgency_follow_up",
-      "note": "Crear tarea con descripción de síntomas. No hacer triaje clínico. Indicar el teléfono de urgencias 622 611 069 si es una urgencia grave, EXCEPTO durante el cierre por vacaciones (del 15 al 31 de agosto): en ese periodo el teléfono de urgencias no está operativo, no ofrecerlo. Si un paciente reporta una urgencia durante el cierre, generar la tarea igualmente y pasar al equipo para que puedan coordinar una fecha a partir de la reapertura del 1 de septiembre. Al mencionar fechas, usar solo día y mes, sin año.",
+      "note": "Crear tarea con descripción de síntomas. No hacer triaje clínico. Indicar el teléfono de urgencias 622 611 069 si es una urgencia grave.",
       "action": "allow",
       "intent": "urgency_report",
       "reason": null,
@@ -363,7 +309,7 @@
     },
     {
       "id": "medical_zero_triage",
-      "note": "No diagnosticar, no pedir gravedad ni hacer preguntas clínicas. Crear una única tarea administrativa para revisión humana. Si es urgencia grave, indicar el teléfono de urgencias 622 611 069, EXCEPTO durante el cierre por vacaciones (del 15 al 31 de agosto), cuando no está operativo: en ese periodo, generar la tarea y pasar al equipo para que puedan coordinar una fecha a partir de la reapertura del 1 de septiembre. Al mencionar fechas, usar solo día y mes, sin año.",
+      "note": "No diagnosticar, no pedir gravedad ni hacer preguntas clínicas. Crear una única tarea administrativa para revisión humana. Si es urgencia grave, indicar el teléfono de urgencias 622 611 069.",
       "action": "allow",
       "intent": "human_follow_up",
       "reason": null,
@@ -479,139 +425,9 @@
       "conditionLogic": null,
       "redirectToTask": null,
       "requiredFields": null
-    },
-    {
-      "id": "summer_schedule_august_2026",
-      "note": "Responder con el texto literal: Del 3 al 14 de agosto, horario de 9 a 15. Del 15 al 31 de agosto (ambos incluidos), cerrado por vacaciones. Nos incorporamos el martes 1 de septiembre. No mencionar el año ni la excepción de jueves y viernes en estos mensajes. Las solicitudes recibidas durante el cierre se gestionarán a partir del 1 de septiembre. Durante el cierre el teléfono de urgencias 622 611 069 NO está operativo; no ofrecerlo en ese periodo. Si un paciente reporta una urgencia durante el cierre, generar tarea y pasar al equipo para que puedan coordinar una fecha.",
-      "action": "allow",
-      "intent": "general_inquiry",
-      "reason": null,
-      "message": null,
-      "priority": 0,
-      "hidePrice": null,
-      "conditions": null,
-      "informOnly": true,
-      "protocolId": null,
-      "description": "El paciente pregunta por el horario de agosto de 2026, por el cierre por vacaciones de verano o si la clínica está abierta en esas fechas.",
-      "conditionLogic": null,
-      "redirectToTask": null,
-      "requiredFields": null
-    },
-    {
-      "id": "pre_surgery_instructions",
-      "note": "Responder con el protocolo pre_surgery_instructions usando el texto literal completo, sin resumir, recortar ni parafrasear, comenzando SIEMPRE con la línea 'Estas son las indicaciones para el día de antes de su cirugía:', tanto si la cirugía es con sedación como sin sedación. Revisar el contexto ASSOCIATED_PATIENTS para determinar si la cirugía del día siguiente incluye sedación. Si no se puede determinar desde el contexto, preguntar al paciente únicamente: '¿su cirugía es con sedación o sin sedación?', sin mencionar anestesia local ni otros términos clínicos. Indicar el ayuno solo como 'debe acudir en ayunas', sin añadir horas, explicaciones sobre comer o beber, ni excepciones no autorizadas por la clínica. No dar consejo médico adicional.",
-      "action": "allow",
-      "intent": "pre_surgery_inquiry",
-      "reason": null,
-      "message": null,
-      "priority": 0,
-      "hidePrice": null,
-      "conditions": null,
-      "informOnly": null,
-      "protocolId": "pre_surgery_instructions",
-      "description": "El paciente con cirugía programada al día siguiente pregunta cómo prepararse: si puede comer, cenar, desayunar, beber alcohol, tomar su medicación habitual o qué preparativos necesita.",
-      "conditionLogic": null,
-      "redirectToTask": null,
-      "requiredFields": null
-    },
-    {
-      "id": "farewell",
-      "note": "Permitir al bot responder brevemente o callarse amablemente.",
-      "action": "allow",
-      "intent": "farewell",
-      "reason": null,
-      "message": null,
-      "priority": 0,
-      "hidePrice": null,
-      "conditions": null,
-      "informOnly": null,
-      "protocolId": null,
-      "description": "El paciente se despide, agradece o cierra la conversación de forma amable.",
-      "conditionLogic": null,
-      "redirectToTask": null,
-      "requiredFields": null
-    },
-    {
-      "id": "reschedule_inquiry",
-      "note": "Consulta sobre reprogramación. El bot pregunta si quiere confirmar el cambio.",
-      "action": "allow",
-      "intent": "appointment_reschedule_inquiry",
-      "reason": null,
-      "message": null,
-      "priority": 0,
-      "hidePrice": null,
-      "conditions": null,
-      "informOnly": null,
-      "protocolId": null,
-      "description": "El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía.",
-      "conditionLogic": null,
-      "redirectToTask": null,
-      "requiredFields": null
-    },
-    {
-      "id": "cancellation_inquiry",
-      "note": "Consulta sobre cancelación. El bot pregunta si quiere cancelar o buscar otra fecha.",
-      "action": "allow",
-      "intent": "appointment_cancellation_inquiry",
-      "reason": null,
-      "message": null,
-      "priority": 0,
-      "hidePrice": null,
-      "conditions": null,
-      "informOnly": null,
-      "protocolId": null,
-      "description": "El paciente consulta sobre cancelar una cita, sin decidir aún.",
-      "conditionLogic": null,
-      "redirectToTask": null,
-      "requiredFields": null
-    },
-    {
-      "id": "keep_appointment",
-      "note": "Paciente quiere mantener la cita. El bot confirma que sigue activa.",
-      "action": "allow",
-      "intent": "keep_appointment",
-      "reason": null,
-      "message": null,
-      "priority": 0,
-      "hidePrice": null,
-      "conditions": null,
-      "informOnly": null,
-      "protocolId": null,
-      "description": "El paciente indica que quiere mantener la cita tal como está.",
-      "conditionLogic": null,
-      "redirectToTask": null,
-      "requiredFields": null
-    },
-    {
-      "id": "all_reschedule_to_task",
-      "note": "En modo tasks-only, el flujo por defecto cancela la cita actual y crea tarea de seguimiento. NO preguntar motivo al paciente; usar reason='Solicitud del paciente'.",
-      "action": "allow",
-      "intent": "appointment_reschedule_request",
-      "reason": null,
-      "message": null,
-      "priority": 0,
-      "hidePrice": null,
-      "conditions": null,
-      "informOnly": null,
-      "protocolId": null,
-      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye adelantar/atrasar mismo dia, correccion de titular y restablecer tras cancelacion en este turno.",
-      "conditionLogic": null,
-      "redirectToTask": true,
-      "requiredFields": null
     }
   ],
   "intents": {
-    "farewell": {
-      "examples": [
-        "adios",
-        "gracias",
-        "hasta luego",
-        "nos vemos",
-        "chao",
-        "ok"
-      ],
-      "description": "El paciente se despide, agradece o cierra la conversación de forma amable."
-    },
     "urgency_report": {
       "examples": [
         "tengo mucho dolor",
@@ -643,14 +459,6 @@
       ],
       "description": "Cualquier solicitud que requiere seguimiento humano y no encaja claramente en los intents anteriores."
     },
-    "keep_appointment": {
-      "examples": [
-        "Dejala igual",
-        "Olvida el cambio",
-        "Mejor mantengamos la cita"
-      ],
-      "description": "El paciente indica que quiere mantener la cita tal como está."
-    },
     "medication_inquiry": {
       "examples": [
         "necesito receta",
@@ -667,11 +475,10 @@
         "quiero una cita para limpieza",
         "quiero una primera visita de implantes",
         "¿podéis darme cita?",
-        "¿podéis adelantarla una hora?",
-        "¿podéis atrasarla un poco?",
-        "¿puedo pasar la cita a otra hora ese mismo día?"
+        "quiero cambiar mi cita de día",
+        "¿podéis adelantarla una hora?"
       ],
-      "description": "El paciente quiere reservar una NUEVA cita, preguntar por disponibilidad de huecos, o mover la hora de una cita existente dentro del MISMO día (adelantar o atrasar). El bot no ejecuta scheduling directamente: recopila los datos necesarios y crea una tarea para que el equipo humano gestione el agendamiento. Si pide adelantar o atrasar la hora el mismo día, NUNCA se cancela la cita original: solo se informa de que se verificará la disponibilidad y se crea tarea. Cambiar la cita a otro día o reprogramar va por appointment_cancellation."
+      "description": "El paciente quiere reservar una NUEVA cita, reprogramar una cita existente, mover una cita dentro del mismo día, o preguntar por disponibilidad de huecos. El bot no ejecuta scheduling directamente: recopila los datos necesarios y crea una tarea para que el equipo humano gestione el agendamiento."
     },
     "appointment_inquiry": {
       "examples": [
@@ -681,19 +488,6 @@
         "¿qué cita tengo mañana?"
       ],
       "description": "El paciente pregunta por citas que ya tiene reservadas, como horarios, fechas, tratamientos o sede. La información ya está en el contexto."
-    },
-    "pre_surgery_inquiry": {
-      "examples": [
-        "mañana tengo la cirugía, ¿puedo comer?",
-        "¿qué tengo que hacer antes de la cirugía?",
-        "¿puedo desayunar antes de la operación?",
-        "¿tengo que ir en ayunas?",
-        "¿puedo tomar mi medicación antes de la cirugía?",
-        "¿cómo me preparo para la cirugía de mañana?",
-        "¿puedo cenar la noche antes de la cirugía?",
-        "¿puedo beber alcohol hoy si mañana me operan?"
-      ],
-      "description": "El paciente tiene una cirugía programada al día siguiente y pregunta cómo prepararse: si puede comer, cenar, desayunar, beber alcohol, tomar su medicación habitual, firmar consentimientos o qué preparativos necesita."
     },
     "patient_running_late": {
       "examples": [
@@ -717,9 +511,10 @@
         "¿podéis cambiarme la cita?",
         "no puedo venir",
         "quiero reprogramar",
+        "¿podéis adelantarla una hora?",
         "quiero cambiar mi cita de día"
       ],
-      "description": "El paciente cancela una cita existente, indica que no podrá asistir, o solicita cambiar o reprogramar una cita a otro día u otra fecha. En todos estos casos se cancela primero la cita (o citas) y se crea tarea. Adelantar o atrasar la hora dentro del mismo día NO se gestiona aquí (nunca se cancela por eso): va por scheduling_request."
+      "description": "El paciente cancela una cita existente, indica que no podrá asistir, o solicita cambiar, reprogramar, adelantar o atrasar una cita existente. En todos estos casos se cancela primero la cita (o citas) y se crea tarea para seguimiento."
     },
     "appointment_confirmation": {
       "examples": [
@@ -743,30 +538,6 @@
         "¿atienen pacientes de Alemania?"
       ],
       "description": "El paciente pregunta información general sobre el Protocolo Signature de implantes, implantes guiados, sedación, cirugía guiada o implantes premium, sin solicitar valoración de su caso ni precio cerrado."
-    },
-    "appointment_reschedule_inquiry": {
-      "examples": [
-        "¿Se puede cambiar mi cita?",
-        "¿Podria moverla a otro dia?"
-      ],
-      "description": "El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía."
-    },
-    "appointment_reschedule_request": {
-      "examples": [
-        "¿podemos cambiar mi cita al jueves?",
-        "muevela a la tarde",
-        "adelantala a las 10h",
-        "la cita es para mi pareja, no para mi",
-        "restablecer la cita que acabo de cancelar"
-      ],
-      "description": "El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. NO usar cuando el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita (eso es scheduling_request, continuar el agendamiento). Incluye: cambiar de día, adelantar o atrasar la hora, corregir el titular. Ejemplos válidos: 'muévela al jueves', 'cámbiamela a la tarde', 'adelántala una hora'."
-    },
-    "appointment_cancellation_inquiry": {
-      "examples": [
-        "¿Que pasa si no puedo ir?",
-        "¿Como cancelo una cita?"
-      ],
-      "description": "El paciente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente."
     }
   },
   "version": "1.0",
@@ -790,7 +561,7 @@
         "platform": "facebook"
       }
     ],
-    "openingHours": "Lunes a miércoles: 10:00–15:00 y 15:30–19:00. Jueves y viernes: 09:00–15:00. Horario especial de verano: del 3 al 14 de agosto, horario de 9 a 15. Del 15 al 31 de agosto (ambos incluidos), cerrado por vacaciones. Nos incorporamos el martes 1 de septiembre.",
+    "openingHours": "Lunes a miércoles: 10:00–15:00 y 15:30–19:00. Jueves y viernes: 09:00–15:00.",
     "farewellMessage": null,
     "escalationMessage": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al 871 172 766.",
     "additionalContacts": [
@@ -852,19 +623,6 @@
       ],
       "description": "El tratamiento de blanqueamiento dental con Philips Zoom utiliza un agente a base de peróxido de hidrógeno. Aunque su absorción sistémica es mínima, no existen estudios suficientes que confirmen su seguridad durante la lactancia. Como es un procedimiento estético y no urgente ni médicamente necesario, en Clínica MZL no lo recomendamos durante el periodo de lactancia.",
       "responseTemplate": "El blanqueamiento con Philips Zoom utiliza peróxido de hidrógeno. Aunque su absorción es mínima, no existen estudios suficientes que confirmen su seguridad durante la lactancia. Como es un tratamiento estético y no urgente, en Clínica MZL no lo recomendamos en este periodo. Si desea, podemos trasladar su consulta al equipo para una valoración personalizada."
-    },
-    "pre_surgery_instructions": {
-      "name": "Instrucciones para el día anterior a una cirugía",
-      "sections": [
-        "Cirugía sin sedación",
-        "Cirugía con sedación (ayuno)",
-        "Medicación habitual",
-        "Consentimientos informados",
-        "Bolsa de cirugía",
-        "Preparación en casa: dieta para los siete días posteriores"
-      ],
-      "description": "Instrucciones para pacientes que tienen una cirugía programada al día siguiente (texto literal de la clínica, usar sin resumir ni parafrasear):\n- Hoy puede hacer vida completamente normal. Únicamente le recomendamos evitar el consumo de alcohol durante el día de hoy.\n- Esta noche puede cenar con normalidad y mañana desayunar de forma habitual.\n- Si toma alguna medicación de forma habitual, mantenga su pauta normal y, cuando llegue a la clínica, indíquenos qué medicación ha tomado.\n- Le agradeceríamos que firmara los consentimientos informados antes de acudir a la cita, si todavía no lo ha hecho.\n- Mañana, en la clínica, le entregaremos una bolsa con todo lo necesario para su cirugía, por lo que no tiene que preocuparse de preparar nada.\n- Únicamente le recomendamos que tenga preparada en casa comida para los siete días posteriores a la cirugía: una dieta líquida o triturada, completamente lisa, sin trozos ni grumos.\nPor lo demás, no necesita realizar ninguna preparación especial.\nSi su cirugía es con sedación, las indicaciones son las mismas pero debe acudir en ayunas.",
-      "responseTemplate": "El paciente tiene una cirugía programada mañana y pregunta cómo prepararse. Responder con el texto literal completo del protocolo, sin resumir, recortar ni parafrasear, ordenado en puntos con saltos de línea (guiones de texto plano, sin markdown ni asteriscos). La respuesta debe comenzar SIEMPRE con la línea literal 'Estas son las indicaciones para el día de antes de su cirugía:', tanto si la cirugía es con sedación como sin sedación:\n- Hoy puede hacer vida completamente normal. Únicamente le recomendamos evitar el consumo de alcohol durante el día de hoy.\n- Esta noche puede cenar con normalidad y mañana desayunar de forma habitual.\n- Si toma alguna medicación de forma habitual, mantenga su pauta normal y, cuando llegue a la clínica, indíquenos qué medicación ha tomado.\n- Le agradeceríamos que firmara los consentimientos informados antes de acudir a la cita, si todavía no lo ha hecho.\n- Mañana, en la clínica, le entregaremos una bolsa con todo lo necesario para su cirugía, por lo que no tiene que preocuparse de preparar nada.\n- Únicamente le recomendamos que tenga preparada en casa comida para los siete días posteriores a la cirugía: una dieta líquida o triturada, completamente lisa, sin trozos ni grumos.\nPor lo demás, no necesita realizar ninguna preparación especial.\nSi su cirugía es con sedación, las indicaciones son las mismas pero debe acudir en ayunas. Indicar el ayuno únicamente con estas palabras: 'debe acudir en ayunas'; no añadir horas, ni explicaciones sobre comer o beber, ni excepciones no autorizadas por la clínica. Si no se puede determinar si su cirugía incluye sedación, preguntar únicamente: '¿su cirugía es con sedación o sin sedación?', sin mencionar anestesia local ni otros términos clínicos. Cerrar con el texto literal: Nos vemos mañana. ¡Hasta pronto!"
     }
   },
   "styleRules": {
@@ -890,8 +648,7 @@
       "Primera visita online no se realizan; deben ser presenciales.",
       "Cita informativa es gratuita; solo se cobra radiografía si es necesaria.",
       "No diagnosticar, no prescribir, no dar consejos médicos que sustituyan la opinión del Dr. Zaragoza.",
-      "No mencionar nombres internos de tratamientos ni estados internos del sistema en ningún mensaje al paciente (confirmaciones, cancelaciones, cambios o cualquier otro).",
-      "Si la lógica interna requiere crear una tarea o cambiar un estado, hacerlo sin explicarlo al paciente.",
+      "No mencionar nombres internos de tratamientos en confirmaciones de cita.",
       "No explicar normativas internas al paciente.",
       "No crear tareas duplicadas.",
       "En modo tasks-only, no preguntar día ni hora ni sugerir franjas horarias.",
@@ -906,11 +663,7 @@
       "Antes de crear una tarea administrativa, verificar nombre y teléfono del paciente. Si el teléfono ya está disponible en el contexto, no volver a pedirlo innecesariamente.",
       "No crear tareas genéricas como 'quiere cita'. Recopilar conversando de forma natural toda la información relevante antes de crear la tarea.",
       "La clínica opera de lunes a miércoles para citas generales; jueves y viernes son exclusivamente cirugía.",
-      "Si el paciente tiene un presupuesto con tratamiento RECONSTRUCCIÓN, recopilar datos y crear TAREA para que el equipo humano gestione la cita.",
-      "Horario especial verano 2026 (texto literal al paciente): Del 3 al 14 de agosto, horario de 9 a 15. Del 15 al 31 de agosto (ambos incluidos), cerrado por vacaciones. Nos incorporamos el martes 1 de septiembre. No mencionar la excepción de jueves y viernes en estos mensajes.",
-      "Aviso proactivo de verano: si el paciente pide cita para fechas entre el 15 y el 31 de agosto, o pregunta por horarios de esas fechas, informar del cierre por vacaciones y de la reapertura el martes 1 de septiembre. Si pide cita entre el 3 y el 14 de agosto, indicar que el horario es de 9 a 15.",
-      "Durante el cierre por vacaciones (15-31 agosto): crear la tarea igualmente e informar de que el equipo la gestionará a partir del 1 de septiembre. El teléfono de urgencias 622 611 069 NO está operativo durante el cierre; no ofrecerlo en ese periodo. Si un paciente reporta una urgencia durante el cierre, generar la tarea y pasar al equipo para que puedan coordinar una fecha a partir de la reapertura.",
-      "Al comunicar fechas del horario de verano o del cierre, usar solo día y mes (ej. 15 de agosto), sin indicar el año ni usar formatos largos como 15/08/2026."
+      "Si el paciente tiene un presupuesto con tratamiento RECONSTRUCCIÓN, recopilar datos y crear TAREA para que el equipo humano gestione la cita."
     ],
     "mandatoryPhrases": [],
     "noMedicalDiagnosis": true,
@@ -939,81 +692,9 @@
   },
   "capabilities": {
     "protocols": true,
+    "reminders": false,
+    "scheduling": false,
     "sensitiveSituations": true
-  },
-  "serviceCatalog": {
-    "treatments": [
-      {
-        "name": "Primera visita informativa",
-        "category": "Consulta",
-        "description": "Consulta inicial gratuita con valoración del doctor, fotografías clínicas y escaneo digital. Solo se cobra radiografía si es necesaria.",
-        "priceDescription": "Gratuita",
-        "requiresConsultation": false
-      },
-      {
-        "name": "Mantenimiento periodontal (limpieza dental boca sana)",
-        "category": "Higiene",
-        "description": "Limpieza dental de aproximadamente 60 minutos. Se recomienda cada 3–6 meses.",
-        "priceDescription": "95 € por sesión",
-        "requiresConsultation": false
-      },
-      {
-        "name": "Blanqueamiento dental pack clínico",
-        "category": "Estética",
-        "description": "Pack de blanqueamiento más mantenimiento periodontal previo. Agenda: Mantenimiento periodontal + Blanqueamiento (90 min).",
-        "priceDescription": "490 € + 95 € mantenimiento previo",
-        "requiresConsultation": true
-      },
-      {
-        "name": "TAC 3D completo (CBCT)",
-        "category": "Diagnóstico",
-        "description": "Radiografía de alta resolución con menor radiación que un TAC médico convencional. Duración aproximada: 5 minutos.",
-        "priceDescription": "150 €",
-        "requiresConsultation": false
-      },
-      {
-        "name": "TAC HD ENDO (CBCT)",
-        "category": "Diagnóstico",
-        "description": "Visualización 3D de anatomía radicular compleja, conductos adicionales, lesiones periapicales ocultas, fracturas radiculares y cuerpos extraños.",
-        "priceDescription": "95 €",
-        "requiresConsultation": false
-      },
-      {
-        "name": "Ortopantomografía",
-        "category": "Diagnóstico",
-        "description": "Radiografía útil para caries profundas, dientes retenidos, enfermedades periodontales, planificación de ortodoncia/implantes/cirugías, quistes y fracturas óseas. Duración: 5 min.",
-        "priceDescription": "90 €",
-        "requiresConsultation": false
-      },
-      {
-        "name": "Fluorización",
-        "category": "Preventivo",
-        "description": "Tratamiento preventivo que aplica flúor para fortalecer el esmalte y proteger contra la caries. Duración aproximada: 30 minutos.",
-        "priceDescription": "60 €",
-        "requiresConsultation": false
-      },
-      {
-        "name": "Terapia GBT (Guided Biofilm Therapy)",
-        "category": "Higiene",
-        "description": "Tecnología AIRFLOW para eliminar biofilm de forma suave y efectiva, incluso en zonas sensibles. Indolora.",
-        "priceDescription": "Desde 95 € por sesión",
-        "requiresConsultation": false
-      },
-      {
-        "name": "Visita de urgencia",
-        "category": "Urgencia",
-        "description": "Visita de urgencia dental con duración aproximada de 60 minutos. La radiografía solo se realiza si el especialista la considera necesaria.",
-        "priceDescription": "50 €",
-        "requiresConsultation": false
-      },
-      {
-        "name": "Protocolo Signature de Implantes",
-        "category": "Implantología",
-        "description": "Protocolo integral de implantología avanzada con planificación digital, cirugía guiada, materiales premium Straumann y acompañamiento completo.",
-        "priceDescription": "Precio personalizado (valoración en clínica)",
-        "requiresConsultation": true
-      }
-    ]
   },
   "errorCategories": [
     {
@@ -1081,10 +762,6 @@
     }
   ],
   "responseTemplates": {
-    "farewell": {
-      "mode": "literal",
-      "text": "Gracias por contactar con la Clínica del Dr. Zaragoza Lauber. Si necesita algo más, estamos aquí."
-    },
     "greeting": {
       "mode": "literal",
       "text": "Hola, soy Vera, asesora virtual de la Clínica del Dr. Zaragoza Lauber. ¿En qué puedo ayudarle?"
@@ -1100,10 +777,6 @@
     "confirmation": {
       "mode": "literal",
       "text": "Tu cita ha quedado confirmada. Te esperamos."
-    },
-    "out_of_scope": {
-      "mode": "literal",
-      "text": "Soy Vera, el asistente virtual de la Clínica del Dr. Zaragoza Lauber, y solo puedo ayudarle con nuestros servicios, tratamientos y citas. ¿En qué puedo ayudarle?"
     },
     "task_created": {
       "mode": "literal",
@@ -1121,10 +794,6 @@
       "mode": "literal",
       "text": "No aparecen citas programadas. ¿Puedo ayudarle con algo más?"
     },
-    "summer_schedule": {
-      "mode": "literal",
-      "text": "Del 3 al 14 de agosto, horario de 9 a 15. Del 15 al 31 de agosto (ambos incluidos), cerrado por vacaciones. Nos incorporamos el martes 1 de septiembre."
-    },
     "medication_inquiry": {
       "mode": "literal",
       "text": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al 871 172 766."
@@ -1141,10 +810,6 @@
       "mode": "literal",
       "text": "No se preocupe, si viene con un poco de retraso le ajustamos la cita para poder atenderle. Si prevé que el retraso va a ser superior, por favor, avísenos para cambiarle la cita."
     },
-    "information_not_available": {
-      "mode": "literal",
-      "text": "No tengo información sobre eso en este momento. ¿Quiere que lo consulte con el equipo?"
-    },
     "signature_protocol_inquiry": {
       "mode": "literal",
       "text": "Signature es nuestro protocolo más completo de implantología avanzada. No se trata solo de colocar implantes, sino de planificar digitalmente todo el caso, realizar cirugía guiada, usar materiales premium y acompañarle antes, durante y después de la cirugía. El Dr. Zaragoza habla inglés y alemán y atiende a pacientes internacionales."
@@ -1152,27 +817,10 @@
   },
   "toolOrchestration": {
     "flows": {
-      "farewell": {
-        "steps": [
-          {
-            "note": "No requiere acciones. El bot responde con el template de despedida o puede callarse amablemente.",
-            "step": 1,
-            "tools": [],
-            "parallel": false,
-            "required": []
-          }
-        ],
-        "intent": "farewell",
-        "description": "El paciente se despide, agradece o cierra la conversación de forma amable.",
-        "allowedTools": [],
-        "allowsSilence": true,
-        "responseTemplate": "Gracias por contactar con la Clínica del Dr. Zaragoza Lauber. Si necesita algo más, estamos aquí.",
-        "responseTemplateMode": "literal"
-      },
       "urgency_report": {
         "steps": [
           {
-            "note": "Crear tarea urgente con nombre, apellidos, teléfono, descripción detallada de síntomas (dolor, sangrado, traumatismo, pieza rota, inflamación). No hacer triaje clínico. Indicar el teléfono de urgencias 622 611 069, EXCEPTO durante el cierre por vacaciones (del 15 al 31 de agosto), cuando no está operativo: en ese periodo no ofrecerlo, generar la tarea igualmente y pasar al equipo para que puedan coordinar una fecha a partir de la reapertura del 1 de septiembre. Al mencionar fechas, usar solo día y mes, sin año.",
+            "note": "Crear tarea urgente con nombre, apellidos, teléfono, descripción detallada de síntomas (dolor, sangrado, traumatismo, pieza rota, inflamación). No hacer triaje clínico. Indicar el teléfono de urgencias 622 611 069.",
             "step": 1,
             "tools": [
               "create_task"
@@ -1247,22 +895,6 @@
         "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al 871 172 766.",
         "responseTemplateMode": "literal"
       },
-      "reschedule_inquiry": {
-        "steps": [
-          {
-            "note": "Flow puramente informativo. Responder amablemente y preguntar si desea confirmar el cambio o buscar otra fecha.",
-            "step": 1,
-            "tools": [],
-            "parallel": false,
-            "required": []
-          }
-        ],
-        "intent": "appointment_reschedule_inquiry",
-        "description": "El paciente pregunta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía.",
-        "allowedTools": [],
-        "responseTemplate": "¿Quiere que confirmemos el cambio de su cita o prefiere otra fecha?",
-        "responseTemplateMode": "literal"
-      },
       "appointment_inquiry": {
         "steps": [
           {
@@ -1275,30 +907,12 @@
         ],
         "intent": "appointment_inquiry",
         "description": "El paciente consulta información sobre citas que ya tiene reservadas, como horarios, fechas, sede o tratamientos.",
-        "allowedTools": [],
-        "responseTemplate": "Aquí tiene la información de sus citas programadas.",
-        "responseTemplateMode": "model"
-      },
-      "cancellation_inquiry": {
-        "steps": [
-          {
-            "note": "Flow puramente informativo. Responder amablemente y preguntar si desea cancelar la cita o buscar otra fecha.",
-            "step": 1,
-            "tools": [],
-            "parallel": false,
-            "required": []
-          }
-        ],
-        "intent": "appointment_cancellation_inquiry",
-        "description": "El paciente pregunta sobre cancelar una cita, sin decidir aún.",
-        "allowedTools": [],
-        "responseTemplate": "¿Quiere que cancelemos la cita o prefiere buscar otra fecha?",
-        "responseTemplateMode": "literal"
+        "allowedTools": []
       },
       "patient_running_late": {
         "steps": [
           {
-            "note": "Marcar la cita existente como EN_CAMINO cuando esté identificada en el contexto. No cancelar la cita automáticamente y no eliminar la cita original del sistema bajo ninguna circunstancia. No ofrecer horarios a menos que el paciente lo pida.",
+            "note": "Marcar la cita existente como EN_CAMINO cuando esté identificada en el contexto. No cancelar la cita automáticamente. No ofrecer horarios a menos que el paciente lo pida.",
             "step": 1,
             "tools": [
               "manage_schedule_block_status"
@@ -1307,7 +921,7 @@
             "required": []
           },
           {
-            "note": "Crear TAREA para seguimiento. Incluir hora estimada de llegada si la menciona. No cancelar la cita automáticamente ni eliminarla del sistema.",
+            "note": "Crear TAREA para seguimiento. Incluir hora estimada de llegada si la menciona. No cancelar la cita automáticamente.",
             "step": 2,
             "tools": [
               "create_task"
@@ -1317,11 +931,6 @@
           }
         ],
         "intent": "patient_running_late",
-        "selection": {
-          "requiredCapabilities": [
-            "hasActiveAppointment"
-          ]
-        },
         "description": "El paciente indica que llegará tarde, que va de camino o que quizá no llegue a la hora de una cita existente.",
         "allowedTools": [
           "manage_schedule_block_status",
@@ -1330,31 +939,10 @@
         "responseTemplate": "No se preocupe, si viene con un poco de retraso le ajustamos la cita para poder atenderle. Si prevé que el retraso va a ser superior, por favor, avísenos para cambiarle la cita.",
         "responseTemplateMode": "literal"
       },
-      "keep_appointment_flow": {
-        "steps": [
-          {
-            "note": "No requiere acciones. Confirmar que la cita sigue activa.",
-            "step": 1,
-            "tools": [],
-            "parallel": false,
-            "required": []
-          }
-        ],
-        "intent": "keep_appointment",
-        "selection": {
-          "requiredCapabilities": [
-            "hasActiveAppointment"
-          ]
-        },
-        "description": "El paciente indica que quiere mantener la cita tal como está.",
-        "allowedTools": [],
-        "responseTemplate": "Perfecto, su cita sigue confirmada.",
-        "responseTemplateMode": "literal"
-      },
       "any_scheduling_request": {
         "steps": [
           {
-            "note": "Recopilar nombre, apellidos, teléfono, tratamiento deseado, fechas/horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento. El bot no consulta la agenda ni muestra huecos disponibles. No preguntar día ni hora ni sugerir franjas. IMPORTANTE: si existe una conversación reciente sobre tratamiento, precio o cita, y la paciente escribe solo un día, hora o franja, interpretar que continúa el flujo de agendamiento. Recopilar los datos que falten y crear tarea, sin responder frases vacías ni crear tareas duplicadas. CONFIRMACIÓN TRAS HORARIOS DEL EQUIPO: si el equipo humano mostró horarios previamente y el paciente responde con un afirmativo más fecha y hora (p. ej. 'vale, el jueves a las 11'), NO marcar CONFIRMADA (la cita aún no existe): crear tarea de agendamiento con esa fecha/hora y el tratamiento ofrecido. ADELANTAR/ATRASAR MISMO DÍA (REGLA ESTRICTA, NO CANCELAR): si el paciente pide adelantar o atrasar la hora de su cita y no indica otro día, interpretar SIEMPRE cambio dentro del mismo día. BAJO NINGUNA CIRCUNSTANCIA cancelar ni eliminar la cita original: la única acción es informar amablemente de que se va a verificar la disponibilidad y crear la tarea de inmediato, indicando la cita afectada y la franja deseada. Si indica explícitamente otro día u otra fecha, es reprogramación: derivar al flow de cancelación. PROFESIONAL (regla estricta de la clínica, no cambiar de profesional): si el paciente tiene citas anteriores con un profesional (Dr. Zaragoza Lauber o Dra. Genestra Pons), anotar SIEMPRE ese mismo profesional en la tarea y no ofrecer ni sugerir nunca uno diferente. Si el paciente lleva más de 6 meses sin venir y solicita valoración, anotar en la tarea la propuesta de MANTENIMIENTO PERIODONTAL primero (ya que si no se tiene la limpieza hecha, no se puede evaluar bien). Si no quieren limpieza, anotar que se propone VALORACIÓN. AVISO VERANO: si el paciente solicita cita entre el 15 y el 31 de agosto, informar proactivamente del cierre por vacaciones y de que la solicitud se gestionará a partir del 1 de septiembre; crear la tarea igualmente. Si solicita entre el 3 y el 14 de agosto, indicar que el horario es de 9 a 15. Usar solo día y mes, sin año, y sin mencionar la excepción de jueves y viernes.",
+            "note": "Recopilar nombre, apellidos, teléfono, tratamiento deseado, fechas/horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento. El bot no consulta la agenda ni muestra huecos disponibles. No preguntar día ni hora ni sugerir franjas. IMPORTANTE: si existe una conversación reciente sobre tratamiento, precio o cita, y la paciente escribe solo un día, hora o franja, interpretar que continúa el flujo de agendamiento. Recopilar los datos que falten y crear tarea, sin responder frases vacías ni crear tareas duplicadas. Si el paciente lleva más de 6 meses sin venir y solicita valoración, anotar en la tarea la propuesta de MANTENIMIENTO PERIODONTAL primero (ya que si no se tiene la limpieza hecha, no se puede evaluar bien). Si no quieren limpieza, anotar que se propone VALORACIÓN.",
             "step": 1,
             "tools": [
               "create_task"
@@ -1364,37 +952,17 @@
           }
         ],
         "intent": "scheduling_request",
-        "description": "El paciente solicita agendar una nueva cita, adelantar o atrasar la hora de una cita dentro del mismo día, o consultar disponibilidad de huecos. No incluye cambios de día ni reprogramación (van por el flow de cancelación).",
+        "description": "El paciente solicita agendar una nueva cita, reprogramar, adelantar o atrasar una cita existente, o consultar disponibilidad de huecos.",
         "allowedTools": [
           "create_task"
         ],
-        "responseTemplate": "Voy a verificar la disponibilidad y un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible para confirmarle. O si lo prefiere, puede llamar directamente al 871 172 766.",
-        "responseTemplateMode": "literal"
-      },
-      "pre_surgery_instructions": {
-        "steps": [
-          {
-            "note": "Consultar el protocolo pre_surgery_instructions y revisar el contexto ASSOCIATED_PATIENTS para verificar que el paciente tiene una cirugía programada al día siguiente y determinar si incluye sedación. Responder con el texto literal completo del protocolo, sin resumir, recortar ni parafrasear (el responseTemplate del flow es literal). La respuesta debe comenzar SIEMPRE con la línea literal 'Estas son las indicaciones para el día de antes de su cirugía:', tanto si la cirugía es con sedación como sin sedación. Si no se puede determinar si lleva sedación, preguntar al paciente únicamente: '¿su cirugía es con sedación o sin sedación?', sin mencionar anestesia local ni otros términos clínicos. Indicar el ayuno únicamente como 'debe acudir en ayunas', sin añadir horas, explicaciones sobre comer o beber, ni excepciones no autorizadas por la clínica. Si la cirugía no es al día siguiente, responder con las mismas indicaciones literales sin referencia al día concreto. Si la duda excede estas instrucciones, derivar a human_follow_up y crear tarea.",
-            "step": 1,
-            "tools": [
-              "query_protocol"
-            ],
-            "parallel": false,
-            "required": []
-          }
-        ],
-        "intent": "pre_surgery_inquiry",
-        "description": "El paciente con cirugía programada (normalmente al día siguiente) pregunta cómo prepararse: comidas, ayuno, alcohol, medicación habitual, consentimientos o preparativos.",
-        "allowedTools": [
-          "query_protocol"
-        ],
-        "responseTemplate": "Estas son las indicaciones para el día de antes de su cirugía:\n- Hoy puede hacer vida completamente normal. Únicamente le recomendamos evitar el consumo de alcohol durante el día de hoy.\n- Esta noche puede cenar con normalidad y mañana desayunar de forma habitual.\n- Si toma alguna medicación de forma habitual, mantenga su pauta normal y, cuando llegue a la clínica, indíquenos qué medicación ha tomado.\n- Le agradeceríamos que firmara los consentimientos informados antes de acudir a la cita, si todavía no lo ha hecho.\n- Mañana, en la clínica, le entregaremos una bolsa con todo lo necesario para su cirugía, por lo que no tiene que preocuparse de preparar nada.\n- Únicamente le recomendamos que tenga preparada en casa comida para los siete días posteriores a la cirugía: una dieta líquida o triturada, completamente lisa, sin trozos ni grumos.\nPor lo demás, no necesita realizar ninguna preparación especial.\nSi su cirugía es con sedación, las indicaciones son las mismas pero debe acudir en ayunas.\nNos vemos mañana. ¡Hasta pronto!",
+        "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al 871 172 766.",
         "responseTemplateMode": "literal"
       },
       "cancel_existing_appointment": {
         "steps": [
           {
-            "note": "PASO 1: Cancelar la cita. Una sola cita: manage_schedule_block_status(CANCELADA). Varias citas el mismo día: manage_all_schedule_blocks_for_date. PASO 2 INMEDIATO Y OBLIGATORIO: SIEMPRE ejecutar create_task a continuación para registrar la cancelación y cualquier solicitud de reprogramación. No omitir create_task bajo ninguna circunstancia. No explicar normativas internas ni pedir motivo. No mencionar el nombre del tratamiento salvo que el paciente lo haya dicho. En la tarea de reprogramación incluir SIEMPRE el tratamiento de la cita cancelada y su fecha/hora original, para que el equipo gestione la nueva cita con el MISMO tratamiento. CORRECCIÓN DE TITULAR: si el paciente indica que la cita existente está a nombre de otra persona (titular incorrecto), cancelar esa cita y crear la tarea indicando el titular correcto, el mismo tratamiento y preferencia por la misma fecha y hora. No decir que 'no existe ninguna cita' ni pedir el motivo.",
+            "note": "PASO 1: Cancelar la cita. Una sola cita: manage_schedule_block_status(CANCELADA). Varias citas el mismo día: manage_all_schedule_blocks_for_date. PASO 2 INMEDIATO Y OBLIGATORIO: SIEMPRE ejecutar create_task a continuación para registrar la cancelación y cualquier solicitud de reprogramación. No omitir create_task bajo ninguna circunstancia. No explicar normativas internas ni pedir motivo. No mencionar el nombre del tratamiento salvo que el paciente lo haya dicho.",
             "step": 1,
             "tools": [
               "manage_schedule_block_status",
@@ -1406,12 +974,7 @@
           }
         ],
         "intent": "appointment_cancellation",
-        "selection": {
-          "requiredCapabilities": [
-            "hasActiveAppointment"
-          ]
-        },
-        "description": "El paciente solicita cancelar una o más citas existentes, o cambiarlas/reprogramarlas a otro día u otra fecha. En todos los casos se cancela la cita (o citas) y se crea tarea para seguimiento. No aplica a adelantar o atrasar la hora dentro del mismo día (eso va por scheduling_request, sin cancelar).",
+        "description": "El paciente solicita cancelar, cambiar o reprogramar una o más citas existentes. En todos los casos se cancela la cita (o citas) y se crea tarea para seguimiento.",
         "allowedTools": [
           "manage_schedule_block_status",
           "manage_all_schedule_blocks_for_date",
@@ -1433,11 +996,6 @@
           }
         ],
         "intent": "appointment_confirmation",
-        "selection": {
-          "requiredCapabilities": [
-            "hasActiveAppointment"
-          ]
-        },
         "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
         "allowedTools": [
           "manage_schedule_block_status"
@@ -1464,46 +1022,10 @@
         ],
         "responseTemplate": "Signature es nuestro protocolo más completo de implantología avanzada. No se trata solo de colocar implantes, sino de planificar digitalmente todo el caso, realizar cirugía guiada, usar materiales premium y acompañarle antes, durante y después de la cirugía. El Dr. Zaragoza habla inglés y alemán y atiende a pacientes internacionales.",
         "responseTemplateMode": "model"
-      },
-      "reschedule_existing_appointment": {
-        "steps": [
-          {
-            "note": "Cancelar cita actual (reason='Solicitud del paciente', NO preguntar motivo) + crear tarea para seguimiento humano. Para corrección de titular: cancelar cita actual, crear tarea indicando nuevo paciente y mismo treatmentId. Para restablecer tras cancelación en este turno: usar datos del historial de tool outputs.",
-            "step": 1,
-            "tools": [
-              "manage_schedule_block_status",
-              "create_task"
-            ],
-            "parallel": false,
-            "required": []
-          }
-        ],
-        "intent": "appointment_reschedule_request",
-        "selection": {
-          "requiredCapabilities": [
-            "hasActiveAppointment"
-          ]
-        },
-        "description": "El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. En modo tasks-only, el flujo cancela la cita actual y crea tarea de seguimiento.",
-        "allowedTools": [
-          "manage_schedule_block_status",
-          "create_task"
-        ],
-        "responseTemplate": "He pasado su solicitud al equipo. Le contactarán pronto.",
-        "responseTemplateMode": "literal"
       }
     }
   },
   "treatmentPolicyHints": [],
-  "conversationResumption": {
-    "instructions": {
-      "recent": "Salude brevemente reconociendo la ausencia (máximo 4 palabras), luego atienda la consulta principal inmediatamente. NO se presente como nuevo.",
-      "distant": "Salude reconociendo la ausencia de forma natural. NO se presente como si fuera la primera vez. Puede decir algo como 'Hola, hace tiempo que no hablamos'. Luego atienda la consulta principal.",
-      "continuous": "Continúe la conversación sin saludar. El paciente está respondiendo inmediatamente.",
-      "same_period": "Saludo muy breve opcional, máximo 2 palabras. Solo si encaja naturalmente con la respuesta principal.",
-      "short_break": "Puede reconocer la pausa con un tono natural (ej: 'perfecto, continuamos'), pero NO salude de nuevo."
-    }
-  },
   "systemPromptInstructions": {
     "knownGaps": [],
     "notesForAdvisor": [
@@ -1513,9 +1035,7 @@
       "Política de idioma: fallback español. Idiomas soportados: es, ca, en, fr, de. No responder en portugués nunca. En respuestas a recordatorios (IS_REMINDER_REPLY=true), responder SIEMPRE en español independientemente del idioma del paciente.",
       "MaxExplanationWords: 50 palabras por turno (salvo listados, confirmaciones o información imprescindible).",
       "Brand name comercial: Clínica MZL.",
-      "Profesionales: Dr. Manuel Zaragoza Lauber (Director Médico, es/en/de, odontología/cirugía oral/implantología/rehabilitación/odontología digital) y Dra. Laura Genestra Pons (Ortodoncista, ortodoncia/ortopedia dentofacial/odontopediatría).",
-      "TEMPORAL (verano 2026): texto literal al paciente: 'Del 3 al 14 de agosto, horario de 9 a 15. Del 15 al 31 de agosto (ambos incluidos), cerrado por vacaciones. Nos incorporamos el martes 1 de septiembre.' En mensajes al paciente se usa solo día y mes, sin año, y NO se menciona la excepción de jueves y viernes (esa regla sigue activa solo internamente para gestión de agenda, ver errorCategories.scheduling_conflict). Durante el cierre el teléfono de urgencias 622 611 069 NO está operativo; si un paciente reporta una urgencia en el cierre, el bot genera tarea y pasa al equipo para coordinar una fecha a partir de la reapertura. REVERTIR estos cambios tras la reapertura: identity.openingHours, faq (horario/agosto/vacaciones/teléfono), rules summer_schedule_august_2026/urgency_follow_up/medical_zero_triage, responseTemplates.summer_schedule, styleRules.additionalRules (reglas de verano y regla de formato de fechas), el note del flow urgency_report y el note del flow any_scheduling_request.",
-      "Nuevo protocolo pre_surgery_instructions: instrucciones del día anterior a cirugía con texto LITERAL de la clínica (el flow usa responseTemplateMode literal para que el modelo no recorte ni parafrasee; solo se ordenó en puntos). Con sedación: mismas indicaciones pero 'debe acudir en ayunas' (literal: sin horas, sin explicaciones sobre comer/beber, sin excepciones). Pregunta de clarificación autorizada: '¿su cirugía es con sedación o sin sedación?', sin mencionar anestesia local (el asesor indica que confunde a los pacientes)."
+      "Profesionales: Dr. Manuel Zaragoza Lauber (Director Médico, es/en/de, odontología/cirugía oral/implantología/rehabilitación/odontología digital) y Dra. Laura Genestra Pons (Ortodoncista, ortodoncia/ortopedia dentofacial/odontopediatría)."
     ],
     "recommendedNextSteps": [
       "Validación ejecutada y aprobada. Probar en ambiente de staging antes de producción."
