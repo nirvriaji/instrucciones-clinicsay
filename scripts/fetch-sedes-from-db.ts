@@ -79,7 +79,13 @@ function warnMissing(metadata: Record<string, unknown>, botId: string, siteSlug:
 }
 
 async function main() {
-  const client = new Client({ connectionString: DATABASE_URL });
+  const client = new Client({
+    connectionString: DATABASE_URL,
+    // Aiven / cloud Postgres uses SSL with a self-signed cert chain.
+    // In development/integration this is acceptable; production should
+    // mount the real CA file instead.
+    ssl: { rejectUnauthorized: false },
+  });
 
   try {
     await client.connect();
