@@ -79,8 +79,15 @@ function warnMissing(metadata: Record<string, unknown>, botId: string, siteSlug:
 }
 
 async function main() {
+  // Strip sslmode from the connection string so pg-connection-string
+  // does NOT override our manual ssl config (it treats 'require' as
+  // 'verify-full' which rejects Aiven's self-signed certs).
+  const dbUrl = new URL(DATABASE_URL);
+  dbUrl.searchParams.delete('sslmode');
+  const connectionString = dbUrl.toString();
+
   const client = new Client({
-    connectionString: DATABASE_URL,
+    connectionString,
     // Aiven / cloud Postgres uses SSL with a self-signed cert chain.
     // In development/integration this is acceptable; production should
     // mount the real CA file instead.
