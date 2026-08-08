@@ -98,6 +98,13 @@ async function main() {
     await client.connect();
     console.log('Connected to database. Fetching active CHAT_BOT bots...\n');
 
+    // Wipe the entire sedes/ directory before downloading so ONLY
+    // the active bots from the DB remain.
+    if (fs.existsSync(SEDES_DIR)) {
+      fs.rmSync(SEDES_DIR, { recursive: true, force: true });
+    }
+    fs.mkdirSync(SEDES_DIR, { recursive: true });
+
     const result = await client.query(
       `
       SELECT
