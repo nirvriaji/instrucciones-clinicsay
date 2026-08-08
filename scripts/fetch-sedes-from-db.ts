@@ -127,22 +127,20 @@ async function main() {
       const siteSlugRaw = row.site_slug as string;
       const siteSlug = sanitizeDirName(siteSlugRaw);
       const siteName = row.site_name as string;
-      const clinicSlug = sanitizeDirName(row.clinic_slug as string);
       const clinicName = row.clinic_name as string;
-      const orgName = sanitizeDirName(row.org_name as string);
+      const orgName = row.org_name as string;
       const botId = row.bot_id as string;
 
-      if (!siteSlug || !clinicSlug) {
-        console.warn(`  ⚠️  Cannot build a directory name for site '${siteSlugRaw}' / clinic '${row.clinic_slug}'. Skipped bot ${botId}.`);
+      if (!siteSlug) {
+        console.warn(`  ⚠️  Cannot build a directory name for site '${siteSlugRaw}'. Skipped bot ${botId}.`);
         skipped++;
         continue;
       }
 
-      // Build a composite folder name: clinicName_siteName
-      // This reflects the real hierarchy: Clinic → Site
-      const clinicPart = sanitizeDirName(clinicName);
-      const sitePart = sanitizeDirName(siteName);
-      const sedeDirName = `${clinicPart}_${sitePart}`;
+      // Build a composite folder name: orgSlug_siteSlug
+      // Organization has no DB slug, so we derive it from org.name.
+      const orgSlug = sanitizeDirName(orgName);
+      const sedeDirName = `${orgSlug}_${siteSlug}`;
       const sedeDir = path.join(SEDES_DIR, sedeDirName);
       const inputDir = path.join(sedeDir, 'input');
       const outputDir = path.join(sedeDir, 'output');
@@ -152,7 +150,7 @@ async function main() {
       cleanDirectory(inputDir);
       cleanDirectory(outputDir);
 
-      console.log(`[${sedeDirName}] ${clinicName} → ${siteName} (bot ${botId})`);
+      console.log(`[${sedeDirName}] ${orgName} → ${clinicName} → ${siteName} (bot ${botId})`);
 
       const fullLogic = metadata['structuredLogicFull'];
       const tasksOnlyLogic = metadata['structuredLogic'];
