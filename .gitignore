@@ -1,6 +1,8 @@
-# Generated outputs (ignore in git; demo outputs are tracked as examples)
-sedes/*/output/*.json
-!sedes/demo/output/*.json
+# Ignore all sede directories EXCEPT demo/ (which serves as the canonical example).
+# The fetch-sedes script generates these from the DB; they are environment data.
+sedes/*
+!sedes/demo/
+!sedes/demo/**
 
 # Node modules (if installed locally)
 node_modules/
