@@ -10,11 +10,19 @@
  *   node scripts/validate-and-save.js --sede <SEDE> --mode <full|tasks-only>
  */
 
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const fs = require('fs');
-const { getSedePaths, getSchemaPath, getActiveJsonPath } = require('./lib/paths');
-const { ALL_TOOLS } = require('./lib/tool-registry');
-const { extractAllowedKeys } = require('./lib/schema-key-extractor');
-const logger = require('./lib/logger');
+const { getSedePaths, getSchemaPath, getActiveJsonPath } = require('./lib/paths.cjs');
+const { ALL_TOOLS } = require('./lib/tool-registry.cjs');
+const { extractAllowedKeys } = require('./lib/schema-key-extractor.cjs');
+const logger = require('./lib/logger.cjs');
 
 // Load JSON Schema once and derive allowed-key Sets programmatically
 const SCHEMA_PATH = getSchemaPath();
