@@ -36,9 +36,9 @@ export function detectModeAdvisoryGaps(
     'resolve_availability_query',
   ]);
 
-  // ── Caso A: Modo full + scheduling intent solo con create_task ──
+  // ── Caso A: Modo full + new_appointment_scheduling solo con create_task ──
   if (mode === 'full') {
-    const schedulingFlows = allFlows.filter((f) => f.intent === 'scheduling_request' || f.intent === 'new_appointment_scheduling');
+    const schedulingFlows = allFlows.filter((f) => f.intent === 'new_appointment_scheduling');
     if (schedulingFlows.length > 0) {
       const hasRealScheduling = schedulingFlows.some((f) =>
         (f.steps ?? []).some((s) => s.tools.some((t) => schedulingTools.has(t))),
@@ -49,7 +49,7 @@ export function detectModeAdvisoryGaps(
           type: 'mode_note',
           description:
             'Para tu información: en modo FULL, el patrón típico para agendar citas es un flujo de new_appointment_scheduling con herramientas de resolución y agendamiento (resolve_patient, resolve_treatment, check_availability, schedule_block) para que el paciente agende directamente sin intervención humana. ' +
-            'Tu flujo de agendamiento no usa ninguna de estas herramientas. Si tu sede prefiere que recepción valide cada solicitud antes de agendar, está perfecto — solo asegúrate de que la tarea (create_task) incluya toda la información necesaria: nombre, apellido, teléfono, tratamiento y fecha preferida.',
+            'Tu flujo de new_appointment_scheduling no usa ninguna de estas herramientas. Si tu sede prefiere que recepción valide cada solicitud antes de agendar, está perfecto — solo asegúrate de que la tarea (create_task) incluya toda la información necesaria: nombre, apellido, teléfono, tratamiento y fecha preferida.',
         });
       }
     }
@@ -77,9 +77,9 @@ export function detectModeAdvisoryGaps(
     });
   }
 
-  // ── Caso D: Modo tasks-only + regla de agendamiento sin redirectToTask ──
+  // ── Caso D: Modo tasks-only + regla new_appointment_scheduling sin redirectToTask ──
   if (mode === 'tasks-only') {
-    const schedulingRules = (logic.rules ?? []).filter((r) => r.intent === 'scheduling_request' || r.intent === 'new_appointment_scheduling');
+    const schedulingRules = (logic.rules ?? []).filter((r) => r.intent === 'new_appointment_scheduling');
     if (schedulingRules.length > 0) {
       const anyHasRedirect = schedulingRules.some((r) => r.redirectToTask === true);
       if (!anyHasRedirect) {

@@ -16,7 +16,7 @@
  * controls the language the LLM uses when interacting with patients.
  */
 
-import type { ChatToolDefinition } from './openai-conversation.port';
+import type { ChatToolDefinition } from './ports/secondary/chat/openai-conversation.port';
 
 // ========== Tool: manage_schedule_block_status ========== //
 

@@ -5,17 +5,17 @@
  * to import only the constants they need instead of the full validator.
  */
 
-import type { StructuredLogicChatMode } from './structured-logic';
+import type { StructuredLogicChatMode } from '../structured-logic';
 
 /**
  * Critical intent categories every clinic must have a business rule for.
  * Single source of truth shared by `validateStructuredLogic` (blocking) and
  * `detectGaps` (advisory).
  */
-export const CRITICAL_INTENTS: Array<{ category: string; aliases?: string[]; description: string }> = [
-  { category: 'existing_appointment_confirmation', aliases: ['appointment_confirmation'], description: 'confirmation of existing appointments' },
-  { category: 'existing_appointment_cancellation', aliases: ['appointment_cancellation'], description: 'cancellation of existing appointments' },
-  { category: 'new_appointment_scheduling', aliases: ['scheduling_request'], description: 'scheduling of new appointments' },
+export const CRITICAL_INTENTS: Array<{ category: string; description: string }> = [
+  { category: 'existing_appointment_confirmation', description: 'confirmation of existing appointments' },
+  { category: 'existing_appointment_cancellation', description: 'cancellation of existing appointments' },
+  { category: 'new_appointment_scheduling', description: 'scheduling of new appointments' },
 ];
 
 /**

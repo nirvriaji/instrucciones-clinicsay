@@ -5,7 +5,7 @@
  * that will NOT resolve at runtime.
  */
 
-import type { StructuredLogic } from './structured-logic';
+import type { StructuredLogic } from '../structured-logic';
 import { RUNTIME_PLACEHOLDERS, IDENTITY_PLACEHOLDERS } from './constants';
 
 export type UnresolvedPlaceholderIssue = {

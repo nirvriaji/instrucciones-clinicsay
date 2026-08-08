@@ -50,11 +50,22 @@ Describe en lenguaje natural CUÁNDO se activa esta regla:
 
 ### 5. Rules especiales por modo y contexto
 
+**Taxonomía canónica en rules (CRÍTICO):**
+Las rules DEBEN usar los intents canónicos exactos. Si una rule referencia un intent bajo namespace reservado (`new_appointment_*` o `existing_appointment_*`) que no es canónico, el backend RECHAZA el JSON. Los intents canónicos son:
+
+- `new_appointment_scheduling`, `new_appointment_inquiry`
+- `existing_appointment_rescheduling`, `existing_appointment_reschedule_inquiry`
+- `existing_appointment_confirmation`, `existing_appointment_cancellation`
+- `existing_appointment_cancellation_inquiry`, `existing_appointment_inquiry`
+- `existing_appointment_keep`, `existing_appointment_delay_notice`
+
+**Ejemplo:** una rule con `intent: "appointment_cancellation"` es RECHAZADA porque no es canónico. Debe ser `intent: "existing_appointment_cancellation"`.
+
 **Tasks-only mode:**
 - `new_appointment_scheduling`: `action: "allow"`, `redirectToTask: true` (patrón típico — **NO obligatorio**). Si la clínica prefiere que el bot responda de forma informativa sin crear tarea, omítelo a propósito: el validador mostrará una nota **advisory** (no bloqueante) para confirmar que la desviación es intencional.
 
 **Full mode:**
-- `new_appointment_scheduling`: `action: "allow"`, `redirectToTask: null` (el bot agenda directamente)
+- `new_appointment_scheduling`: `action: "allow"`, `redirectToTask: null` (el bot agenda directamente). **NO** usar `redirectToTask: true` en full mode: el backend lo detectaría como advisory (nota de modo) porque en full el bot agenda directamente.
 
 **Reglas de negocio de los archivos de input:**
 Si las los archivos de input mencionan restricciones específicas, CREA rules con `conditions`:

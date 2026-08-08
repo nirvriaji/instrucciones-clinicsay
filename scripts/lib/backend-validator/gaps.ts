@@ -4,7 +4,7 @@
  * Extracted from validator.ts to separate gap analysis from blocking validation.
  */
 
-import type { StructuredLogic, StructuredLogicChatMode } from './structured-logic';
+import type { StructuredLogic, StructuredLogicChatMode } from '../structured-logic';
 import type { LogicGap } from './validator';
 import { CRITICAL_INTENTS } from './constants';
 import { detectModeAdvisoryGaps } from './advisory/mode-advisory';
@@ -33,9 +33,7 @@ export function detectGaps(
 
   // 0b. Missing critical intent categories (same set enforced by validateStructuredLogic)
   const presentIntents = new Set(logic.rules.map((r) => r.intent));
-  const missingIntents = CRITICAL_INTENTS
-    .filter((c) => !presentIntents.has(c.category) && !(c.aliases?.some((a) => presentIntents.has(a))))
-    .map((c) => c.category);
+  const missingIntents = CRITICAL_INTENTS.filter((c) => !presentIntents.has(c.category)).map((c) => c.category);
   if (missingIntents.length > 0) {
     gaps.push({
       type: 'missing_rules',

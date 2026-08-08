@@ -83,6 +83,25 @@ Incluye 2-3 ejemplos realistas por intent. Los ejemplos son frases que un pacien
 }
 ```
 
+## Reglas de Namespace Reservado (CRÍTICO — el backend RECHAZA el JSON si se viola)
+
+Los prefijos `new_appointment_` y `existing_appointment_` están **RESERVADOS** para la taxonomía canónica. Un id que empiece por cualquiera de ellos DEBE ser exactamente uno de estos 10 ids:
+
+- `new_appointment_scheduling`
+- `new_appointment_inquiry`
+- `existing_appointment_rescheduling`
+- `existing_appointment_reschedule_inquiry`
+- `existing_appointment_confirmation`
+- `existing_appointment_cancellation`
+- `existing_appointment_cancellation_inquiry`
+- `existing_appointment_inquiry`
+- `existing_appointment_keep`
+- `existing_appointment_delay_notice`
+
+**Cualquier otro id bajo esos prefijos (ej: `existing_appointment_moving`, `new_appointment_booking`) es RECHAZADO** porque parece de citas pero no es reconocido por las reglas de seguridad ni por los guards del servidor, así que la protección se apaga en silencio.
+
+Fuera de esos prefijos eres libre: `insurance_coverage_inquiry`, `parking_info`, `payment_inquiry`, `physio_program_followup` son válidos sin problema.
+
 ## Checklist antes de entregar
 - [ ] 12 baseline intents presentes con descriptions semánticas
 - [ ] Un intent por cada servicio mencionado en los archivos de input
@@ -92,3 +111,4 @@ Incluye 2-3 ejemplos realistas por intent. Los ejemplos son frases que un pacien
 - [ ] IDs en snake_case inglés
 - [ ] Descripciones en español natural, no keyword salad
 - [ ] Ningún intent inventado que no esté en los archivos de input
+- [ ] **NINGÚN intent bajo namespace reservado que no sea canónico**

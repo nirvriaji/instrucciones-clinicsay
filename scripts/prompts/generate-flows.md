@@ -228,6 +228,28 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 }
 ```
 
+## FLOW SAFETY RULES (el backend RECHAZA el JSON si se viola alguna)
+
+S1. **NEVER poner una herramienta destructiva antes de su contraparte constructiva.** En particular, `manage_schedule_block_status` (cancel) NUNCA debe estar en un paso ANTERIOR a `schedule_block`, ni en el MISMO paso (con o sin `parallel: true`). Cancelar antes de que la nueva cita exista deja al paciente SIN CITA cuando no hay hueco o abandona la conversación. Esto ocurrió en producción.
+
+S2. **Orden seguro de reagendamiento en full mode:** resolver fechas → buscar disponibilidad → agendar la NUEVA cita → cancelar la antigua. La cancelación es el ÚLTIMO movimiento del flujo y está adicionalmente bloqueada server-side hasta que la cita nueva exista.
+
+S3. Un flujo de reagendamiento (intent `existing_appointment_rescheduling`) en full mode que puede cancelar DEBE también poder agendar: `schedule_block` debe estar presente en steps o allowedTools.
+
+S3b. `allowedTools` es una lista blanca SIN ORDEN, así que nunca puede anclar el orden seguro. Si `manage_schedule_block_status` es un paso numerado, entonces `schedule_block` debe TAMBIÉN ser un paso numerado, colocado ANTES. La forma segura por defecto: la cancelación vive en `allowedTools` (último movimiento, bloqueada server-side) mientras `schedule_block` es el paso terminal.
+
+S4. `responseTemplate` se inyecta SOLO en las tools del paso TERMINAL (el ÚLTIMO elemento del array de steps). Por tanto, el paso terminal debe ser la herramienta que realiza la acción real (`schedule_block`, `manage_schedule_block_status`, `create_task`). Una plantilla cuyo paso terminal solo contiene tools de búsqueda (`check_availability`, `resolve_*`, `lookup_patient`, `query_*`) es RECHAZADA: hace que el bot anuncie como hecho algo que todavía no ha hecho.
+
+S5. Un flujo que usa tools y declara `responseTemplate` DEBE declarar `steps` con la herramienta de cierre en el último paso. `allowedTools` no sirve para saber cuál es el paso final.
+
+S6. Escribe el array `steps` en orden de ejecución: la numeración debe ser ascendente (1, 2, 3...), porque el paso terminal es el ÚLTIMO item del array.
+
+S7. **Los ids de intent son LIBRES** excepto dentro de dos namespaces reservados. La clínica puede inventar `insurance_coverage_inquiry`, `parking_info`, `physio_program_followup` sin problema. Lo que está CERRADO son los prefijos `new_appointment_` y `existing_appointment_`: un id que empiece por cualquiera de ellos DEBE ser uno de los ids canónicos: `new_appointment_scheduling`, `new_appointment_inquiry`, `existing_appointment_rescheduling`, `existing_appointment_reschedule_inquiry`, `existing_appointment_confirmation`, `existing_appointment_cancellation`, `existing_appointment_cancellation_inquiry`, `existing_appointment_inquiry`, `existing_appointment_keep`, `existing_appointment_delay_notice`. Un `existing_appointment_moving` inventado PARECE reagendamiento pero no es reconocido por las reglas de seguridad ni por los guards del servidor, así que la protección se apaga en silencio.
+
+S7b. Un flujo que CREA, MUEVE o DESTRUYE citas (usa `schedule_block`, `manage_schedule_block_status` o `manage_all_schedule_blocks_for_date`, ya sea en `steps` o en `allowedTools`) DEBE declarar un intent CANÓNICO, aunque el nombre del flow sea propio de la clínica. Ese flujo lleva semántica de seguridad y los guards necesitan clasificarlo. Un flujo con intent libre y sin tools de escritura en citas (solo `query_knowledge_base`, `create_task`, `lookup_patient`, `check_availability`, resolvers...) es válido.
+
+S8. Un flujo cuyo intent es `existing_appointment_*` Y que usa una tool de escritura en citas DEBE declarar `"selection": { "requiredCapabilities": ["hasActiveAppointment"] }`. Sin esa puerta determinista, un "sí" desnudo puede activar el flow cuando el paciente no tiene ninguna cita, y el bot actúa sobre una cita inexistente.
+
 ## Checklist antes de entregar
 - [ ] Un flow por cada intent que requiere acción
 - [ ] En full mode: flows de booking con patrón canónico de 5 steps (entidades → disponibilidad → paciente → agenda al final; `selection` para distinguir nuevo/existente; SIN required circulares: un step nunca requiere lo que establece su propia tool)
@@ -239,3 +261,4 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 - [ ] Notes explicativas para cada step
 - [ ] **GATE ciclo de vida: los 5 flujos de acción sobre cita existente (confirm, reschedule, cancel, running-late, keep) llevan `selection.requiredCapabilities: ["hasActiveAppointment"]`**
 - [ ] `existing_appointment_rescheduling` excluye "elegir hora de opciones propuestas para cita nueva" en su descripción
+- [ ] **S1-S8 FLOW SAFETY: orden destructivo correcto, intents canónicos para flows que escriben citas, terminal template en paso de acción real, steps en orden ascendente**

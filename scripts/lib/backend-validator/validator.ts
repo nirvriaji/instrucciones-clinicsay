@@ -5,7 +5,7 @@
  * All validation logic lives in ./validators/ modules.
  */
 
-import type { StructuredLogicChatMode } from './structured-logic';
+import type { StructuredLogicChatMode } from '../structured-logic';
 import { validateStructuredLogicMinimum } from './structured-logic-minimum';
 
 export { validateStructuredLogicMinimum } from './structured-logic-minimum';
@@ -24,6 +24,9 @@ import { validateDomainRules } from './validators/domain-rules';
 import { validateStructuralSections } from './validators/structural';
 import { validateCrossReferences } from './validators/cross-reference';
 import { validateFlowsAndTools } from './validators/flow-validation';
+import { validateFlowSafety } from './validators/flow-safety';
+
+export { validateFlowSafety } from './validators/flow-safety';
 
 export type ValidationResult = {
   valid: boolean;
@@ -78,7 +81,7 @@ export function validateStructuredLogic(
     return { valid: false, errors: ['structuredLogic must be an object'] };
   }
 
-  const sl = logic as Partial<import('./structured-logic').StructuredLogic>;
+  const sl = logic as Partial<import('../chat/structured-logic').StructuredLogic>;
 
   // 1. Basic schema validation
   validateBasicSchema(sl, errors);
@@ -98,6 +101,10 @@ export function validateStructuredLogic(
 
   // 6. Flow steps and tool validation
   validateFlowsAndTools(sl, mode, errors);
+
+  // 7. Flow safety: destructive-before-constructive ordering and closing
+  //    templates that can never (or must never) be delivered.
+  validateFlowSafety(sl, mode, errors);
 
   return {
     valid: errors.length === 0,

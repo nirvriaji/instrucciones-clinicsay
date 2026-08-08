@@ -349,22 +349,28 @@ type ConversationResumptionConfig = {
 
 ## Recommended Baseline Intents (every clinic)
 
-Declare at least these intents in the catalog. The exact ids below are the canonical ones the backend examples use; reuse them so flows, rules, and the classifier all align.
+Declare at least these intents in the catalog. The exact ids below are the **canonical ones** the backend recognizes for safety rules and guards. Reuse them exactly so flows, rules, and the classifier all align.
 
 | Intent id | Meaning |
 |---|---|
-| `appointment_confirmation` | Patient confirms attendance to an already-booked appointment (often replying to a reminder). |
-| `appointment_cancellation` | Patient cancels an existing appointment, or replies they will not attend. |
-| `appointment_inquiry` | Patient asks about appointments they already have (times, dates, treatments). Answerable from context. |
-| `scheduling_request` | Patient wants to book a NEW appointment, reschedule an existing one, or asks about availability. |
+| `existing_appointment_confirmation` | Patient confirms attendance to an already-booked appointment (often replying to a reminder). |
+| `existing_appointment_cancellation` | Patient cancels an existing appointment, or replies they will not attend. |
+| `existing_appointment_inquiry` | Patient asks about appointments they already have (times, dates, treatments). Answerable from context. |
+| `new_appointment_scheduling` | Patient wants to book a NEW appointment or asks about availability. |
 | `general_inquiry` | General questions about the clinic (hours, location, contact, fixed prices, services). |
 | `human_follow_up` | Anything that needs human follow-up and does not fit the above. |
 | `farewell` | Patient says goodbye, thanks, or closes the conversation politely. **Required flow with `allowsSilence: true`.** |
-| `appointment_reschedule_request` | Patient wants to MOVE an already-booked appointment to another date/time. |
-| `patient_running_late` | Patient warns they will arrive late to a confirmed appointment. |
-| `appointment_reschedule_inquiry` | Patient asks about the possibility of rescheduling without confirming yet. |
-| `appointment_cancellation_inquiry` | Patient asks about canceling without confirming yet. |
-| `keep_appointment` | Patient indicates they want to keep the appointment as-is. |
+| `existing_appointment_rescheduling` | Patient wants to MOVE an already-booked appointment to another date/time. |
+| `existing_appointment_delay_notice` | Patient warns they will arrive late to a confirmed appointment. |
+| `existing_appointment_reschedule_inquiry` | Patient asks about the possibility of rescheduling without confirming yet. |
+| `existing_appointment_cancellation_inquiry` | Patient asks about canceling without confirming yet. |
+| `existing_appointment_keep` | Patient indicates they want to keep the appointment as-is. |
+
+### Reserved Intent Namespaces (CRITICAL)
+
+The prefixes `new_appointment_` and `existing_appointment_` are **RESERVED** for the canonical taxonomy. Any id starting with either MUST be exactly one of the ids above. Invented ids like `existing_appointment_moving` or `new_appointment_booking` are **REJECTED** by the backend validator because they look like appointment semantics but are not recognized by safety rules or server-side guards, causing silent loss of protection.
+
+Outside those prefixes you are free: `insurance_coverage_inquiry`, `parking_info`, `payment_inquiry`, `physio_program_followup` are all valid.
 
 ---
 
@@ -428,10 +434,10 @@ Canonical mode notes (`detectModeAdvisoryGaps`):
 
 | Case | Advisory note (summary) |
 |---|---|
-| **full + `scheduling_request` without scheduling tools** | The typical full pattern books directly (`resolve_patient`, `resolve_treatment`, `check_availability`, `schedule_block`). If reception validates every request manually, fine — ensure `create_task` captures name, last name, phone, treatment, and preferred date. |
+| **full + `new_appointment_scheduling` without scheduling tools** | The typical full pattern books directly (`resolve_patient`, `resolve_treatment`, `check_availability`, `schedule_block`). If reception validates every request manually, fine — ensure `create_task` captures name, last name, phone, treatment, and preferred date. |
 | **full without `schedule_block` anywhere** | Typical full mode books directly. If all appointments go through reception, `tasks-only` may describe your operation better. |
 | **tasks-only + `resolve_patient`/`resolve_treatment`** | Not typical (no direct booking). Keep only if intentional (e.g., the human task already gets the resolved `patientId`). |
-| **tasks-only + `scheduling_request` rule without `redirectToTask`** | The bot will answer without creating a human task. Fine for informational replies — ensure the patient knows their next step. |
+| **tasks-only + `new_appointment_scheduling` rule without `redirectToTask`** | The bot will answer without creating a human task. Fine for informational replies — ensure the patient knows their next step. |
 | **any mode + `create_task` without `resolve_patient`/`lookup_patient`** | `create_task` ALWAYS needs patient name, last name, and phone. Ensure the bot collects them beforehand (or a prior flow step did). |
 
 ---
@@ -443,8 +449,8 @@ The **last bot message** determines the meaning of short replies.
 
 | Last Bot Message | Patient Reply | Correct Intent |
 |-----------------|---------------|----------------|
-| "Do you confirm attendance to your appointment?" | "yes" | `appointment_confirmation` |
-| "Would you like us to change your appointment to another day?" | "yes" | `appointment_reschedule_request` |
+| "Do you confirm attendance to your appointment?" | "yes" | `existing_appointment_confirmation` |
+| "Would you like us to change your appointment to another day?" | "yes" | `existing_appointment_rescheduling` |
 | "Here is the information you requested" | "ok" | `general_inquiry` / acknowledgment |
 | "Do you need anything else?" | "no" | acknowledgment (conversation end) |
 
@@ -452,17 +458,17 @@ The **last bot message** determines the meaning of short replies.
 
 | Patient Message | Correct Intent |
 |-----------------|----------------|
-| "I can't make it, cancel it" | `appointment_cancellation` |
-| "I can't make it, can we move it?" | `appointment_reschedule_request` |
-| "I won't attend" (reply to reminder) | `appointment_cancellation` |
+| "I can't make it, cancel it" | `existing_appointment_cancellation` |
+| "I can't make it, can we move it?" | `existing_appointment_rescheduling` |
+| "I won't attend" (reply to reminder) | `existing_appointment_cancellation` |
 
 ### New Booking vs. Existing Appointment
 
 | Patient Message | Correct Intent |
 |-----------------|----------------|
-| "I want a new ultrasound" | `scheduling_request` |
-| "I want to move my Tuesday ultrasound" | `appointment_reschedule_request` |
-| "When is my appointment?" | `appointment_inquiry` |
+| "I want a new ultrasound" | `new_appointment_scheduling` |
+| "I want to move my Tuesday ultrasound" | `existing_appointment_rescheduling` |
+| "When is my appointment?" | `existing_appointment_inquiry` |
 
 ---
 

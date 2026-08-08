@@ -5,33 +5,12 @@
  * from basic schema and structural validations.
  */
 
+import { isReschedulingIntent } from '../canonical-intents';
 import type { BusinessRule, StructuredLogic, StructuredLogicChatMode, ToolFlow } from '../structured-logic';
 import { StructuredLogicJsonSchema } from '../structured-logic-json-schema';
 import { extractAllowedKeys } from '../schema-key-extractor';
 import { ALL_CHAT_TOOL_NAMES } from '../structured-logic-json-schema';
 import { TURN_START_CAPABILITIES, TURN_START_CAPABILITY_SET, VALID_CAPABILITIES, CAPABILITY_ESTABLISHERS } from '../constants';
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) => [i, ...Array<number>(n).fill(0)]);
-  for (let j = 1; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-    }
-  }
-  return dp[m][n];
-}
-
-function closestValidCapability(name: string): string | null {
-  let best: string | null = null;
-  let bestDist = Infinity;
-  for (const cap of VALID_CAPABILITIES) {
-    const dist = levenshtein(String(name), cap);
-    if (dist < bestDist) { bestDist = dist; best = cap; }
-  }
-  return bestDist <= 4 ? best : null;
-}
 import { ALL_CHAT_TOOLS_TASKS_ONLY } from '../tool-definitions-tasks-only';
 
 const ALLOWED_FLOW_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.toolOrchestration.properties.flows.additionalProperties.properties');
@@ -192,9 +171,8 @@ export function validateFlowsAndTools(
               `Flow '${flowName}' step ${stepIndex + 1} has invalid required capability '${req}'. Must be one of: ${Array.from(VALID_CAPABILITIES).join(', ')}. Tool names in 'required' will block execution at runtime.`,
             );
           } else if (!VALID_CAPABILITIES.has(req)) {
-            const suggestion = closestValidCapability(req);
             errors.push(
-              `Flow '${flowName}' step ${stepIndex + 1} has unknown required capability '${req}'. Must be one of: ${Array.from(VALID_CAPABILITIES).join(', ')}.${suggestion ? ` Did you mean '${suggestion}'?` : ''}`,
+              `Flow '${flowName}' step ${stepIndex + 1} has unknown required capability '${req}'. Must be one of: ${Array.from(VALID_CAPABILITIES).join(', ')}.`,
             );
           }
         });
@@ -278,11 +256,9 @@ export function validateFlowsAndTools(
   // may design tasks-only flows with other approaches (e.g., informational responses).
   // Previously enforced as blocking; now advisory only via detectModeAdvisoryGaps.
 
-  // 6d5. reschedule flows in full must have manage_schedule_block_status (cancel step)
+  // 6d5. rescheduling flows in full must have manage_schedule_block_status (cancel step)
   if (mode === 'full') {
-    const rescheduleFlows = Object.entries(flows).filter(([, flow]) =>
-      flow.intent === 'appointment_reschedule_request' || flow.intent === 'existing_appointment_rescheduling'
-    );
+    const rescheduleFlows = Object.entries(flows).filter(([, flow]) => isReschedulingIntent(flow.intent));
     for (const [flowName, flow] of rescheduleFlows) {
       if (!flowUsesTool(flow, 'manage_schedule_block_status')) {
         errors.push(
@@ -298,12 +274,40 @@ export function validateFlowsAndTools(
   // The advisor decides whether reschedule requests redirect to human tasks.
   // Previously enforced as blocking; now advisory only via detectModeAdvisoryGaps.
 
-  // 6d7. appointment_cancellation flows must have responseTemplate
-  const cancellationFlows = Object.entries(flows).filter(([, flow]) => flow.intent === 'appointment_cancellation');
+  // 6d6. new_appointment_scheduling flows must resolve the patient before scheduling
+  const schedulingFlows = Object.entries(flows).filter(([, flow]) => flow.intent === 'new_appointment_scheduling');
+  for (const [flowName, flow] of schedulingFlows) {
+    // 6d6a. strict check: schedule_block in a step requires resolve_patient in an earlier step
+    const scheduleBlockStepIndex = flow.steps.findIndex((step) => (step.tools || []).includes('schedule_block'));
+    if (scheduleBlockStepIndex >= 0) {
+      const hasResolvePatientBefore = flow.steps
+        .slice(0, scheduleBlockStepIndex)
+        .some((step) => (step.tools || []).includes('resolve_patient'));
+      if (!hasResolvePatientBefore) {
+        errors.push(
+          `Flow '${flowName}' intent 'new_appointment_scheduling' uses schedule_block but does not have resolve_patient in an earlier step. Add resolve_patient before schedule_block to avoid booking with an unresolved patient.`
+        );
+      }
+    }
+
+    // 6d6b. permissive check: schedule_block in allowedTools also requires resolve_patient somewhere in a prior step
+    const hasScheduleBlockInAllowedTools = (flow.allowedTools || []).includes('schedule_block');
+    if (hasScheduleBlockInAllowedTools && scheduleBlockStepIndex < 0) {
+      const hasResolvePatientAnyStep = flow.steps.some((step) => (step.tools || []).includes('resolve_patient'));
+      if (!hasResolvePatientAnyStep) {
+        errors.push(
+          `Flow '${flowName}' intent 'new_appointment_scheduling' allows schedule_block in allowedTools but does not have resolve_patient in any step. Add resolve_patient before the bot can use schedule_block to avoid booking with an unresolved patient.`
+        );
+      }
+    }
+  }
+
+  // 6d7. cancellation flows must have responseTemplate
+  const cancellationFlows = Object.entries(flows).filter(([, flow]) => flow.intent === 'existing_appointment_cancellation');
   for (const [flowName, flow] of cancellationFlows) {
     if (!flow.responseTemplate) {
       errors.push(
-        `Flow "${flowName}" (intent: appointment_cancellation) must have a "responseTemplate". ` +
+        `Flow "${flowName}" (intent: existing_appointment_cancellation) must have a "responseTemplate". ` +
           `The patient needs confirmation that the cancellation was processed.`
       );
     }

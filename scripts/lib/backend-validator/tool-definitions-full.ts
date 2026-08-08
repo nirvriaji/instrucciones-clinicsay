@@ -7,7 +7,7 @@
  * controls the language the LLM uses when interacting with patients.
  */
 
-import type { ChatToolDefinition } from './openai-conversation.port';
+import type { ChatToolDefinition } from './ports/secondary/chat/openai-conversation.port';
 
 // ========== Tool: check_availability ========== //
 
@@ -38,6 +38,11 @@ export const TOOL_CHECK_AVAILABILITY: ChatToolDefinition = {
         type: 'array',
         items: { type: 'number' },
         description: 'Days of the week to consider (1=Monday..7=Sunday). Optional.',
+      },
+      isWeekdayPattern: {
+        type: 'boolean',
+        description:
+          'Set to true if the patient asked for a weekday pattern ("los lunes", "lunes y martes", "cualquier lunes"). Set to false/omit if the patient asked for a single occurrence ("el lunes", "este lunes", "próximo lunes"). When true, daysOfWeek is a hard filter; when false, it is only a ranking preference.',
       },
       resolvedDates: {
         type: 'array',
@@ -80,6 +85,11 @@ export const TOOL_CHECK_AVAILABILITY: ChatToolDefinition = {
             end: { type: 'string', description: 'End time in HH:mm.' },
           },
         },
+      },
+      ignoreScheduleBlockIds: {
+        type: 'array',
+        description: 'Schedule block IDs to ignore when checking availability. Used during rescheduling so the appointment being moved does not block its own slot. Only the block being moved belongs here; other appointments must keep blocking.',
+        items: { type: 'string' },
       },
     },
     required: ['treatmentId', 'resolvedDates'],
@@ -275,10 +285,11 @@ export const TOOL_RESOLVE_PATIENT: ChatToolDefinition = {
   description:
     'Identify or create a patient before booking. ' +
     'Use BEFORE schedule_block when patient identity is not confirmed. ' +
-    'Returns the resolved patient ID, name, and phone. ' +
-    'If the patient is not found, the system automatically creates a new patient record. ' +
-    'The bot does NOT need to ask if the patient is new — the system handles it. ' +
-    'If data is missing, returns what fields are needed.',
+    'The bot must ask the user for first name, last name, and phone during the conversation, and use ONLY the data provided by the user. ' +
+    'If the patient is not found, the system automatically creates them with the provided data. ' +
+    'If first name, last name, or phone is missing, the system returns status "needs_info" and lists the missing fields. ' +
+    'Set useInterlocutorPhone to true ONLY when the user explicitly asks to use their own contact number from Kommo (e.g., "a este número", "mi número"). ' +
+    'Returns the resolved patient ID, name, and phone.',
   parameters: {
     type: 'object',
     additionalProperties: false,
@@ -293,18 +304,18 @@ export const TOOL_RESOLVE_PATIENT: ChatToolDefinition = {
       },
       phone: {
         type: 'string',
-        description: 'Patient phone number (with or without country code). Required. Send empty string if not yet known — the system will ask.',
+        description: 'Patient phone number (with or without country code). Required unless useInterlocutorPhone is true, in which case the system uses the contact\'s phone number from Kommo.',
       },
       isForInterlocutor: {
         type: 'boolean',
-        description: 'Set to true if the caller is booking on behalf of someone else (third-party). Used for audit/logging only — does NOT auto-fill any data.',
+        description: 'Set to true if the booking is for the person chatting. Used only for audit/logging; it does NOT auto-fill any data from the caller\'s contact.',
       },
       useInterlocutorPhone: {
         type: 'boolean',
-        description: 'Set to true ONLY when the caller explicitly asks to use their own phone number (e.g. "a este número", "mi número"). When true, the system uses the Kommo caller phone instead of the patient phone.',
+        description: 'Set to true ONLY when the user explicitly asks to use their own contact phone number from Kommo (e.g., "a este número", "mi número"). When true, the phone is taken from the contact context instead of the phone argument.',
       },
     },
-    required: ['firstName', 'lastName', 'phone', 'isForInterlocutor'],
+    required: ['firstName', 'lastName', 'phone', 'isForInterlocutor', 'useInterlocutorPhone'],
   },
 };
 
@@ -361,7 +372,8 @@ export const TOOL_LOOKUP_PATIENT: ChatToolDefinition = {
   strict: true,
   description:
     'Look up patient information by phone number, first name, or last name. ' +
-    'Returns personal data and scheduled appointments. Use to identify the patient or review their history.',
+    'Returns personal data and scheduled appointments. Use to identify the patient or review their history. ' +
+    'The response includes isNew: true when no patients are found, and isNew: false when one or more patients are found.',
   parameters: {
     type: 'object',
     additionalProperties: false,
