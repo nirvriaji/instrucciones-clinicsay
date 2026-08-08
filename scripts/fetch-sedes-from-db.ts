@@ -96,15 +96,19 @@ async function main() {
         s.name           AS site_name,
         c.id             AS clinic_id,
         c.slug           AS clinic_slug,
-        c.name           AS clinic_name
+        c.name           AS clinic_name,
+        o.id             AS org_id,
+        o.name           AS org_name
       FROM kommo_bot kb
       JOIN site s ON s.id = kb.site_id
       JOIN clinic c ON c.id = kb.clinic_id
+      JOIN organization o ON o.id = c.organization_id
       WHERE kb.bot_type = 'CHAT_BOT'
         AND kb.record_status = 'ACTIVE'
         AND s.record_status = 'ACTIVE'
         AND c.record_status = 'ACTIVE'
-      ORDER BY s.slug, kb.id
+        AND o.record_status = 'ACTIVE'
+      ORDER BY o.name, c.slug, s.slug, kb.id
       `
     );
 
@@ -123,15 +127,23 @@ async function main() {
       const siteSlugRaw = row.site_slug as string;
       const siteSlug = sanitizeDirName(siteSlugRaw);
       const siteName = row.site_name as string;
+      const clinicSlug = sanitizeDirName(row.clinic_slug as string);
+      const clinicName = row.clinic_name as string;
+      const orgName = sanitizeDirName(row.org_name as string);
       const botId = row.bot_id as string;
 
-      if (!siteSlug) {
-        console.warn(`  ⚠️  Cannot build a directory name for site slug '${siteSlugRaw}'. Skipped bot ${botId}.`);
+      if (!siteSlug || !clinicSlug) {
+        console.warn(`  ⚠️  Cannot build a directory name for site '${siteSlugRaw}' / clinic '${row.clinic_slug}'. Skipped bot ${botId}.`);
         skipped++;
         continue;
       }
 
-      const sedeDir = path.join(SEDES_DIR, siteSlug);
+      // Build a composite folder name: clinicName_siteName
+      // This reflects the real hierarchy: Clinic → Site
+      const clinicPart = sanitizeDirName(clinicName);
+      const sitePart = sanitizeDirName(siteName);
+      const sedeDirName = `${clinicPart}_${sitePart}`;
+      const sedeDir = path.join(SEDES_DIR, sedeDirName);
       const inputDir = path.join(sedeDir, 'input');
       const outputDir = path.join(sedeDir, 'output');
 
@@ -140,7 +152,7 @@ async function main() {
       cleanDirectory(inputDir);
       cleanDirectory(outputDir);
 
-      console.log(`[${siteSlug}] ${siteName} (bot ${botId})`);
+      console.log(`[${sedeDirName}] ${clinicName} → ${siteName} (bot ${botId})`);
 
       const fullLogic = metadata['structuredLogicFull'];
       const tasksOnlyLogic = metadata['structuredLogic'];
