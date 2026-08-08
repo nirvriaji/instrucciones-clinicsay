@@ -9,9 +9,16 @@
  *   node scripts/check-structure.js --sede <SEDE> --mode <full|tasks-only>
  */
 
+// NOTE: This script runs in an ESM project (package.json { "type": "module" }).
+// We use createRequire to access existing CommonJS utilities under scripts/lib/*.cjs
+// without changing their module system.
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 const fs = require('fs');
-const { getSedePaths, getActiveJsonPath } = require('./lib/paths');
-const logger = require('./lib/logger');
+const { getSedePaths, getActiveJsonPath } = require('./lib/paths.cjs');
+const logger = require('./lib/logger.cjs');
 
 const REQUIRED_SECTIONS = [
   'version',

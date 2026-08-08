@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "sede": "mzl_mzl-centro",
+    "mode": "tasks-only",
+    "timestamp": "2026-08-08T04:31:22.726Z",
+    "inputFiles": [
+      "structured-logic.full.json",
+      "structured-logic.tasks-only.json"
+    ],
+    "inputFilesCount": 2,
+    "combinedTextLength": 187000
+  },
+  "summary": {
+    "total": 0,
+    "errors": 0,
+    "warnings": 0,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 0,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 0
+  },
+  "gaps": []
+}
