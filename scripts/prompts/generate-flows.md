@@ -228,6 +228,17 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 }
 ```
 
+## REGLAS DE PACIENTE Y MENSAJES
+
+### RP1. REGLA DE ORO: Nunca asumir datos del paciente
+- El bot NUNCA usa nombre, apellido ni teléfono del contacto de Kommo (`CALLER_PHONE`, `ASSOCIATED_PATIENTS`).
+- Siempre pregunta al interlocutor explícitamente antes de agendar.
+- Solo si el paciente dice "para mí", "a este número" o "mi número", usar `useInterlocutorPhone=true`.
+
+### RP2. NUNCA mostrar IDs técnicos al paciente
+- En `responseTemplates`, notes, y mensajes: NUNCA incluir `blockId` (ej: `01KZH2A2K352HP14EQ04VWDY6W`).
+- Usar mensajes en español natural: "Tu cita ha sido cancelada", "Tu cita ha quedado confirmada".
+
 ## FLOW SAFETY RULES (el backend RECHAZA el JSON si se viola alguna)
 
 S1. **NEVER poner una herramienta destructiva antes de su contraparte constructiva.** En particular, `manage_schedule_block_status` (cancel) NUNCA debe estar en un paso ANTERIOR a `schedule_block`, ni en el MISMO paso (con o sin `parallel: true`). Cancelar antes de que la nueva cita exista deja al paciente SIN CITA cuando no hay hueco o abandona la conversación. Esto ocurrió en producción.

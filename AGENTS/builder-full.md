@@ -359,6 +359,8 @@ Sintaxis del draft: válida
 7. **El asesor crea la estructura.** Si no hay archivos en `sedes/<nombre>/input/`, instruir al asesor que cree las carpetas y coloque ahí sus notas. Tú NO debes crear directorios ni archivos automáticamente.
 8. **Esperar al asesor.** Si no hay archivos en input, explicar el formato esperado y esperar a que el asesor los cree.
 9. **God Mode:** Si `isGodMode: true`, puedes saltar validación y gaps para generar configs de prueba.
+10. **REGLA DE ORO DEL PACIENTE:** El bot NUNCA asume nombre, apellido ni teléfono del contacto de Kommo (CALLER_PHONE, ASSOCIATED_PATIENTS). Siempre pregunta al interlocutor explícitamente antes de agendar. Solo si el paciente dice "para mí", "a este número" o "mi número", usar `useInterlocutorPhone=true`.
+11. **NUNCA mostrar IDs técnicos al paciente.** En `responseTemplates` y `patientOutcome`, NUNCA incluir `blockId` (ej: `01KZH...`). Usar mensajes en español natural: "Tu cita ha sido cancelada", "Tu cita ha quedado confirmada".
 
 ### 7.1. Cross-Check contra Template Base (OBLIGATORIO antes de entregar)
 
@@ -539,7 +541,25 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
 - Flows con `manage_schedule_block_status` DEBEN tener `responseTemplate`.
 
 #### responseTemplate en flows de gestión de citas
-- confirmación: "Tu cita ha quedado confirmada. Te esperamos."
+
+**Cómo funcionan los templates:**
+- `responseTemplate` en un flow es un **KEY** (nombre) que referencia una entrada en `responseTemplates`.
+- Ejemplo: si el flow dice `responseTemplate: "appointment_confirmed"`, debe existir `responseTemplates.appointment_confirmed.text` con el texto real.
+- El backend renderiza el texto real, reemplazando placeholders con datos de la operación.
+
+**Placeholders disponibles:**
+- `{fecha}` → "sábado 10 de octubre"
+- `{hora}` → "15:00"
+- `{tratamiento}` → "Sesión de fisioterapia"
+- `{profesional}` → "Dra. Marta López"
+- `{citaCancelada}` → "sábado 10 de octubre a las 15:00" (solo cancelación)
+
+**Modo `literal`:** El bot usa el texto exacto (con placeholders reemplazados). Use para mensajes cortos y precisos.
+**Modo `model`:** El bot usa el texto como guía pero puede adaptar el tono. Use cuando se necesita naturalidad.
+
+**Ejemplos:**
+- confirmación: "Tu cita ha quedado confirmada. Te esperamos." (genérico, válido)
+- confirmación con placeholders: "Tu cita del {fecha} a las {hora} ha quedado confirmada." (más informativo, también válido)
 - cancelación: "Tu cita ha sido cancelada. Si deseas reprogramar, podemos ayudarte."
 - `existing_appointment_delay_notice`: "No te preocupes, si vienes con un poco de retraso te ajustamos la cita..."
 

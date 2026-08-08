@@ -38,8 +38,8 @@ Además, crea templates para cada flow que use `responseTemplate`:
 | `task_created` | Tarea creada | "Un miembro de nuestro equipo se pondrá en contacto contigo." | "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible." |
 
 ### 4. Templates adicionales para full mode
-- `booking_options`: "He encontrado estas opciones: [options]. ¿Cuál prefieres?"
-- `booking_confirmed`: "Tu cita ha quedado agendada para [date] a las [time]. Te esperamos."
+- `booking_options`: "He encontrado estas opciones: {options}. ¿Cuál prefieres?"
+- `booking_confirmed`: "Tu cita ha quedado agendada para {fecha} a las {hora}. Te esperamos."
 
 ### 5. mode de template
 - `"literal"`: El bot usa el texto EXACTO (reemplazando variables si las hay)
@@ -47,10 +47,18 @@ Además, crea templates para cada flow que use `responseTemplate`:
 - Usa `"literal"` para mensajes cortos y estandarizados
 - Usa `"model"` para mensajes que requieren variables dinámicas
 
-### 6. Variables en templates
-Si un template incluye variables, usa formato claro:
-- `[date]`, `[time]`, `[professional]`, `[treatment]`, `[options]`
-- El backend o el LLM reemplazará estas variables
+### 6. Variables (placeholders) en templates
+El backend reemplaza automáticamente estos placeholders con datos reales de la operación:
+- `{fecha}` → "sábado 10 de octubre"
+- `{hora}` → "15:00"
+- `{profesional}` → "Dra. Marta López"
+- `{tratamiento}` → "Sesión de fisioterapia"
+- `{options}` → lista de opciones (booking_options)
+- `{citaCancelada}` → "sábado 10 de octubre a las 15:00" (solo en cancelación)
+
+Las sedes pueden usar estos placeholders o NO usarlos. Ambos son válidos:
+- Genérico: "Tu cita ha quedado confirmada. Te esperamos."
+- Con placeholders: "Tu cita del {fecha} a las {hora} ha quedado confirmada."
 
 ## Anti-patrones a Evitar
 
@@ -59,6 +67,7 @@ Si un template incluye variables, usa formato claro:
 ❌ **Mencionar tools o reglas**: "Usaré manage_schedule_block_status para confirmar" → NUNCA
 ❌ **Inventar datos**: No pongas "Te esperamos a las 10:00" si el template es genérico
 ❌ **Tasks-only prometiendo agendamiento**: "Tu cita ha quedado agendada" → MAL en tasks-only
+❌ **IDs técnicos al paciente**: NUNCA incluir `blockId` (ej: `01KZH...`) en templates. Usar texto natural.
 
 ## Ejemplo de Output Correcto
 

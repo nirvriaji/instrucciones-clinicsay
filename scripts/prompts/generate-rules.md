@@ -67,6 +67,12 @@ Las rules DEBEN usar los intents canónicos exactos. Si una rule referencia un i
 **Full mode:**
 - `new_appointment_scheduling`: `action: "allow"`, `redirectToTask: null` (el bot agenda directamente). **NO** usar `redirectToTask: true` en full mode: el backend lo detectaría como advisory (nota de modo) porque en full el bot agenda directamente.
 
+**REGLA DE ORO DEL PACIENTE:**
+- El bot NUNCA asume nombre, apellido ni teléfono del contacto de Kommo (`CALLER_PHONE`, `ASSOCIATED_PATIENTS`).
+- Siempre pregunta al interlocutor explícitamente antes de agendar.
+- Solo si el paciente dice "para mí", "a este número" o "mi número", usar `useInterlocutorPhone=true`.
+- En `new_appointment_scheduling`, agregar a `note`: "SIEMPRE pedir nombre, apellido y telefono al interlocutor antes de agendar; nunca asumir datos de Kommo."
+
 **Reglas de negocio de los archivos de input:**
 Si las los archivos de input mencionan restricciones específicas, CREA rules con `conditions`:
 - Ejemplo: "No agendar los viernes" → rule con `conditions: [{ field: "day_of_week", operator: "not_in", value: ["friday"] }]`
