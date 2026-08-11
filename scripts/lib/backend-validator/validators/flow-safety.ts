@@ -78,12 +78,19 @@ export const FLOW_SAFETY_PROMPT_RULES =
   `FLOW SAFETY RULES (the backend validator REJECTS the JSON when any of these is violated):\n` +
   `S1. In a full reschedule flow (intent "existing_appointment_rescheduling") that includes "schedule_block", ` +
   `the preparatory tool MUST be "cancel_for_rescheduling". "manage_schedule_block_status" is NOT a preparatory tool in this flow; ` +
-  `use it only for definitive cancellation, confirmation, or EN_ROUTE actions in their respective flows.\n` +
+  `use it only for definitive cancellation, confirmation, or EN_ROUTE actions in their respective flows. ` +
+  `Conversely, "cancel_for_rescheduling" is ONLY valid in rescheduling flows: definitive cancellation, confirmation ` +
+  `and EN_ROUTE flows MUST use "manage_schedule_block_status" instead.\n` +
   `S2. The mandatory full reschedule order is cancel_for_rescheduling -> resolve_availability_query -> check_availability -> schedule_block. ` +
+  `EXCEPTION: when the flow declares "selection": { "requiredCapabilities": [..., "hasConcreteDateTime"] } — the patient already ` +
+  `gave a concrete date AND time at turn start — "resolve_availability_query" MAY be omitted and the mandatory order becomes ` +
+  `cancel_for_rescheduling -> check_availability -> schedule_block. "check_availability" NEVER runs without a concrete date and time: ` +
+  `without that capability the resolve step is REQUIRED so the bot asks for the missing date or time. ` +
   `The first tool captures a validated backend target; it is not a definitive cancellation and the final booking reuses the persisted ` +
   `care plan and planned sessions.\n` +
   `S3. A full reschedule flow that includes "schedule_block" MUST include "cancel_for_rescheduling" in numbered steps, and all four ` +
-  `tools in S2 MUST appear in that exact numbered order.\n` +
+  `tools in S2 MUST appear in that exact numbered order. Under the hasConcreteDateTime exception, "resolve_availability_query" ` +
+  `is the only one of the four that may be absent.\n` +
   `S4. "responseTemplate" is injected ONLY into the tools of the flow's TERMINAL step (the LAST element of the steps array). ` +
   `So the terminal step must be the tool that performs the real action (schedule_block, manage_schedule_block_status, create_task). ` +
   `A template whose terminal step only contains search/resolver tools (check_availability, resolve_*, lookup_patient, query_*) is REJECTED: ` +

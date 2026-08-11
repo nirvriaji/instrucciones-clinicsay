@@ -21,8 +21,18 @@ export const CRITICAL_INTENTS: Array<{ category: string; description: string }> 
 /**
  * Capabilities that are available before the tool cycle starts and are therefore
  * safe to use in flow.selection.
+ *
+ * `hasConcreteDateTime` marks that the patient already gave a concrete date AND
+ * time at turn start (e.g. "move my appointment to Tuesday at 5pm"). A full
+ * rescheduling flow that requires it in `selection.requiredCapabilities` may
+ * omit `resolve_availability_query` (see validator rule 6d5); flows without it
+ * must keep the resolve step so the bot asks for the missing date or time.
  */
-export const TURN_START_CAPABILITIES = ['hasResolvedPatient', 'hasActiveAppointment'] as const;
+export const TURN_START_CAPABILITIES = [
+  'hasResolvedPatient',
+  'hasActiveAppointment',
+  'hasConcreteDateTime',
+] as const;
 export const TURN_START_CAPABILITY_SET = new Set<string>(TURN_START_CAPABILITIES);
 
 export const VALID_CAPABILITIES = new Set([

@@ -98,9 +98,12 @@ export function usesReservedIntentNamespace(id: string): boolean {
 }
 
 /**
- * Intents whose fulfilment MOVES an existing appointment: the old one must be
- * destroyed only once the replacement exists. These drive the destructive-order
- * validator rule and the server-side cancel guard.
+ * Intents whose fulfilment MOVES an existing appointment. The current contract
+ * cancels PREPARATORILY first (`cancel_for_rescheduling`, which persists the
+ * backend-owned target) and rebooks afterwards from that target — there is no
+ * atomic create+cancel route anymore. These intents drive the flow-safety
+ * validator rules and the server-side `schedule_block` gate that requires the
+ * persisted target.
  */
 export const RESCHEDULING_INTENTS: ReadonlySet<CanonicalIntent> = new Set<CanonicalIntent>([
   'existing_appointment_rescheduling',
@@ -134,6 +137,33 @@ export const EXISTING_APPOINTMENT_INTENTS: ReadonlySet<CanonicalIntent> = new Se
 /** True when a flow serving `intent` moves an appointment the patient already has. */
 export function isReschedulingIntent(intent: string | undefined): boolean {
   return isCanonicalIntent(intent) && RESCHEDULING_INTENTS.has(intent);
+}
+
+/**
+ * Intents whose arrival abandons a pending reschedule continuation: the
+ * persisted `cancelledRescheduleTarget` must be dropped when the classifier
+ * lands on one of these.
+ *
+ * - `new_appointment_scheduling`: the patient now wants a NEW appointment. The
+ *   schedule_block handler forces the persisted target's patient and rejects
+ *   other patients while a target exists, so a stale target would hijack the
+ *   new booking.
+ * - `existing_appointment_cancellation`: the patient abandons the reschedule
+ *   in favour of a definitive cancellation. The preparatory cancellation
+ *   already happened; the target is dead weight.
+ *
+ * Everything else (rescheduling itself, inquiries, confirmation, keep, delay,
+ * non-canonical topical intents) KEEPS the target: the patient may still be
+ * mid-reschedule and the rebooking path revalidates it against the live DB.
+ */
+const RESCHEDULE_TARGET_DROPPING_INTENTS: ReadonlySet<CanonicalIntent> = new Set<CanonicalIntent>([
+  'new_appointment_scheduling',
+  'existing_appointment_cancellation',
+]);
+
+/** True when detecting `intent` must drop a persisted rescheduling target. */
+export function dropsCancelledRescheduleTarget(intent: string | undefined): boolean {
+  return isCanonicalIntent(intent) && RESCHEDULE_TARGET_DROPPING_INTENTS.has(intent);
 }
 
 /** True when a flow serving `intent` can only succeed by creating an appointment. */

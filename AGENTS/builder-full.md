@@ -109,6 +109,7 @@ Las 13 tools disponibles en este modo son:
 - `query_knowledge_base` — Buscar semánticamente en protocols, FAQ, responseTemplates y rules cuando la respuesta no esté ya en contexto.
 
 ### Configuración Base
+- `hasConcreteDateTime` es una capability de inicio de turno, no una tool. Solo debe aparecer en `selection.requiredCapabilities` cuando el paciente ya proporcionó fecha Y hora concretas; en ese caso permite omitir `resolve_availability_query` en un flow full de reagendamiento.
 - Copia las capabilities de `_templates/base-full.json`; no añadas `scheduling` por suposición. El modo full lo imponen el validador y los flows de booking.
 - Las únicas tools permitidas son: `check_availability`, `schedule_block`, `cancel_for_rescheduling`, `manage_schedule_block_status`, `manage_all_schedule_blocks_for_date`, `create_task`, `resolve_patient`, `resolve_professional`, `resolve_treatment`, `resolve_availability_query`, `lookup_patient`, `query_protocol`, `query_knowledge_base`.
 - `create_task` se usa solo en estas situaciones:
@@ -544,6 +545,7 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
     - Paso 2: `resolve_availability_query` (nuevas fechas).
     - Paso 3: `check_availability` (buscar huecos).
     - Paso 4: `schedule_block` (agenda nueva reutilizando target capturado).
+    - Excepción: si `selection.requiredCapabilities` incluye `hasConcreteDateTime` porque el paciente ya dio fecha Y hora concretas al inicio del turno, puede omitirse `resolve_availability_query`; el orden queda `cancel_for_rescheduling` → `check_availability` → `schedule_block`.
 - `parallel: true` solo cuando las tools no dependen entre sí.
 - Flows con `manage_schedule_block_status` o `cancel_for_rescheduling` DEBEN tener `responseTemplate`.
 
@@ -579,7 +581,7 @@ Usa `allowedTools` para declarar explícitamente qué tools están disponibles e
 - `cancel_existing_appointment`: `allowedTools: ["manage_schedule_block_status", "manage_all_schedule_blocks_for_date"]` — gestión de citas; añade `create_task` solo si la clínica requiere tarea de seguimiento.
 - `existing_appointment_inquiry`: `allowedTools: []` — el bot responde desde el contexto, no usa tools.
 - `new_appointment_scheduling`: no usar `allowedTools`; el flow necesita múltiples tools (`resolve_patient`, `resolve_treatment`, `check_availability`, `schedule_block`).
-- `existing_appointment_rescheduling`: `allowedTools: ["cancel_for_rescheduling", "resolve_availability_query", "check_availability", "schedule_block"]` — el flujo de reprogramación usa exactamente estas 4 tools en orden.
+- `existing_appointment_rescheduling`: `allowedTools: ["cancel_for_rescheduling", "resolve_availability_query", "check_availability", "schedule_block"]` — el flujo normal usa estas 4 tools en orden. Si declara `hasConcreteDateTime`, puede omitir `resolve_availability_query` tanto de `steps` como de `allowedTools`.
 
 Regla: si `allowedTools` está presente, debe incluir exactamente las tools que el flow necesita, ni más ni menos.
 

@@ -66,6 +66,12 @@ Reprogramar cita existente (existing_appointment_rescheduling, selection.require
   Step 2: resolve_availability_query (resolver nuevas fechas)
   Step 3: check_availability (buscar nuevos horarios)
   Step 4: schedule_block (agendar la nueva cita reutilizando el target persistido)
+
+  Excepción para fecha y hora concretas ya presentes al inicio del turno:
+  selection.requiredCapabilities incluye "hasConcreteDateTime".
+  En ese caso puede omitirse resolve_availability_query y el orden es:
+  cancel_for_rescheduling -> check_availability -> schedule_block.
+  No omitirlo si falta la fecha o la hora; check_availability nunca debe ejecutarse sin ambas.
 ```
 
 **TASKS-ONLY MODE:**
@@ -79,7 +85,7 @@ Cualquier solicitud de agendamiento:
 - `step`: número secuencial (1, 2, 3...)
 - `tools`: array de strings (tool names)
 - `parallel`: `true` solo si las tools no dependen entre sí
-- `required`: array de **capability flags** que deben estar presentes para ejecutar este step. NUNCA tool names. Flags válidas: `hasResolvedTreatment`, `hasResolvedPatient`, `hasResolvedProfessional`, `hasShownSlots`, `hasSelectedSlot`, `hasCreatedAppointment`, `hasCreatedTask`, `hasResolvedAvailabilityQuery`. Ejemplo: `["hasResolvedPatient"]` en el step final de booking. Si no hay requirements, usar `[]`. **INVARIANTE TÉCNICO (bloqueante):** la flag solo puede CONSUMIRSE; debe haber sido establecida por tools de steps ANTERIORES (`resolve_treatment`→`hasResolvedTreatment`, `resolve_patient`/`lookup_patient`→`hasResolvedPatient`, `resolve_professional`→`hasResolvedProfessional`, `check_availability`→`hasShownSlots`, `schedule_block`→`hasCreatedAppointment`, `create_task`→`hasCreatedTask`, `resolve_availability_query`→`hasResolvedAvailabilityQuery`). Un step que requiere lo que su propia tool establece es una dependencia circular y bloquea el flow en runtime.
+- `required`: array de **capability flags** que deben estar presentes para ejecutar este step. NUNCA tool names. Flags válidas: `hasResolvedTreatment`, `hasResolvedPatient`, `hasResolvedProfessional`, `hasShownSlots`, `hasSelectedSlot`, `hasCreatedAppointment`, `hasCreatedTask`, `hasResolvedAvailabilityQuery`, `hasConcreteDateTime`. Ejemplo: `["hasResolvedPatient"]` en el step final de booking. Si no hay requirements, usar `[]`. `hasConcreteDateTime` es una capability de inicio de turno y solo significa que el paciente ya dio fecha Y hora concretas; habilita omitir `resolve_availability_query` en un flow full de reagendamiento. **INVARIANTE TÉCNICO (bloqueante):** la flag solo puede CONSUMIRSE; debe haber sido establecida por tools de steps ANTERIORES (`resolve_treatment`→`hasResolvedTreatment`, `resolve_patient`/`lookup_patient`→`hasResolvedPatient`, `resolve_professional`→`hasResolvedProfessional`, `check_availability`→`hasShownSlots`, `schedule_block`→`hasCreatedAppointment`, `create_task`→`hasCreatedTask`, `resolve_availability_query`→`hasResolvedAvailabilityQuery`). Un step que requiere lo que su propia tool establece es una dependencia circular y bloquea el flow en runtime.
 - `note`: explicación para el LLM de qué hacer en este step
 - **NO usar `condition` dentro de steps.** El schema del backend solo permite: `step`, `tools`, `parallel`, `required`, `note`. Si un step tiene una condición (ej: "solo si tiene múltiples citas"), escríbela en el campo `note`.
 
@@ -96,7 +102,7 @@ Cualquier solicitud de agendamiento:
 
 - **Dependencias críticas (patrón canónico):**
   - `check_availability` DEBE ir antes de `schedule_block`
-  - `resolve_availability_query` DEBE ir antes de `check_availability`
+  - `resolve_availability_query` DEBE ir antes de `check_availability`, salvo que el flow de reagendamiento declare `selection.requiredCapabilities: ["hasConcreteDateTime"]`.
   - `resolve_patient` va en su **propio step anterior** a `schedule_block` (el paciente se identifica al elegir slot, no antes; `schedule_block` declara `required: ["hasResolvedPatient"]`). En bookings de paciente nuevo NO va en step 1.
 
 ### 5. responseTemplate
@@ -244,11 +250,11 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 
 S1. **NEVER poner una herramienta destructiva antes de su contraparte constructiva.** En particular, `manage_schedule_block_status` (cancel definitivo) NUNCA debe estar en un paso ANTERIOR a `schedule_block`, ni en el MISMO paso (con o sin `parallel: true`). Cancelar antes de que la nueva cita exista deja al paciente SIN CITA cuando no hay hueco o abandona la conversación. Esto ocurrió en producción.
 
-S2. **Orden de reagendamiento en full mode (patrón canónico obligatorio):**
+S2. **Orden de reagendamiento en full mode (patrón canónico):**
 `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`.
-El backend captura el target de la cita original al ejecutar `cancel_for_rescheduling` (paso 1) y lo reutiliza automáticamente en `schedule_block` (paso 4). La cancelación preparatoria vive en `steps`, NO en `allowedTools`, y `manage_schedule_block_status` está PROHIBIDO en este flow.
+El backend captura el target de la cita original al ejecutar `cancel_for_rescheduling` (paso 1) y lo reutiliza automáticamente en `schedule_block` (paso 4). Si `selection.requiredCapabilities` incluye `hasConcreteDateTime`, `resolve_availability_query` puede omitirse y el orden se reduce a `cancel_for_rescheduling` → `check_availability` → `schedule_block`. La cancelación preparatoria vive en `steps`, NO en `allowedTools`, y `manage_schedule_block_status` está PROHIBIDO en este flow.
 
-S3. Un flujo de reagendamiento (intent `existing_appointment_rescheduling`) en full mode DEBE declarar `cancel_for_rescheduling` como paso 1 cuando incluye `schedule_block`.
+S3. Un flujo de reagendamiento (intent `existing_appointment_rescheduling`) en full mode DEBE declarar `cancel_for_rescheduling` como paso 1 cuando incluye `schedule_block`. Solo puede omitir `resolve_availability_query` si declara `hasConcreteDateTime` en `selection.requiredCapabilities`.
 
 S3b. `allowedTools` es una lista blanca SIN ORDEN y no puede anclar el orden seguro. En reagendamiento full mode, las tools de escritura (`cancel_for_rescheduling`, `schedule_block`) deben vivir en `steps` numeradas en el orden canónico. `manage_schedule_block_status` NO debe aparecer en este flow.
 

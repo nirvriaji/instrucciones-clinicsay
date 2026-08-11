@@ -350,6 +350,22 @@ export function validateFlowsAndTools(
   // preparatory cancellation contract. Definitive status actions remain valid
   // in their own existing-appointment flows.
   if (mode === 'full') {
+    // 6d5a. cancel_for_rescheduling is the preparatory cancellation of the
+    // rescheduling contract — symmetric to the manage_schedule_block_status
+    // ban below, it must never appear outside rescheduling-intent flows. A
+    // definitive cancellation, confirmation or EN_ROUTE flow that includes it
+    // would cancel WITHOUT the persisted target the rebooking path reuses.
+    for (const [flowName, flow] of Object.entries(flows)) {
+      if (isReschedulingIntent(flow.intent)) continue;
+      if (!flowUsesTool(flow, 'cancel_for_rescheduling')) continue;
+      errors.push(
+        `Flow "${flowName}" (intent: ${flow.intent}) uses "cancel_for_rescheduling" outside a rescheduling flow. ` +
+          `"cancel_for_rescheduling" is the preparatory cancellation of the rescheduling contract and is ONLY valid ` +
+          `in flows whose intent is a rescheduling intent. For definitive cancellation, confirmation, or EN_ROUTE ` +
+          `actions use "manage_schedule_block_status".`,
+      );
+    }
+
     const rescheduleFlows = Object.entries(flows).filter(([, flow]) =>
       isReschedulingIntent(flow.intent),
     );
@@ -385,6 +401,36 @@ export function validateFlowsAndTools(
       const resolveIndex = flow.steps.findIndex((step) =>
         (step.tools || []).includes('resolve_availability_query'),
       );
+
+      // Concrete date/time exception: when the flow requires the turn-start
+      // capability "hasConcreteDateTime", the patient already gave a concrete
+      // date AND time, so resolve_availability_query MAY be omitted. When it is
+      // NOT declared, the resolve step stays mandatory so the bot asks for the
+      // missing date or time — check_availability never runs without both.
+      const requiredCapabilities = flow.selection?.requiredCapabilities;
+      const declaresConcreteDateTime =
+        Array.isArray(requiredCapabilities) &&
+        requiredCapabilities.includes('hasConcreteDateTime');
+
+      if (declaresConcreteDateTime) {
+        const orderIsValid =
+          scheduleIndex >= 0 &&
+          availabilityIndex >= 0 &&
+          cancelIndex < availabilityIndex &&
+          availabilityIndex < scheduleIndex &&
+          (resolveIndex < 0 ||
+            (cancelIndex < resolveIndex && resolveIndex < availabilityIndex));
+        if (!orderIsValid) {
+          errors.push(
+            `Flow "${flowName}" (intent: ${flow.intent}) declares "hasConcreteDateTime", so "resolve_availability_query" may be omitted, ` +
+              `but it must still order cancel_for_rescheduling -> check_availability -> schedule_block in numbered steps ` +
+              `(when "resolve_availability_query" is present it must stay between cancel_for_rescheduling and check_availability). ` +
+              `"check_availability" never runs without a concrete date and time.`,
+          );
+        }
+        continue;
+      }
+
       if (
         scheduleIndex < 0 ||
         availabilityIndex < 0 ||
@@ -398,7 +444,9 @@ export function validateFlowsAndTools(
         errors.push(
           `Flow "${flowName}" (intent: ${flow.intent}) declares "cancel_for_rescheduling" but must order ` +
             `cancel_for_rescheduling -> resolve_availability_query -> check_availability -> schedule_block in ` +
-            `numbered steps. The backend target is captured before the new date and booking reuses it.`,
+            `numbered steps. The backend target is captured before the new date and booking reuses it. ` +
+            `If the patient always gives a concrete date AND time at turn start, declare "hasConcreteDateTime" ` +
+            `in selection.requiredCapabilities to make "resolve_availability_query" optional.`,
         );
       }
     }
