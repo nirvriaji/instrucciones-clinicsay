@@ -5,8 +5,8 @@
  * State round-trips via frontend and is persisted in bot metadata.
  */
 
-import { DEFAULT_STRUCTURED_LOGIC } from '../structured-logic';
-import type { StructuredLogic } from '../structured-logic';
+import { DEFAULT_STRUCTURED_LOGIC } from './structured-logic';
+import type { StructuredLogic } from './structured-logic';
 
 export type InitialProcessJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 

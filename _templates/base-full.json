@@ -407,13 +407,21 @@
           {
             "step": 1,
             "tools": [
-              "resolve_availability_query"
+              "cancel_for_rescheduling"
             ],
             "parallel": false,
-            "note": "Resolver las nuevas fechas que pide el paciente. NO cancelar todavia nada. Para correccion de titular: usar mismo treatmentId, cambiar paciente. Para restablecer: usar datos del historial de tool outputs de este turno."
+            "note": "Cancelar y liberar preparatoriamente la cita elegible. El backend conserva el target y sus sesiones; no inventar carePlanId ni plannedSessionIds."
           },
           {
             "step": 2,
+            "tools": [
+              "resolve_availability_query"
+            ],
+            "parallel": false,
+            "note": "Resolver las nuevas fechas que pide el paciente despues de capturar el target."
+          },
+          {
+            "step": 3,
             "tools": [
               "check_availability"
             ],
@@ -421,19 +429,19 @@
             "note": "Buscar nuevos horarios (condicion: dates_resolved). Mantener mismo professionalId de la cita original como preferencia. Para mismo dia: filtrar slots del dia actual."
           },
           {
-            "step": 3,
+            "step": 4,
             "tools": [
               "schedule_block"
             ],
             "parallel": false,
-            "note": "Agendar la NUEVA cita (condicion: slot_selected). Mantener treatmentId original salvo que el paciente pida cambiarlo. Solo DESPUES de que la nueva cita exista se cancela la antigua con manage_schedule_block_status (reason='Solicitud del paciente', NO preguntar motivo); el servidor bloquea esa cancelacion si la nueva cita aun no existe."
+            "note": "Agendar la NUEVA cita (condicion: slot_selected) reutilizando el target persistido CARE_PLAN. El backend toma carePlanId y plannedSessionIds del target cancelado."
           }
         ],
         "allowedTools": [
+          "cancel_for_rescheduling",
           "resolve_availability_query",
           "check_availability",
-          "schedule_block",
-          "manage_schedule_block_status"
+          "schedule_block"
         ],
         "responseTemplate": "He movido tu cita al {fecha} a las {hora}. Te esperamos.",
         "responseTemplateMode": "model",

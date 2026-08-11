@@ -17,7 +17,7 @@
  * Duplicates: last-wins (deterministic, matches Object.assign behavior).
  */
 
-import type { StructuredLogic, IntentDefinition, ToolFlow, Protocol, ResponseTemplate } from '../structured-logic';
+import type { StructuredLogic, IntentDefinition, ToolFlow, Protocol, ResponseTemplate } from './structured-logic';
 
 export type WireIntent = {
   intentId: string;

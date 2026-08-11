@@ -167,6 +167,32 @@ export const TOOL_SCHEDULE_BLOCK: ChatToolDefinition = {
   },
 };
 
+// ========== Tool: cancel_for_rescheduling ========== //
+
+export const TOOL_CANCEL_FOR_RESCHEDULING: ChatToolDefinition = {
+  name: 'cancel_for_rescheduling',
+  strict: true,
+  description:
+    'Cancel and release one existing appointment as preparation for rescheduling. ' +
+    'Use only in a configured rescheduling flow, before asking for or checking the new date. ' +
+    'The backend validates the unique eligible appointment and returns the persisted target; never provide carePlanId or plannedSessionIds.',
+  parameters: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      scheduleBlockId: {
+        type: 'string',
+        description: 'Optional identifier from the backend appointment context. Do not invent one.',
+      },
+      reason: {
+        type: 'string',
+        description: 'Optional cancellation reason. Defaults to patient request.',
+      },
+    },
+    required: ['scheduleBlockId', 'reason'],
+  },
+};
+
 // ========== Tool: manage_schedule_block_status ========== //
 
 export const TOOL_MANAGE_SCHEDULE_BLOCK_STATUS: ChatToolDefinition = {
@@ -451,6 +477,7 @@ export const ALL_CHAT_TOOLS: ChatToolDefinition[] = [
   TOOL_RESOLVE_AVAILABILITY_QUERY,
   TOOL_CHECK_AVAILABILITY,
   TOOL_SCHEDULE_BLOCK,
+  TOOL_CANCEL_FOR_RESCHEDULING,
   TOOL_MANAGE_SCHEDULE_BLOCK_STATUS,
   TOOL_MANAGE_ALL_SCHEDULE_BLOCKS_FOR_DATE,
   TOOL_CREATE_TASK,

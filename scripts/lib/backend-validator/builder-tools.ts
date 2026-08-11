@@ -1,4 +1,4 @@
-import type { StructuredLogic, StructuredLogicChatMode } from '../structured-logic';
+import type { StructuredLogic, StructuredLogicChatMode } from './structured-logic';
 import { buildDefaultStructuredLogicForMode } from './default-structured-logic';
 
 /**

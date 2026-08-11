@@ -11,7 +11,7 @@
  *
  * Two of those shapes caused a production incident (lead 23415677):
  *
- *  1. The reschedule flow cancelled the patient's appointment in step 1, in
+ *  1. The old reschedule flow cancelled the patient's appointment in step 1, in
  *     PARALLEL with resolving the requested dates — i.e. before any
  *     alternative existed. When no slot matched, the patient was left with no
  *     appointment at all. Irrecoverable business data loss.
@@ -35,7 +35,11 @@ import {
   isReschedulingIntent,
   usesReservedIntentNamespace,
 } from '../canonical-intents';
-import type { StructuredLogic, StructuredLogicChatMode, ToolFlow } from '../structured-logic';
+import type {
+  StructuredLogic,
+  StructuredLogicChatMode,
+  ToolFlow,
+} from '../structured-logic';
 import { NEVER_TEMPLATED_TOOLS } from '../tool-description-generator';
 
 /** Tool that destroys an existing appointment (action `cancel`). */
@@ -72,19 +76,14 @@ const ACTIVE_APPOINTMENT_CAPABILITY = 'hasActiveAppointment';
  */
 export const FLOW_SAFETY_PROMPT_RULES =
   `FLOW SAFETY RULES (the backend validator REJECTS the JSON when any of these is violated):\n` +
-  `S1. NEVER put a destructive tool before its constructive counterpart. In particular, ` +
-  `"manage_schedule_block_status" (cancel) must NEVER be in a step earlier than "schedule_block", and never in the SAME step ` +
-  `(with or without "parallel": true). Cancelling before the new appointment exists leaves the patient WITH NO APPOINTMENT ` +
-  `when no slot is found or the patient drops the conversation. This happened in production.\n` +
-  `S2. Safe reschedule order in full mode: resolve dates -> check availability -> schedule the NEW appointment -> cancel the old one. ` +
-  `The cancellation is the LAST movement of the flow and is additionally blocked server-side until the new appointment exists.\n` +
-  `S3. A reschedule flow (intent "existing_appointment_rescheduling") in full mode that can cancel MUST also be able to book: ` +
-  `"schedule_block" must be present in steps or allowedTools.\n` +
-  `S3b. "allowedTools" is an UNORDERED whitelist, so it can never anchor the safe order. If ` +
-  `"manage_schedule_block_status" is a numbered STEP, then "schedule_block" must ALSO be a numbered step, placed EARLIER — ` +
-  `having the booking tool only in "allowedTools" is REJECTED. The reverse is the safe default: the cancellation lives in ` +
-  `"allowedTools" (last movement, blocked server-side until the new appointment exists) while "schedule_block" is the ` +
-  `terminal step. In a reschedule flow, "schedule_block" must always appear in "steps".\n` +
+  `S1. In a full reschedule flow (intent "existing_appointment_rescheduling") that includes "schedule_block", ` +
+  `the preparatory tool MUST be "cancel_for_rescheduling". "manage_schedule_block_status" is NOT a preparatory tool in this flow; ` +
+  `use it only for definitive cancellation, confirmation, or EN_ROUTE actions in their respective flows.\n` +
+  `S2. The mandatory full reschedule order is cancel_for_rescheduling -> resolve_availability_query -> check_availability -> schedule_block. ` +
+  `The first tool captures a validated backend target; it is not a definitive cancellation and the final booking reuses the persisted ` +
+  `care plan and planned sessions.\n` +
+  `S3. A full reschedule flow that includes "schedule_block" MUST include "cancel_for_rescheduling" in numbered steps, and all four ` +
+  `tools in S2 MUST appear in that exact numbered order.\n` +
   `S4. "responseTemplate" is injected ONLY into the tools of the flow's TERMINAL step (the LAST element of the steps array). ` +
   `So the terminal step must be the tool that performs the real action (schedule_block, manage_schedule_block_status, create_task). ` +
   `A template whose terminal step only contains search/resolver tools (check_availability, resolve_*, lookup_patient, query_*) is REJECTED: ` +
@@ -114,7 +113,9 @@ function toolsOf(step: { tools?: string[] } | undefined): string[] {
 }
 
 function stepsOf(flow: ToolFlow): Array<{ step: number; tools: string[]; parallel?: boolean }> {
-  return Array.isArray(flow.steps) ? (flow.steps as Array<{ step: number; tools: string[]; parallel?: boolean }>) : [];
+  return Array.isArray(flow.steps)
+    ? (flow.steps as Array<{ step: number; tools: string[]; parallel?: boolean }>)
+    : [];
 }
 
 /** First array position (execution position) whose step declares `tool`. */
@@ -173,7 +174,7 @@ function validateDestructiveOrder(flowName: string, flow: ToolFlow, errors: stri
     `Es una pérdida de datos irrecuperable y ya ocurrió en producción.`;
   const how =
     `CÓMO SE CORRIGE: coloca "${CONSTRUCTIVE_TOOL}" en un paso ANTERIOR al de "${DESTRUCTIVE_TOOL}". ` +
-    `Orden seguro: resolver fechas → buscar huecos → agendar la cita nueva → cancelar la antigua. ` +
+    `En un flujo de reprogramación usa "cancel_for_rescheduling" como paso preparatorio. ` +
     `Nunca pongas las dos herramientas en el mismo paso ni con "parallel": true.`;
 
   // Both tools are ordered steps: compare their execution positions below.
@@ -355,7 +356,17 @@ function validateStepArrayOrder(flowName: string, flow: ToolFlow, errors: string
  * Tokens that appear in almost every appointment intent and therefore carry no
  * discriminating power when suggesting a canonical replacement.
  */
-const NON_DISCRIMINATING_TOKENS = new Set(['appointment', 'appointments', 'cita', 'citas', 'new', 'existing', 'patient', 'request', 'flow']);
+const NON_DISCRIMINATING_TOKENS = new Set([
+  'appointment',
+  'appointments',
+  'cita',
+  'citas',
+  'new',
+  'existing',
+  'patient',
+  'request',
+  'flow',
+]);
 
 /**
  * Canonical ids that look like the unknown one, so the advisor gets a concrete
@@ -382,7 +393,9 @@ function suggestCanonicalIntents(unknownIntent: string): readonly string[] {
     .map((entry) => entry.candidate);
 }
 
-const RESERVED_NAMESPACES_TEXT = RESERVED_INTENT_NAMESPACES.map((prefix) => `"${prefix}"`).join(' y ');
+const RESERVED_NAMESPACES_TEXT = RESERVED_INTENT_NAMESPACES.map((prefix) => `"${prefix}"`).join(
+  ' y ',
+);
 
 const RESERVED_NAMESPACE_WHY =
   `POR QUÉ ES PELIGROSO: los prefijos ${RESERVED_NAMESPACES_TEXT} están RESERVADOS para la taxonomía canónica. ` +
@@ -421,7 +434,8 @@ function reservedNamespaceError(id: string, where: string): string | undefined {
  */
 function canonicalIntentsForTools(writingTools: string[]): readonly string[] {
   const creates = writingTools.includes(CONSTRUCTIVE_TOOL);
-  const destroys = writingTools.includes(DESTRUCTIVE_TOOL) || writingTools.includes(BULK_DESTRUCTIVE_TOOL);
+  const destroys =
+    writingTools.includes(DESTRUCTIVE_TOOL) || writingTools.includes(BULK_DESTRUCTIVE_TOOL);
 
   if (creates && destroys) return ['existing_appointment_rescheduling'];
   if (creates) return ['new_appointment_scheduling', 'existing_appointment_rescheduling'];
@@ -440,7 +454,11 @@ function canonicalIntentsForTools(writingTools: string[]): readonly string[] {
  * on appointments (rule 3), in which case the guards must be able to classify
  * it and only a canonical id can be classified.
  */
-function validateFlowIntentIsClassifiable(flowName: string, flow: ToolFlow, errors: string[]): void {
+function validateFlowIntentIsClassifiable(
+  flowName: string,
+  flow: ToolFlow,
+  errors: string[],
+): void {
   const intent = String(flow.intent ?? '');
 
   const reserved = reservedNamespaceError(intent, header(flowName, flow));

@@ -21,7 +21,9 @@ Produce a JSON `StructuredLogic` object that defines: the **intent catalog**, **
 
 ## The Mental Model (read this first)
 
-The whole system is driven by **intents**. An intent is a semantic, `snake_case` identifier for *what the patient wants* (e.g., `appointment_confirmation`, `scheduling_request`, `general_inquiry`). It is **not** a keyword and **not** a literal phrase.
+The whole system is driven by **intents**. An intent is a semantic, `snake_case` identifier for *what the patient wants* (e.g., `existing_appointment_confirmation`, `new_appointment_scheduling`, `parking_info`). It is **not** a keyword and **not** a literal phrase.
+
+Intent ids are **free except inside two reserved namespaces** (see "Canonical Intent Taxonomy" below). The clinic owns its conversation, so ids such as `insurance_coverage_inquiry` or `parking_info` are valid. What is closed is the safety perimeter: the prefixes `new_appointment_` and `existing_appointment_` are reserved for the canonical ids, and any flow that creates, moves or destroys appointments must carry a canonical intent — the safety rules and the server-side runtime guards key off these exact strings, so an invented id there silently disables the protection it was supposed to trigger.
 
 The pipeline is:
 
@@ -33,10 +35,6 @@ patient message            →  classified into a single intent id
 rule whose intent matches  →  allow / block (precondition gate)
         ↓ allow
 flow whose intent matches  →  orchestrates tools + optional responseTemplate
-        ↓
-query_knowledge_base (si el bot no tiene la respuesta en contexto)
-        ↓
-semantic search en protocols, FAQ, templates, rules
 ```
 
 Three artifacts reference the same intent ids and **must stay in sync**:
@@ -85,6 +83,22 @@ All `description` fields (in intents, rules, and flows) must describe **intent a
 
 **CRITICAL:** flows that use `manage_schedule_block_status` (confirm / cancel / on-the-way) MUST define their own `responseTemplate`. Rules **never** define response templates.
 
+**The template is injected ONLY into the tools of the flow's TERMINAL step** — the last element of the `steps` array. It describes how to *close* the flow, so the terminal step must be the tool that performs the real action. Consequences:
+- A template whose terminal step only holds search/resolver tools (`check_availability`, `resolve_*`, `lookup_patient`, `query_*`) is **rejected by the validator**: it would make the bot announce a result it has not produced.
+- `allowedTools` is an unordered whitelist and is ignored for template injection. Optional/conditional tools (e.g. a follow-up `create_task`) belong there, never in the terminal step.
+- Write `steps` in execution order (ascending `step` numbers): the terminal step is the **last array item**, not the highest number.
+
+### Destructive Tools Come Last
+A tool that destroys data must never run before — or alongside — the tool that creates its replacement.
+
+**Hard rule (validator-enforced, blocking):** in any flow, `manage_schedule_block_status` (cancel) must not appear in a step earlier than `schedule_block`, nor in the same step (with or without `parallel: true`).
+
+**Why:** cancelling before the new appointment exists leaves the patient **with no appointment at all** when no slot is found, when they do not pick one, or when they simply stop replying. This is irrecoverable data loss and it happened in production.
+
+**Safe reschedule order (full mode):** resolve dates → check availability → **schedule the new appointment** → cancel the old one. The cancellation is the last movement of the flow, and the backend additionally blocks it until the new appointment exists (defense in depth: step order is only a suggestion to the model).
+
+A reschedule flow (`existing_appointment_rescheduling`) in `full` mode that can cancel MUST also be able to book: `schedule_block` has to be present in `steps` or `allowedTools`.
+
 ### Clinic-Agnostic Content
 Use generic placeholders ("the clinic", "the patient", "the interlocutor"). Never invent real clinic names, addresses, phone numbers, or city names.
 
@@ -101,19 +115,12 @@ The person sending the message (interlocutor) may be the patient, a partner, a f
 {
   version: string;                    // Required. Schema version (e.g., "1.0")
   capabilities: ClinicCapabilities;   // Required
-  identity?: BotIdentity;             // Clinic contact info, tone, and bot persona
-  styleRules?: StyleRules;            // Tone, brevity, formatting, emoji, time greetings
-  responseTemplates?: ResponseTemplates; // Named templates for common replies
-  faq?: FaqEntry[];                   // Frequently asked questions
-  serviceCatalog: ServiceCatalog;     // Required. Treatments/packs the bot can reference for pricing
-  intents: IntentCatalog;             // Required. The intent vocabulary.
+  intents: IntentCatalog;             // Required in generated output. The intent vocabulary.
   toolOrchestration: ToolOrchestration; // Required
   rules: BusinessRule[];              // Required. MUST contain at least one rule. Never empty.
-  protocols?: Record<string, Protocol>;  // Optional. Knowledge base searchable via query_knowledge_base.
+  protocols?: Record<string, Protocol>;  // Optional
+  products?: ProductConfig;           // Optional
   errorCategories?: ErrorCategory[];  // Optional
-  treatmentPolicyHints?: TreatmentPolicyHint[]; // Optional. Scheduling policy guidance for the advisor
-  systemPromptInstructions?: SystemPromptInstructions; // Builder-only metadata (notes, gaps, next steps)
-  conversationResumption?: ConversationResumptionConfig; // Optional. Greeting behavior after conversation pauses
 }
 ```
 
@@ -128,22 +135,20 @@ type IntentDefinition = {
 };
 ```
 
-`intentId` is a `snake_case` semantic identifier (e.g., `appointment_confirmation`).
+`intentId` is a `snake_case` semantic identifier taken from the canonical taxonomy (e.g., `existing_appointment_confirmation`).
 
 ### `ClinicCapabilities`
 
 ```typescript
 {
+  scheduling: boolean;        // Can schedule real appointments?
+  products: boolean;          // Sells physical products?
+  shipping: boolean;          // Offers shipping?
   sensitiveSituations: boolean;  // Handles delicate situations?
   protocols: boolean;         // Has specific protocols?
-  bookingMode?: "direct" | "confirm-first" | null;  // Optional per-clinic booking behavior
+  reminders: boolean;         // Sends reminders?
 }
 ```
-> **NOTE:** `scheduling` capability is derived from the external chat mode (`'full'` or `'tasks-only'`), **NOT** stored in the JSON. The backend computes it at runtime. Do NOT add `scheduling`, `products`, `shipping`, or `reminders` to `capabilities`.
->
-> **`bookingMode`** (optional, per clinic): `direct` = book as soon as the patient picks a slot (recommended default — `schedule_block`'s result IS the confirmation); `confirm-first` = ask for explicit confirmation before booking. Decided per sede in its JSON (clinic config, NOT conversation state).
-
-> **APPOINTMENT LIFECYCLE GATE (deterministic, backend):** every flow that ACTS on an existing appointment declares `selection.requiredCapabilities: ["hasActiveAppointment"]`: `confirm_appointment`, `reschedule_appointment`, `cancel_appointment`, `on_the_way` (patient_running_late), `keep_appointment_flow`. The capability is computed from data (future non-cancelled block or reminder link), never inferred — so without a real appointment those flows are ineligible by construction and no fake action/message can be produced ("He movido tu cita", "¡Muchas gracias!", "tu cita sigue confirmada"). Inquiry flows (`reschedule_inquiry`, `cancellation_inquiry`) do NOT carry the gate (they write nothing), and custom class flows are out of scope (different domain). Fallback when all are ineligible: conversational answer, optionally via the `no_appointments` template — never a false claim.
 
 ### `ToolOrchestration` and `ToolFlow`
 
@@ -155,12 +160,9 @@ type ToolOrchestration = {
 type ToolFlow = {
   intent: string;             // Required. Semantic intent reference (must exist in the intents catalog).
   description: string;        // Differentiates this flow's intent from similar ones (semantic, no keywords).
-  selection?: ToolFlowSelection; // Optional capability-based routing when multiple flows share the same intent.
-  steps: ToolStep[];          // Ordered flow steps. May be empty for purely informational flows.
-  responseTemplate?: string;   // Optional. Template key or exact text the bot uses after completing this flow.
-  responseTemplateMode?: "literal" | "model"; // Optional. "literal" = exact text (default). "model" = LLM adapts the template.
+  steps: ToolStep[];          // Ordered flow steps.
+  responseTemplate?: string;   // Optional. Exact text the bot MUST use after completing this flow.
   allowedTools?: string[];    // Optional. Explicit tool whitelist for the LLM in this flow.
-  allowsSilence?: boolean;    // Optional. If true, the LLM may return empty response. ONLY allowed on farewell flow.
 };
 ```
 
@@ -171,22 +173,10 @@ type ToolFlow = {
   step: number;               // Step number (1-based)
   tools: string[];            // Tool names to execute in this step
   parallel: boolean;          // Execute in parallel?
-  required?: string[];         // Capability flags required for this step (e.g., ["hasResolvedPatient", "hasSelectedSlot"]). EMPTY [] if none. NEVER tool names — a tool name here will SILENTLY block execution.
-                               // ANTI-CIRCULAR INVARIANT (technical, blocking): a step must NEVER require a capability
-                               // established by a tool in the SAME step (e.g., requiring "hasResolvedTreatment" in a step
-                               // containing resolve_treatment). 'required' only consumes what EARLIER steps established.
+  required?: string[];         // Required vs optional tools
   note?: string;              // Explanatory note for the LLM
-  // NOTE: condition is NOT supported by the backend schema. Use 'note' for conditional guidance.
+  condition?: string;         // Condition to execute this step
 }
-```
-
-### `ToolFlowSelection`
-
-```typescript
-type ToolFlowSelection = {
-  requiredCapabilities?: string[];  // Capabilities that must ALL be present for this flow to be eligible (turn-start only).
-  excludedCapabilities?: string[];  // Capabilities that must ALL be absent for this flow to be eligible (turn-start only).
-};
 ```
 
 ### `BusinessRule`
@@ -196,18 +186,10 @@ type ToolFlowSelection = {
   id: string;                 // Unique identifier (e.g., "no_surgery_days")
   intent: string;             // Required. Semantic intent reference (must exist in the intents catalog).
   description?: string;       // How the classifier recognizes this intent (semantic, no keywords). REQUIRED in practice.
+  condition?: BusinessRuleCondition;     // AND condition
+  conditions?: BusinessRuleCondition[];  // OR conditions
   action: "allow" | "block";  // ONLY these two values. Rules are filters, never executors.
-  conditionLogic?: "and" | "or"; // How to combine conditions. Default "and".
-  conditions?: BusinessRuleCondition[]; // Optional conditions evaluated against rule context.
-  reason?: string;            // Machine-readable reason (e.g., "missing_patient_data")
-  message?: string;           // Patient-facing message when action is "block".
-  protocolId?: string;        // Optional protocol to inject when this rule fires.
-  requiredFields?: string[];  // Fields that must be collected before allowing proceeding.
   note?: string;              // Note for the advisor
-  priority?: number | null; // Evaluation order. Higher = first. Default 0.
-  hidePrice?: boolean;        // If true, the bot must not mention the treatment price.
-  redirectToTask?: boolean;   // If true, redirect to human task instead of booking.
-  informOnly?: boolean;       // If true, the bot should only provide information.
 }
 ```
 
@@ -227,112 +209,27 @@ type ToolFlowSelection = {
 {
   name: string;
   description: string;
-  responseTemplate: string;  // COMPLETE text used by the bot to answer patient questions. Searchable via query_knowledge_base.
-  sections?: string[];        // Business rules, conditions, examples. Also searchable.
+  responseTemplate: string;  // Text injected into the system prompt when activated
+  sections?: string[];
+  rules?: Array<{
+    condition: string;        // e.g., "weeks < 13"
+    treatment?: string;
+    offer?: string;
+    price?: string;
+    promotion?: boolean;
+    note?: string;
+  }>;
 }
 ```
 
-**CRITICAL:** `responseTemplate` must be COMPLETE (not a summary) because the bot may search it via `query_knowledge_base` when the patient asks informational questions. Include prices, durations, conditions, and example responses.
-
-### `ServiceCatalog`
+### `ProductConfig`
 
 ```typescript
-type ServiceCatalog = {
-  treatments: ChatService[];  // Required. At least one treatment.
-  packs?: ChatService[];      // Optional bundles / promos.
-};
-
-type ChatService = {
-  name: string;               // Required. Treatment or pack name (e.g., "Limpieza dental").
-  description?: string;       // Optional brief description.
-  priceDescription?: string;  // Free-text pricing. Exact price ("50 EUR"), range ("From 120 EUR"), or directive ("Consult clinic").
-  requiresConsultation?: boolean; // If true, the bot should offer to book a consultation first.
-  category?: string;          // Optional grouping category (e.g., "Dental", "Medicina estética").
-};
-```
-
-### `BotIdentity`
-
-```typescript
-type BotIdentity = {
-  botName?: string;
-  clinicName?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  openingHours?: string;
-  language?: "auto" | string;
-  persona?: string;
-  tone?: string;
-  farewellMessage?: string;
-  escalationMessage?: string;
-  socialLinks?: Array<{ platform: string; url: string }>;
-  additionalContacts?: Array<{ type: string; value: string; label?: string }>;
-};
-```
-
-### `StyleRules`
-
-```typescript
-type StyleRules = {
-  brevity?: string;
-  format?: string;
-  tone?: string;
-  emojiPolicy?: "allowed" | "forbidden" | "contextual";
-  languagePolicy?: "auto" | string;
-  noMedicalDiagnosis?: boolean;
-  noAsterisks?: boolean;
-  noMarkdown?: boolean;
-  maxSentences?: number;
-  maxWordsPerSentence?: number;
-  avoidPhrases?: string[];
-  mandatoryPhrases?: string[];
-  additionalRules?: string[];
-  mustOfferHumanHandoff?: boolean;
-  timeGreetingRanges?: Array<{
-    label: "dias" | "tardes" | "noches";
-    start: string;   // HH:mm
-    end: string;     // HH:mm
-    greeting: string;
-  }>;
-};
-```
-
-### `ResponseTemplates` and `FaqEntry`
-
-```typescript
-type ResponseTemplates = { [key: string]: { text: string; mode?: "literal" | "model" } };
-
-type FaqEntry = {
-  question: string;
-  answer: string;
-  condition?: string;
-};
-```
-
-### `SystemPromptInstructions`
-
-```typescript
-type SystemPromptInstructions = {
-  notesForAdvisor: string[];
-  knownGaps: string[];
-  recommendedNextSteps: string[];
-};
-```
-
-### `ConversationResumptionConfig`
-
-```typescript
-type ConversationResumptionConfig = {
-  instructions: {
-    continuous?: string;   // Patient is responding immediately. Do NOT greet again.
-    short_break?: string;   // Pause < 2 hours. Do NOT greet again.
-    same_period?: string;   // Today or yesterday. Brief optional greeting allowed.
-    recent?: string;        // Several days passed. Greet cordially, offer 1-line summary if something is pending.
-    distant?: string;       // Weeks/months passed. Greet acknowledging absence. Do NOT present yourself as new.
-  };
-};
+{
+  shipping?: { enabled: boolean; requiresPostalCode: boolean; options: Array<{ type: string; price: number }> };
+  paymentMethods?: string[];
+  bizumReservation?: { enabled: boolean; amount: number; phone: string };
+}
 ```
 
 ### `ErrorCategory`
@@ -347,30 +244,38 @@ type ConversationResumptionConfig = {
 
 ---
 
-## Recommended Baseline Intents (every clinic)
+## Canonical Intent Taxonomy (a closed PERIMETER, not a closed vocabulary)
 
-Declare at least these intents in the catalog. The exact ids below are the **canonical ones** the backend recognizes for safety rules and guards. Reuse them exactly so flows, rules, and the classifier all align.
+The canonical ids are the contract shared by the configuration-time validator and the server-side runtime guards. Three rules govern them:
+
+1. **Reserved namespaces.** `new_appointment_` and `existing_appointment_` are RESERVED. An id starting with either that is not in the table below is a **blocking** error: it looks like an appointment action but no safety rule recognises it.
+2. **Free intents are allowed.** Any id outside those prefixes that is not canonical is valid — it is a conversational intent of the clinic (`insurance_coverage_inquiry`, `parking_info`, `physio_program_followup`). No error, not even a warning, in the `intents` catalog or in `flow.intent`.
+3. **A flow that writes on appointments needs a canonical intent.** If a flow uses `schedule_block`, `manage_schedule_block_status` or `manage_all_schedule_blocks_for_date` (in `steps` or in `allowedTools`), its `intent` MUST be canonical — that flow has safety semantics and the guards must classify it. A flow with a free intent and only read/task tools (`query_knowledge_base`, `create_task`, `lookup_patient`, `check_availability`, resolvers) is perfectly valid.
+
+**Naming convention**
+
+- `new_appointment_*` — the patient does **not** have the appointment yet.
+- `existing_appointment_*` — the patient **already has** it; the flow reads, moves, confirms, keeps or destroys it.
+- Everything else keeps a plain topical name (no appointment involved).
+
+The prefix is not cosmetic: `existing_appointment_*` is what subjects a flow to the `hasActiveAppointment` gate rule and to the destructive-order rules.
 
 | Intent id | Meaning |
 |---|---|
-| `existing_appointment_confirmation` | Patient confirms attendance to an already-booked appointment (often replying to a reminder). |
-| `existing_appointment_cancellation` | Patient cancels an existing appointment, or replies they will not attend. |
-| `existing_appointment_inquiry` | Patient asks about appointments they already have (times, dates, treatments). Answerable from context. |
-| `new_appointment_scheduling` | Patient wants to book a NEW appointment or asks about availability. |
-| `general_inquiry` | General questions about the clinic (hours, location, contact, fixed prices, services). |
-| `human_follow_up` | Anything that needs human follow-up and does not fit the above. |
-| `farewell` | Patient says goodbye, thanks, or closes the conversation politely. **Required flow with `allowsSilence: true`.** |
+| `new_appointment_scheduling` | Patient wants to book a NEW appointment. |
+| `new_appointment_inquiry` | Patient asks about a new appointment or its availability, without deciding yet. |
 | `existing_appointment_rescheduling` | Patient wants to MOVE an already-booked appointment to another date/time. |
+| `existing_appointment_reschedule_inquiry` | Patient asks whether the appointment could be moved, without deciding yet. |
+| `existing_appointment_confirmation` | Patient confirms attendance to an already-booked appointment (often replying to a reminder). |
+| `existing_appointment_cancellation` | Patient explicitly cancels an existing appointment. |
+| `existing_appointment_cancellation_inquiry` | Patient asks about cancelling, without ordering the cancellation. |
+| `existing_appointment_inquiry` | Patient asks about appointments they already have (times, dates, treatments). Answerable from context. |
+| `existing_appointment_keep` | Patient wants to keep the appointment as it is and drop any proposed change. |
 | `existing_appointment_delay_notice` | Patient warns they will arrive late to a confirmed appointment. |
-| `existing_appointment_reschedule_inquiry` | Patient asks about the possibility of rescheduling without confirming yet. |
-| `existing_appointment_cancellation_inquiry` | Patient asks about canceling without confirming yet. |
-| `existing_appointment_keep` | Patient indicates they want to keep the appointment as-is. |
 
-### Reserved Intent Namespaces (CRITICAL)
+The list is deliberately short: it holds only the intents a safety rule must classify, and all of them live inside the reserved prefixes. Everything else — `general_inquiry`, `payment_inquiry`, `location_contact_inquiry`, `post_treatment_follow_up`, `special_treatment_request`, `human_follow_up`, `farewell`, `insurance_coverage_inquiry`, `parking_info`… — is a **free intent**: declare it with whatever id fits the clinic. Intent types are practically infinite and not only conversational, so the taxonomy restricts as little as it can. It may grow, but every addition takes freedom away from every clinic, so an id only earns a place here when a guard or a validator rule genuinely needs to classify it.
 
-The prefixes `new_appointment_` and `existing_appointment_` are **RESERVED** for the canonical taxonomy. Any id starting with either MUST be exactly one of the ids above. Invented ids like `existing_appointment_moving` or `new_appointment_booking` are **REJECTED** by the backend validator because they look like appointment semantics but are not recognized by safety rules or server-side guards, causing silent loss of protection.
-
-Outside those prefixes you are free: `insurance_coverage_inquiry`, `parking_info`, `payment_inquiry`, `physio_program_followup` are all valid.
+**Migration (legacy id → canonical id):** `scheduling_request` → `new_appointment_scheduling`; `appointment_reschedule_request` → `existing_appointment_rescheduling`; `appointment_reschedule_inquiry` → `existing_appointment_reschedule_inquiry`; `appointment_confirmation` → `existing_appointment_confirmation`; `appointment_cancellation` → `existing_appointment_cancellation`; `appointment_cancellation_inquiry` → `existing_appointment_cancellation_inquiry`; `appointment_inquiry` → `existing_appointment_inquiry`; `keep_appointment` → `existing_appointment_keep`; `patient_running_late` → `existing_appointment_delay_notice`. There is **no** backward-compatibility mapping in the code: a JSON still using a legacy id is rejected. Ids such as `general_inquiry`, `payment_inquiry` or `farewell` need no migration — they are free intents.
 
 ---
 
@@ -379,7 +284,7 @@ Outside those prefixes you are free: `insurance_coverage_inquiry`, `parking_info
 ### Intents
 - Declare every intent referenced by any flow or rule. No orphan references.
 - Write descriptions semantically; add 2-5 realistic `examples` per intent when helpful.
-- Do not invent intents the clinic's instructions do not justify, but always include the recommended baseline above.
+- Never invent ids under `new_appointment_` or `existing_appointment_`: those prefixes are reserved, use the canonical id from the table above. Outside them you may declare the clinic's own intents when its instructions justify them.
 
 ### Business Rules
 - Each rule references an `intent` that exists in the catalog.
@@ -389,11 +294,12 @@ Outside those prefixes you are free: `insurance_coverage_inquiry`, `parking_info
 **CRITICAL: the `rules` array must NEVER be empty.** An empty `rules` array breaks intent classification: the classifier falls back to a generic `patient_message`, no flow activates, tool scoping is disabled, ALL tools (including `create_task`) become available, and the bot behaves erratically (unnecessary tasks, re-confirmations).
 
 ### Flows and Steps
-- Flow `intent` must exist in the catalog and should be unique per flow (one flow per intent).
+- Flow `intent` must exist in the catalog and should be unique per flow (one flow per intent). If the flow can create, move or destroy an appointment, that intent must be canonical.
 - `description` differentiates this flow from similar ones ("NEW session" vs. "move an ALREADY BOOKED appointment" vs. "confirm attendance").
-- Order steps logically (resolve entities → check availability → act). **Canonical full-mode booking pattern:** the patient is resolved LAST — `resolve_patient` + `schedule_block` share the final step, executed only when the patient picks a slot (see `_templates/base-full.json`). Do NOT ask for patient data up front.
-- `parallel: true` only when tools have no dependencies between them.
+- Order steps logically (identify patient → resolve entities → check availability → act).
+- `parallel: true` only when tools have no dependencies between them — and never for a destructive tool.
 - Flows using `manage_schedule_block_status` MUST set `responseTemplate`.
+- The last step must be the one that performs the flow's real action: it is where the closing template lands.
 
 ### Protocols
 - `responseTemplate` is injected into the system prompt when the protocol activates.
@@ -406,39 +312,26 @@ Outside those prefixes you are free: `insurance_coverage_inquiry`, `parking_info
 
 ## Validations (must pass `validateStructuredLogic()`)
 - `version` is a non-empty string.
-- `capabilities` has exactly two boolean fields: `sensitiveSituations` and `protocols`.
-- `serviceCatalog.treatments` is a non-empty array with at least one treatment having a non-empty `name`.
-- `toolOrchestration.flows` is an object (not an array) and MUST include a `farewell` flow with `allowsSilence: true`.
+- `capabilities` has all six boolean fields.
+- `toolOrchestration.flows` is an object (not an array).
 - `rules` is a non-empty array.
-- `responseTemplates` MUST include templates named `information_not_available`, `out_of_scope`, and `farewell`.
-- The intent `price_inquiry` is PROHIBITED. Use `general_inquiry` with `serviceCatalog.treatments[].priceDescription` instead.
 - Every flow has a non-empty `intent`, and that intent is declared in the `intents` catalog.
 - Every rule has a non-empty `intent` (declared in the catalog) and a non-empty `description`.
-- `BusinessRule.action` is `"allow"` or `"block"`. Block rules MUST include a non-empty `message`.
+- `BusinessRule.action` is `"allow"` or `"block"`.
 - `ToolStep.tools` are strings matching the available tools for the bot mode.
 - `Protocol.responseTemplate` is a non-empty string if the protocol exists.
-- Flows using `query_knowledge_base` or `query_protocol` MUST NOT use a literal `responseTemplate` (set `responseTemplateMode: "model"` if needed).
 
----
+### Flow safety (blocking — see "Destructive Tools Come Last" and "Response Template")
+- `manage_schedule_block_status` never in a step before, or in the same step as, `schedule_block`.
+- A `full`-mode reschedule flow that can cancel must also have `schedule_block` available.
+- `allowedTools` is an UNORDERED whitelist and can never anchor the safe order. If `manage_schedule_block_status` is a numbered step, `schedule_block` must also be a numbered step placed earlier — booking reachable only through `allowedTools` is rejected. The safe (default) shape is the reverse: `schedule_block` as the terminal step, the cancellation in `allowedTools` as the last movement. In a reschedule flow `schedule_block` must always appear in `steps`.
+- Every `flow.intent`, and every id declared in `intents`, must belong to the canonical taxonomy.
+- A flow whose intent is `existing_appointment_*` and that uses `manage_schedule_block_status` or `schedule_block` must declare `selection.requiredCapabilities: ["hasActiveAppointment"]`. Informational flows (no tools) do not need it.
+- No `responseTemplate` when the terminal step holds only search/resolver tools.
+- No `responseTemplate` on a tool-using flow whose terminal step declares no tools (e.g. tools only in `allowedTools`, no `steps`).
+- The `steps` array must be written in ascending `step` order.
 
-## Advisory Mode Warnings (non-blocking)
-
-Validation has **two tiers**:
-
-1. **Blocking errors** (`errors`) — schema, type, and cross-reference violations. These prevent saving.
-2. **Non-blocking gaps** (`gaps`) — quality and mode notes with severity `high | medium | low | advisory`. They are **educational**: the validator informs the advisor but never blocks the save.
-
-**`redirectToTask: true` on `scheduling_request` rules and `create_task` in tasks-only scheduling/reschedule flows are NOT mandatory.** The advisor decides. When the JSON deviates from the typical mode pattern, the validator emits an advisory `mode_note` (Spanish, starting with "Para tu información:…") explaining the canonical pattern so the advisor can confirm the deviation is intentional.
-
-Canonical mode notes (`detectModeAdvisoryGaps`):
-
-| Case | Advisory note (summary) |
-|---|---|
-| **full + `new_appointment_scheduling` without scheduling tools** | The typical full pattern books directly (`resolve_patient`, `resolve_treatment`, `check_availability`, `schedule_block`). If reception validates every request manually, fine — ensure `create_task` captures name, last name, phone, treatment, and preferred date. |
-| **full without `schedule_block` anywhere** | Typical full mode books directly. If all appointments go through reception, `tasks-only` may describe your operation better. |
-| **tasks-only + `resolve_patient`/`resolve_treatment`** | Not typical (no direct booking). Keep only if intentional (e.g., the human task already gets the resolved `patientId`). |
-| **tasks-only + `new_appointment_scheduling` rule without `redirectToTask`** | The bot will answer without creating a human task. Fine for informational replies — ensure the patient knows their next step. |
-| **any mode + `create_task` without `resolve_patient`/`lookup_patient`** | `create_task` ALWAYS needs patient name, last name, and phone. Ensure the bot collects them beforehand (or a prior flow step did). |
+There are **no silent fallbacks**: any of these produces an explicit, blocking error explaining what is wrong, why it is dangerous and how to fix it. A JSON that fails validation is not loaded at runtime.
 
 ---
 
@@ -450,7 +343,7 @@ The **last bot message** determines the meaning of short replies.
 | Last Bot Message | Patient Reply | Correct Intent |
 |-----------------|---------------|----------------|
 | "Do you confirm attendance to your appointment?" | "yes" | `existing_appointment_confirmation` |
-| "Would you like us to change your appointment to another day?" | "yes" | `existing_appointment_rescheduling` |
+| "Would you like us to change your appointment to another day?" | "yes" | `existing_appointment_reschedule_inquiry` |
 | "Here is the information you requested" | "ok" | `general_inquiry` / acknowledgment |
 | "Do you need anything else?" | "no" | acknowledgment (conversation end) |
 
@@ -482,6 +375,12 @@ The **last bot message** determines the meaning of short replies.
 
 ### "Orphan Intent Reference"
 **Symptom:** a flow or rule references `intent: "X"` but `intents["X"]` is missing. **Why wrong:** the validator rejects it and the classifier can never select it. **Fix:** declare `X` in the catalog (or fix the reference).
+
+### "Cancel First, Ask Later"
+**Symptom:** a reschedule flow whose step 1 contains `manage_schedule_block_status`, often `parallel: true` next to `resolve_availability_query`. **Why wrong:** the appointment is cancelled before any alternative exists; if nothing is available the patient ends up with no appointment (real production incident). **Fix:** resolve dates → check availability → `schedule_block` → cancel the old appointment last.
+
+### "Closing Template on a Search"
+**Symptom:** a flow whose terminal step is `check_availability` / `resolve_*` while declaring `responseTemplate: "He movido tu cita"`. **Why wrong:** the template is the flow's closing line, so the bot claims the change is done right after merely listing slots. **Fix:** end the flow with the acting tool and keep the template there; or drop the template and let the model synthesise the search results.
 
 ### "Flow Without Differentiator"
 **Symptom:** two flows have semantically overlapping descriptions. **Why wrong:** the classifier cannot distinguish them. **Fix:** add clear differentiators ("NEW" vs. "ALREADY BOOKED", "reserve" vs. "move").

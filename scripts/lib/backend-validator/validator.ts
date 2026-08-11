@@ -5,7 +5,7 @@
  * All validation logic lives in ./validators/ modules.
  */
 
-import type { StructuredLogicChatMode } from '../structured-logic';
+import type { StructuredLogicChatMode } from './structured-logic';
 import { validateStructuredLogicMinimum } from './structured-logic-minimum';
 
 export { validateStructuredLogicMinimum } from './structured-logic-minimum';

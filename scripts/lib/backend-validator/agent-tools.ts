@@ -7,7 +7,7 @@
  */
 
 import { buildEmptyStructuredLogicForMode } from './structured-logic-skeleton';
-import type { StructuredLogic, StructuredLogicChatMode } from '../structured-logic';
+import type { StructuredLogic, StructuredLogicChatMode } from './structured-logic';
 import { StructuredLogicWireJsonSchema } from './structured-logic-wire-schema';
 import { validateStructuredLogic, detectGaps } from './validator';
 

@@ -70,7 +70,14 @@ export const FULL_MODE_ENHANCEMENTS: Record<string, string> = {
     'Debe llamarse DESPUES de resolve_patient. ' +
     'patientId debe ser el UUID real del paciente devuelto por resolve_patient. ' +
     'NUNCA usar "NEW_PATIENT" ni placeholders como patientId. ' +
-    'Siempre confirma con el paciente antes de llamar.',
+    'En un flujo de reagendamiento, reutiliza exclusivamente el target cancelado persistido por el backend; ' +
+    'no crees un care plan ni sesiones nuevas. Siempre confirma con el paciente antes de llamar.',
+
+  cancel_for_rescheduling:
+    'Cancelar y liberar preparatoriamente una unica cita existente para poder buscar otra fecha. ' +
+    'USAR solo cuando el flujo de reagendamiento lo declare y antes de preguntar la nueva fecha. ' +
+    'El backend valida el bloque y devuelve el target persistido con care plan y sesiones; nunca inventes esos IDs. ' +
+    'NO usar para una cancelacion definitiva: para eso usa manage_schedule_block_status.',
 
   manage_schedule_block_status:
     'Gestionar el estado de una cita existente: confirmar, cancelar, o marcar en camino. ' +
@@ -86,11 +93,14 @@ export const FULL_MODE_ENHANCEMENTS: Record<string, string> = {
   resolve_patient:
     'Identificar o crear un paciente antes de agendar. ' +
     'USAR ANTES de schedule_block cuando no se conozca la identidad del paciente. ' +
-    'SIEMPRE preguntar y usar los datos que el usuario proporcione en la conversacion: nombre y apellido. ' +
-    'El numero de telefono tambien debe venir de la conversacion, salvo que el usuario pida EXPLICITAMENTE usar su propio numero de contacto de Kommo ("a este numero", "mi numero"). En ese caso, enviar useInterlocutorPhone=true. ' +
+    'REGLA DE ORO: Solo puedes pasar firstName, lastName o phone si el INTERLOCUTOR los dijo EXPLICITAMENTE en su mensaje actual o en mensajes anteriores de ESTA conversacion. ' +
+    'NUNCA uses el nombre, apellido ni telefono que aparecen en CALLER_PHONE, ASSOCIATED_PATIENTS o en los datos del contacto de Kommo. ' +
+    'Esos datos son solo de referencia; el paciente debe confirmarlos o proporcionarlos explicitamente. ' +
+    'Si el paciente dice "quiero una cita" sin mencionar nombre, apellido ni telefono, deja TODOS esos campos vacios y el sistema te pedira que los preguntes. ' +
+    'El numero de telefono solo puede venir de la conversacion, salvo que el paciente diga EXPLICITAMENTE "a este numero", "mi numero" o "para mi". ' +
+    'En ese caso, enviar useInterlocutorPhone=true y deja phone vacio. ' +
     'Si falta alguno de estos datos, el sistema retorna status "needs_info" y pide los datos faltantes. ' +
     'El sistema busca por telefono + nombre + apellido; si no encuentra ningun paciente, lo crea automaticamente con los datos proporcionados. ' +
-    'NO asumir nombre ni apellido del contacto de Kommo. ' +
     'El campo isForInterlocutor solo sirve para auditoria/logging; NO altera la busqueda ni la creacion.',
 
   resolve_treatment:
@@ -112,6 +122,8 @@ export const FULL_MODE_ENHANCEMENTS: Record<string, string> = {
     'Buscar paciente por numero de telefono, nombre o apellido. ' +
     'Busqueda pura: NUNCA crea pacientes. ' +
     'USAR para identificar al paciente o revisar su historial de citas. ' +
+    'REGLA DE ORO: Solo busca con datos que el INTERLOCUTOR haya proporcionado EXPLICITAMENTE en esta conversacion. ' +
+    'NUNCA uses CALLER_PHONE, ASSOCIATED_PATIENTS ni datos del contacto de Kommo como criterio de busqueda automatico. ' +
     'La respuesta incluye isNew: true cuando no encuentra pacientes y isNew: false cuando encuentra uno o mas. ' +
     'Usar al inicio de la conversacion para ver si es paciente existente. ' +
     'Si no hay telefono, busca por nombre+apellido. Retorna datos personales y citas programadas.',

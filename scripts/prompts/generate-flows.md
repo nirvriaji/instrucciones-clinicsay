@@ -62,9 +62,10 @@ Nueva cita (new_appointment_scheduling, selection.excludedCapabilities: ["hasRes
   ⚠️ INVARIANTE ANTI-CIRCULAR: 'required' solo consume capabilities establecidas por steps ANTERIORES; un step NUNCA requiere lo que establece su propia tool (el validador lo rechaza como error bloqueante).
 
 Reprogramar cita existente (existing_appointment_rescheduling, selection.requiredCapabilities: ["hasActiveAppointment"]):
-  Step 1: resolve_availability_query (resolver nuevas fechas, NO cancelar todavía)
-  Step 2: check_availability (buscar nuevos horarios)
-  Step 3: schedule_block (agendar la nueva cita; la antigua se cancela automáticamente después)
+  Step 1: cancel_for_rescheduling (cancelar y liberar preparatoriamente la cita elegible; el backend conserva el target)
+  Step 2: resolve_availability_query (resolver nuevas fechas)
+  Step 3: check_availability (buscar nuevos horarios)
+  Step 4: schedule_block (agendar la nueva cita reutilizando el target persistido)
 ```
 
 **TASKS-ONLY MODE:**
@@ -241,13 +242,15 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 
 ## FLOW SAFETY RULES (el backend RECHAZA el JSON si se viola alguna)
 
-S1. **NEVER poner una herramienta destructiva antes de su contraparte constructiva.** En particular, `manage_schedule_block_status` (cancel) NUNCA debe estar en un paso ANTERIOR a `schedule_block`, ni en el MISMO paso (con o sin `parallel: true`). Cancelar antes de que la nueva cita exista deja al paciente SIN CITA cuando no hay hueco o abandona la conversación. Esto ocurrió en producción.
+S1. **NEVER poner una herramienta destructiva antes de su contraparte constructiva.** En particular, `manage_schedule_block_status` (cancel definitivo) NUNCA debe estar en un paso ANTERIOR a `schedule_block`, ni en el MISMO paso (con o sin `parallel: true`). Cancelar antes de que la nueva cita exista deja al paciente SIN CITA cuando no hay hueco o abandona la conversación. Esto ocurrió en producción.
 
-S2. **Orden seguro de reagendamiento en full mode:** resolver fechas → buscar disponibilidad → agendar la NUEVA cita → cancelar la antigua. La cancelación es el ÚLTIMO movimiento del flujo y está adicionalmente bloqueada server-side hasta que la cita nueva exista.
+S2. **Orden de reagendamiento en full mode (patrón canónico obligatorio):**
+`cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`.
+El backend captura el target de la cita original al ejecutar `cancel_for_rescheduling` (paso 1) y lo reutiliza automáticamente en `schedule_block` (paso 4). La cancelación preparatoria vive en `steps`, NO en `allowedTools`, y `manage_schedule_block_status` está PROHIBIDO en este flow.
 
-S3. Un flujo de reagendamiento (intent `existing_appointment_rescheduling`) en full mode que puede cancelar DEBE también poder agendar: `schedule_block` debe estar presente en steps o allowedTools.
+S3. Un flujo de reagendamiento (intent `existing_appointment_rescheduling`) en full mode DEBE declarar `cancel_for_rescheduling` como paso 1 cuando incluye `schedule_block`.
 
-S3b. `allowedTools` es una lista blanca SIN ORDEN, así que nunca puede anclar el orden seguro. Si `manage_schedule_block_status` es un paso numerado, entonces `schedule_block` debe TAMBIÉN ser un paso numerado, colocado ANTES. La forma segura por defecto: la cancelación vive en `allowedTools` (último movimiento, bloqueada server-side) mientras `schedule_block` es el paso terminal.
+S3b. `allowedTools` es una lista blanca SIN ORDEN y no puede anclar el orden seguro. En reagendamiento full mode, las tools de escritura (`cancel_for_rescheduling`, `schedule_block`) deben vivir en `steps` numeradas en el orden canónico. `manage_schedule_block_status` NO debe aparecer en este flow.
 
 S4. `responseTemplate` se inyecta SOLO en las tools del paso TERMINAL (el ÚLTIMO elemento del array de steps). Por tanto, el paso terminal debe ser la herramienta que realiza la acción real (`schedule_block`, `manage_schedule_block_status`, `create_task`). Una plantilla cuyo paso terminal solo contiene tools de búsqueda (`check_availability`, `resolve_*`, `lookup_patient`, `query_*`) es RECHAZADA: hace que el bot anuncie como hecho algo que todavía no ha hecho.
 
@@ -265,7 +268,7 @@ S8. Un flujo cuyo intent es `existing_appointment_*` Y que usa una tool de escri
 - [ ] Un flow por cada intent que requiere acción
 - [ ] En full mode: flows de booking con patrón canónico de 5 steps (entidades → disponibilidad → paciente → agenda al final; `selection` para distinguir nuevo/existente; SIN required circulares: un step nunca requiere lo que establece su propia tool)
 - [ ] En tasks-only mode: NINGUNA scheduling tool (check_availability, schedule_block, etc.)
-- [ ] responseTemplate presente en flows de manage_schedule_block_status
+ - [ ] responseTemplate presente en flows de acción real (schedule_block, manage_schedule_block_status, create_task, cancel_for_rescheduling)
 - [ ] allowedTools incluye exactamente las tools del flow (si se usa)
 - [ ] Steps ordenados con dependencias correctas
 - [ ] parallel=true solo cuando steps son independientes
