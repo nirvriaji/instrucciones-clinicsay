@@ -185,8 +185,8 @@ export type ToolFlow = {
   responseTemplate?: string;
   /**
    * Optional response mode for the template.
-   * - 'literal': respond with the exact template text (default).
-   * - 'model': use the template as a base and adapt to the patient's question.
+   * - 'literal': respond with the exact template text; reserved for deterministic appointment operations.
+   * - 'model': use the template as a base and adapt to the patient's question (default).
    */
   responseTemplateMode?: 'literal' | 'model';
   /** Optional explicit tool whitelist for the LLM in this flow */

@@ -138,7 +138,8 @@ function injectFlowResponseTemplates(
     }
 
     // Resolve template reference: if the flow.responseTemplate matches a key
-    // in logic.responseTemplates, use the actual text; otherwise treat as literal.
+    // in logic.responseTemplates, use the actual text; otherwise treat it as
+    // an inline model template unless the flow explicitly opts into literal.
     const resolvedTemplate =
       logic.responseTemplates?.[flow.responseTemplate]?.text ?? flow.responseTemplate;
 

@@ -113,7 +113,9 @@ Cualquier solicitud de agendamiento:
 ### 5. responseTemplate
 - **OBLIGATORIO** en flows que usan `manage_schedule_block_status`
 - Opcional en otros flows
-- Si presente, debe ser texto exacto que el bot usará (mode: "literal")
+- Si presente, usa `responseTemplateMode: "model"` por defecto para que la IA adapte la respuesta al contexto.
+- Solo usa `responseTemplateMode: "literal"` en flows de confirmación, cancelación definitiva y llegada tarde/en camino de citas existentes.
+- Un flow informativo como `existing_appointment_reschedule_inquiry` debe usar `model`; nunca fuerces una pregunta literal genérica.
 - Si ausente, el LLM genera respuesta natural (o usa fallback del backend)
 
 ### 6. allowedTools

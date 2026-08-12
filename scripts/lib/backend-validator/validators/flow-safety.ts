@@ -87,6 +87,26 @@ const APPOINTMENT_WRITING_TOOLS_TEXT = APPOINTMENT_WRITING_TOOLS.join('", "');
 const ACTIVE_APPOINTMENT_CAPABILITY = 'hasActiveAppointment';
 
 /**
+ * Literal responses are reserved for deterministic appointment operations.
+ * Conversational flows must remain model-adaptable; otherwise a generic
+ * sentence can be emitted without considering the latest context.
+ */
+const LITERAL_APPOINTMENT_INTENTS = new Set([
+  'existing_appointment_confirmation',
+  'existing_appointment_cancellation',
+  'existing_appointment_delay_notice',
+]);
+
+const LITERAL_APPOINTMENT_TEMPLATE_KEYS = new Set([
+  'confirmation',
+  'appointment_confirmed',
+  'cancellation',
+  'appointment_cancelled',
+  'on_the_way',
+  'existing_appointment_delay_notice',
+]);
+
+/**
  * Flow safety rules stated for the LLMs that draft the JSON with the advisor.
  *
  * Single source of truth: the builder prompts embed this text so the model is
@@ -700,6 +720,40 @@ function validateInformationalTemplate(
   );
 }
 
+function validateResponseTemplateModes(sl: Partial<StructuredLogic>, errors: string[]): void {
+  const flows = sl.toolOrchestration?.flows ?? {};
+  const templates = sl.responseTemplates ?? {};
+
+  for (const [flowName, flow] of Object.entries(flows)) {
+    if (!flow || typeof flow !== 'object' || flow.responseTemplateMode !== 'literal') continue;
+    if (LITERAL_APPOINTMENT_INTENTS.has(flow.intent)) continue;
+
+    errors.push(
+      `${header(flowName, flow)} usa responseTemplateMode "literal" para una respuesta conversacional. ` +
+        `POR QUÉ ES PELIGROSO: la IA puede repetir una frase rígida sin adaptar la respuesta al contexto. ` +
+        `CÓMO SE CORRIGE: usa responseTemplateMode "model". Literal solo está permitido para confirmación, ` +
+        `cancelación definitiva y avisos de llegada tarde/en camino.`,
+    );
+  }
+
+  for (const [templateKey, template] of Object.entries(templates)) {
+    if (!template || typeof template !== 'object' || template.mode !== 'literal') continue;
+    if (LITERAL_APPOINTMENT_TEMPLATE_KEYS.has(templateKey)) continue;
+
+    const referencingFlows = Object.values(flows).filter(
+      (flow) => flow && typeof flow === 'object' && flow.responseTemplate === templateKey,
+    );
+    if (referencingFlows.length > 0 && referencingFlows.every((flow) => LITERAL_APPOINTMENT_INTENTS.has(flow.intent))) continue;
+
+    errors.push(
+      `responseTemplates["${templateKey}"] usa mode "literal" fuera de una operación de cita permitida. ` +
+        `POR QUÉ ES PELIGROSO: puede forzar una respuesta rígida en una conversación informativa o de seguimiento. ` +
+        `CÓMO SE CORRIGE: cambia su mode a "model". Literal solo está permitido para confirmación, ` +
+        `cancelación definitiva y avisos de llegada tarde/en camino.`,
+    );
+  }
+}
+
 /**
  * Validate advisor-authored flow safety invariants.
  * Every finding is blocking: a silent degradation is worse than a loud error.
@@ -712,6 +766,7 @@ export function validateFlowSafety(
   const flows = sl.toolOrchestration?.flows ?? {};
 
   validateIntentCatalogNamespaces(sl, errors);
+  validateResponseTemplateModes(sl, errors);
 
   for (const [flowName, flow] of Object.entries(flows)) {
     if (!flow || typeof flow !== 'object') continue;

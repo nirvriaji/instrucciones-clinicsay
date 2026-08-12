@@ -41,12 +41,13 @@ Además, crea templates para cada flow que use `responseTemplate`:
 - `booking_options`: "He encontrado estas opciones: {options}. ¿Cuál prefieres?"
 - `booking_confirmed`: "Tu cita ha quedado agendada para {fecha} a las {hora}. Te esperamos."
 
-### 5. mode de template
+### 5. mode de template (REGLA BLOQUEANTE)
 - `"literal"`: El bot usa el texto EXACTO (reemplazando variables si las hay)
 - `"model"`: El LLM genera respuesta libre basada en el contexto
-- Por defecto usa `"model"` para respuestas conversacionales, informativas, de reserva/reprogramación, consultas, despedidas, mantener cita y tareas.
-- Usa `"literal"` solo para respuestas operativas de una cita existente: confirmación, cancelación definitiva y aviso de llegada tarde/en camino, incluidos recordatorios.
-- Esta es una recomendación para el asesor, no una validación bloqueante: puede elegir `literal` intencionadamente cuando lo necesite.
+- Usa `"model"` obligatoriamente para respuestas conversacionales, informativas, de reserva/reprogramación, consultas, despedidas, mantener cita y tareas.
+- Usa `"literal"` únicamente para respuestas operativas de una cita existente: confirmación, cancelación definitiva y aviso de llegada tarde/en camino, incluidos recordatorios.
+- Esta regla aplica tanto a `responseTemplates.<key>.mode` como a `flow.responseTemplateMode`.
+- Un template conversacional en `literal` es un error bloqueante: impide que la IA adapte la respuesta al contexto y puede producir respuestas rígidas o incorrectas.
 - En una consulta informativa de reagendamiento, el texto debe pedir confirmación y nunca afirmar que la cita ya cambió.
 - La cancelación por no asistencia debe confirmar solo la cancelación. La oferta de una cita nueva pertenece a la continuación posterior a la aceptación del paciente.
 - En tasks-only, no presupongas que toda solicitud genera una tarea: el asesor puede elegir cancelación-only, cancelación + tarea, tarea-only o respuesta informativa sin acción.
@@ -117,4 +118,6 @@ Las sedes pueden usar estos placeholders o NO usarlos. Ambos son válidos:
 - [ ] Full mode tiene templates para booking (options, confirmed)
 - [ ] Texto plano, sin markdown ni emojis
 - [ ] Variables en formato [variable]
-- [ ] mode es "literal" o "model"
+- [ ] Todos los templates conversacionales usan `mode: "model"`
+- [ ] Solo confirmación, cancelación definitiva y llegada tarde/en camino usan `mode: "literal"`
+- [ ] Los flows mantienen la misma política en `responseTemplateMode`
