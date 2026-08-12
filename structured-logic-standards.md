@@ -97,7 +97,7 @@ During rescheduling, the preparatory cancellation must never run before — or a
 
 **Safe reschedule order (full mode):** `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`. The preparatory cancellation captures and persists the backend-owned target; `manage_schedule_block_status` is not the cancellation route for this flow. The original professional is a backend preference, not a required patient choice. Before booking, the backend reconciles captured sessions against current state and keeps only `ACTIVE` + `PENDING` sessions for the captured treatment: reuse `CARE_PLAN` when any remain, or use a backend-authorized `STANDALONE` fallback when none remain. The LLM/advisor does not select the mode or provide internal metadata.
 
-**Full booking identity rule:** before a full booking flow executes `schedule_block`, it must execute `resolve_patient`. The patient-resolution step may occur before or after availability is resolved and checked; the invariant is only that identity is resolved before the appointment is reserved.
+**Full booking identity rule:** before a new full booking flow executes `schedule_block`, it must execute `resolve_patient`. A rescheduling flow with a backend-owned `hasCancelledRescheduleTarget` is the exception: the target already identifies the original patient and `resolve_patient` must not replace that identity. The patient-resolution step for new bookings may occur before or after availability is resolved and checked; the invariant is only that identity is resolved before the appointment is reserved.
 
 A reschedule flow (`existing_appointment_rescheduling`) in `full` mode that can cancel MUST also be able to book: `schedule_block` has to be present in `steps` or `allowedTools`.
 
@@ -162,6 +162,11 @@ type ToolOrchestration = {
 type ToolFlow = {
   intent: string;             // Required. Semantic intent reference (must exist in the intents catalog).
   description: string;        // Differentiates this flow's intent from similar ones (semantic, no keywords).
+  selection?: {
+    requiredCapabilities?: string[];             // All required capabilities.
+    alternativeRequiredCapabilities?: string[];  // Any one can satisfy the selection instead.
+    excludedCapabilities?: string[];
+  };
   steps: ToolStep[];          // Ordered flow steps.
   responseTemplate?: string;   // Optional. Exact text the bot MUST use after completing this flow.
   allowedTools?: string[];    // Optional. Explicit tool whitelist for the LLM in this flow.

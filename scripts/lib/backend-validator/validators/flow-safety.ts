@@ -590,11 +590,17 @@ function validateActiveAppointmentGate(flowName: string, flow: ToolFlow, errors:
   if (mutatingTools.length === 0) return;
 
   const required = flow.selection?.requiredCapabilities;
-  if (Array.isArray(required) && required.includes(ACTIVE_APPOINTMENT_CAPABILITY)) return;
+  const alternatives = flow.selection?.alternativeRequiredCapabilities;
+  const hasActiveAppointmentGate = Array.isArray(required) && required.includes(ACTIVE_APPOINTMENT_CAPABILITY);
+  const hasRescheduleTargetGate =
+    flow.intent === 'existing_appointment_rescheduling' &&
+    Array.isArray(alternatives) &&
+    alternatives.includes('hasCancelledRescheduleTarget');
+  if (hasActiveAppointmentGate || hasRescheduleTargetGate) return;
 
   errors.push(
     `${header(flowName, flow)}: actúa sobre una cita que el paciente YA tiene y la modifica ` +
-      `(${mutatingTools.join(', ')}), pero no declara "selection": { "requiredCapabilities": ["${ACTIVE_APPOINTMENT_CAPABILITY}"] }. ` +
+      `(${mutatingTools.join(', ')}), pero no declara una capacidad de selección válida. ` +
       `POR QUÉ ES PELIGROSO: sin esa puerta determinista el flujo puede seleccionarse cuando el paciente NO tiene ninguna cita activa ` +
       `(por ejemplo con un "sí" suelto), y el bot intenta confirmar, mover o cancelar una cita inexistente o la equivocada. ` +
       `CÓMO SE CORRIGE: añade "selection": { "requiredCapabilities": ["${ACTIVE_APPOINTMENT_CAPABILITY}"] } al flujo; ` +
@@ -626,10 +632,18 @@ function validateFullReschedulingContract(
   if (mode !== 'full' || flow.intent !== 'existing_appointment_rescheduling') return;
 
   const requiredCapabilities = flow.selection?.requiredCapabilities;
-  if (!Array.isArray(requiredCapabilities) || !requiredCapabilities.includes(ACTIVE_APPOINTMENT_CAPABILITY)) {
+  const alternativeRequiredCapabilities = flow.selection?.alternativeRequiredCapabilities;
+  const hasActiveAppointmentGate =
+    Array.isArray(requiredCapabilities) && requiredCapabilities.includes(ACTIVE_APPOINTMENT_CAPABILITY);
+  const hasRescheduleTargetGate =
+    Array.isArray(alternativeRequiredCapabilities) &&
+    alternativeRequiredCapabilities.includes('hasCancelledRescheduleTarget');
+  if (!hasActiveAppointmentGate && !hasRescheduleTargetGate) {
     errors.push(
       `${header(flowName, flow)} en modo full debe declarar "selection.requiredCapabilities" con ` +
-        `"${ACTIVE_APPOINTMENT_CAPABILITY}". La reprogramación solo puede actuar sobre una cita activa.`
+        `"${ACTIVE_APPOINTMENT_CAPABILITY}" o "alternativeRequiredCapabilities" con ` +
+        `"hasCancelledRescheduleTarget". La reprogramación debe tener una cita activa ` +
+        `o un target backend-owned pendiente.`
     );
   }
 

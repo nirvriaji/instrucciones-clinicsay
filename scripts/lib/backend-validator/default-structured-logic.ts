@@ -278,9 +278,6 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
       cancel_appointment: {
         intent: 'existing_appointment_cancellation',
         selection: {
-          // Deterministic gate: only eligible when a real appointment exists
-          // (future non-cancelled block or reminder link). Without it, a bare
-          // "sí" can never produce a fake action on a non-existent appointment.
           requiredCapabilities: ['hasActiveAppointment'],
         },
         description: 'Paciente comunica que no podra asistir a una cita ya reservada y necesita anularla.',
@@ -308,6 +305,7 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
           // (future non-cancelled block or reminder link). Without it, a bare
           // "sí" can never produce a fake action on a non-existent appointment.
           requiredCapabilities: ['hasActiveAppointment'],
+          alternativeRequiredCapabilities: ['hasCancelledRescheduleTarget'],
         },
         description:
           'Paciente quiere cambiar la fecha u hora de una cita YA AGENDADA. ' +

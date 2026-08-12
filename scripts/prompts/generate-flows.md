@@ -65,7 +65,7 @@ Nueva cita (new_appointment_scheduling):
   El asesor puede resolver al paciente antes de check_availability o después de mostrar disponibilidad, siempre antes de reservar.
   ⚠️ INVARIANTE ANTI-CIRCULAR: 'required' solo consume capabilities establecidas por steps ANTERIORES; un step NUNCA requiere lo que establece su propia tool (el validador lo rechaza como error bloqueante).
 
-Reprogramar cita existente (existing_appointment_rescheduling, selection.requiredCapabilities: ["hasActiveAppointment"]):
+Reprogramar cita existente (existing_appointment_rescheduling, selection.requiredCapabilities: ["hasActiveAppointment"] o alternativeRequiredCapabilities: ["hasCancelledRescheduleTarget"]):
   Step 1: cancel_for_rescheduling (cancelar y liberar preparatoriamente la cita elegible; el backend conserva el target y establece la capability de continuación)
   Step 2: resolve_availability_query (resolver nuevas fechas)
   Step 3: check_availability (buscar nuevos horarios, usando el profesional original como preferencia cuando sea posible)
@@ -198,7 +198,7 @@ Cualquier solicitud de agendamiento:
 
 ## GATE DETERMINISTA DEL CICLO DE VIDA DE CITAS (OBLIGATORIO)
 
-Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requiredCapabilities: ["hasActiveAppointment"]`:
+Los flujos que ACTÚAN sobre una cita existente llevan un gate determinista. Confirmar, cancelar, marcar llegada y mantener cita requieren `selection.requiredCapabilities: ["hasActiveAppointment"]`. Reprogramar acepta una cita activa o la continuidad backend-owned `alternativeRequiredCapabilities: ["hasCancelledRescheduleTarget"]`:
 
 | Flow | Nombre (full) | Nombre (tasks-only) |
 |------|---------------|---------------------|
@@ -213,7 +213,7 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 ```
 
 - **Determinista y del backend:** la capability se computa de datos (bloque futuro no cancelado o link de recordatorio), NUNCA del LLM.
-- **Sin cita real, el flow es inelegible por construcción:** un "sí" desnudo NUNCA produce acción ni mensaje falso ("He movido tu cita", "He cancelado tu cita", "¡Muchas gracias!", "tu cita sigue confirmada").
+- **Sin cita real ni target pendiente, el flow es inelegible por construcción:** un "sí" desnudo NUNCA produce acción ni mensaje falso ("He movido tu cita", "He cancelado tu cita", "¡Muchas gracias!", "tu cita sigue confirmada").
 - **NO llevan gate** (no escriben): `reschedule_inquiry`, `cancellation_inquiry`. **NO se aplica** a flujos custom de clases (ej: Pilates — dominio distinto).
 - **`existing_appointment_rescheduling` (descripción sin ambigüedad):** excluir explícitamente "el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita" — eso es `new_appointment_scheduling` (continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente: "muévela al jueves", "cámbiamela a la tarde", "adelántala una hora".
 - **Fallback elegante:** cuando todos son inelegibles, el LLM responde conversacionalmente (puede usar la plantilla `no_appointments` si existe) — nunca afirma una acción que no ocurrió.
@@ -286,6 +286,6 @@ S8. Un flujo cuyo intent es `existing_appointment_*` Y que usa una tool de escri
 - [ ] Steps ordenados con dependencias correctas
 - [ ] parallel=true solo cuando steps son independientes
 - [ ] Notes explicativas para cada step
-- [ ] **GATE ciclo de vida: los 5 flujos de acción sobre cita existente (confirm, reschedule, cancel, running-late, keep) llevan `selection.requiredCapabilities: ["hasActiveAppointment"]`**
+- [ ] **GATE ciclo de vida:** confirm, cancel, running-late y keep requieren `selection.requiredCapabilities: ["hasActiveAppointment"]`; reschedule requiere esa capability o `alternativeRequiredCapabilities: ["hasCancelledRescheduleTarget"]`.
 - [ ] `existing_appointment_rescheduling` excluye "elegir hora de opciones propuestas para cita nueva" en su descripción
 - [ ] **S1-S8 FLOW SAFETY: orden destructivo correcto, intents canónicos para flows que escriben citas, terminal template en paso de acción real, steps en orden ascendente**

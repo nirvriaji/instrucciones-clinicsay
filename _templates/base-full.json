@@ -406,6 +406,9 @@
         "selection": {
           "requiredCapabilities": [
             "hasActiveAppointment"
+          ],
+          "alternativeRequiredCapabilities": [
+            "hasCancelledRescheduleTarget"
           ]
         },
         "description": "Paciente quiere cambiar la fecha u hora de una cita YA AGENDADA. Incluye: (a) mover a otro dia, (b) adelantar/atrasar el MISMO dia, (c) corregir titular manteniendo mismo tratamiento, (d) restablecer cita tras cancelar en este turno.",

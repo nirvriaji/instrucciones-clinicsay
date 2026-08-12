@@ -31,6 +31,7 @@ export const CRITICAL_INTENTS: Array<{ category: string; description: string }> 
 export const TURN_START_CAPABILITIES = [
   'hasResolvedPatient',
   'hasActiveAppointment',
+  'hasCancelledRescheduleTarget',
   'hasConcreteDateTime',
 ] as const;
 export const TURN_START_CAPABILITY_SET = new Set<string>(TURN_START_CAPABILITIES);

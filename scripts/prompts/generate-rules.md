@@ -133,7 +133,7 @@ Operadores permitidos: `"equals"`, `"in"`, `"not_in"`, `"gt"`, `"lt"`, `"gte"`, 
     "description": "El paciente confirma asistencia a una cita existente con un afirmativo breve o respondiendo a un recordatorio.",
     "action": "allow",
     "priority": 0,
-    "note": "GUARDA DE EXISTENCIA: marcar CONFIRMADA solo si existe una cita activa en el contexto ASSOCIATED_PATIENTS o es respuesta a un recordatorio (IS_REMINDER_REPLY). Si el paciente responde afirmativo a una fecha/hora PROPUESTA por el bot para la que NO existe cita activa, NO marcar CONFIRMADA: continuar el agendamiento con new_appointment_scheduling (resolve_patient y schedule_block). El gate determinista de selection.requiredCapabilities=[hasActiveAppointment] en el flow impide activarlo sin cita real."
+     "note": "GUARDA DE EXISTENCIA: marcar CONFIRMADA solo si existe una cita activa en el contexto ASSOCIATED_PATIENTS o es respuesta a un recordatorio (IS_REMINDER_REPLY). Si el paciente responde afirmativo a una fecha/hora PROPUESTA por el bot para la que NO existe cita activa, NO marcar CONFIRMADA: continuar el agendamiento con new_appointment_scheduling (resolve_patient y schedule_block). El gate determinista de selection.requiredCapabilities=[hasActiveAppointment] en el flow impide activarlo sin cita real. Una reprogramacion pendiente se continua con su target backend-owned y no se convierte en confirmacion."
   },
   {
     "id": "cancel_existing_appointment",

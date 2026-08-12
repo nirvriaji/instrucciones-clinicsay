@@ -190,6 +190,8 @@ export function validateFlowsAndTools(
         );
         const required = (flow.selection as { requiredCapabilities?: unknown })
           .requiredCapabilities;
+        const alternatives = (flow.selection as { alternativeRequiredCapabilities?: unknown })
+          .alternativeRequiredCapabilities;
         const excluded = (flow.selection as { excludedCapabilities?: unknown })
           .excludedCapabilities;
         const validateCapabilityList = (list: unknown, name: string) => {
@@ -209,6 +211,7 @@ export function validateFlowsAndTools(
           });
         };
         validateCapabilityList(required, 'requiredCapabilities');
+        validateCapabilityList(alternatives, 'alternativeRequiredCapabilities');
         validateCapabilityList(excluded, 'excludedCapabilities');
       }
     }

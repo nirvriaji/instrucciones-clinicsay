@@ -66,9 +66,10 @@ export const StructuredLogicWireJsonSchema = {
                 type: ['object', 'null'],
                 properties: {
                   requiredCapabilities: { type: ['array', 'null'], items: { type: 'string' } },
+                  alternativeRequiredCapabilities: { type: ['array', 'null'], items: { type: 'string' } },
                   excludedCapabilities: { type: ['array', 'null'], items: { type: 'string' } },
                 },
-                required: ['requiredCapabilities', 'excludedCapabilities'],
+                required: ['requiredCapabilities', 'alternativeRequiredCapabilities', 'excludedCapabilities'],
                 additionalProperties: false,
               },
               steps: {

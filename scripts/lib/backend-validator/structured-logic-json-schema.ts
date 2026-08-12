@@ -67,6 +67,7 @@ export const StructuredLogicJsonSchema = {
                 type: ['object', 'null'],
                 properties: {
                   requiredCapabilities: { type: ['array', 'null'], items: { type: 'string' } },
+                  alternativeRequiredCapabilities: { type: ['array', 'null'], items: { type: 'string' } },
                   excludedCapabilities: { type: ['array', 'null'], items: { type: 'string' } },
                 },
                 additionalProperties: false,

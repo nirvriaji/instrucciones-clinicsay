@@ -31,6 +31,7 @@ export type WireFlow = {
   description: string;
   selection?: {
     requiredCapabilities?: string[] | null;
+    alternativeRequiredCapabilities?: string[] | null;
     excludedCapabilities?: string[] | null;
   } | null;
   steps: Array<{
@@ -102,7 +103,13 @@ export function toWireFormat(logic: StructuredLogic): WireStructuredLogic {
             flowName,
             intent: flow.intent,
             description: flow.description,
-            selection: flow.selection,
+            selection: flow.selection
+              ? {
+                  requiredCapabilities: flow.selection.requiredCapabilities ?? null,
+                  alternativeRequiredCapabilities: flow.selection.alternativeRequiredCapabilities ?? null,
+                  excludedCapabilities: flow.selection.excludedCapabilities ?? null,
+                }
+              : null,
             steps: flow.steps,
             responseTemplate: flow.responseTemplate,
             responseTemplateMode: flow.responseTemplateMode,
@@ -188,6 +195,9 @@ export function fromWireFormat(wire: WireStructuredLogic): StructuredLogic {
       flow.selection = {};
       if (entry.selection.requiredCapabilities != null) {
         flow.selection.requiredCapabilities = entry.selection.requiredCapabilities;
+      }
+      if (entry.selection.alternativeRequiredCapabilities != null) {
+        flow.selection.alternativeRequiredCapabilities = entry.selection.alternativeRequiredCapabilities;
       }
       if (entry.selection.excludedCapabilities != null) {
         flow.selection.excludedCapabilities = entry.selection.excludedCapabilities;

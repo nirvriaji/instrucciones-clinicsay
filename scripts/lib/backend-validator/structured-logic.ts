@@ -159,6 +159,8 @@ export type ToolFlowSelection = {
    * Only turn-start capabilities are allowed here (e.g., 'hasResolvedPatient').
    */
   requiredCapabilities?: string[];
+  /** At least one alternative can satisfy the selection instead. */
+  alternativeRequiredCapabilities?: string[];
   /** Capabilities that must ALL be absent for this flow to be eligible.
    * Only turn-start capabilities are allowed here (e.g., 'hasResolvedPatient').
    */
