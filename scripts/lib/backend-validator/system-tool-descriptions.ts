@@ -76,7 +76,7 @@ export const FULL_MODE_ENHANCEMENTS: Record<string, string> = {
   cancel_for_rescheduling:
     'Cancelar y liberar preparatoriamente una unica cita existente para poder buscar otra fecha. ' +
     'USAR solo cuando el flujo de reagendamiento lo declare y antes de preguntar la nueva fecha. ' +
-    'El backend valida el bloque y devuelve el target persistido con care plan y sesiones; nunca inventes esos IDs. ' +
+    'El backend valida el bloque y conserva el target persistido; nunca proporciones ni inventes IDs internos, metadata o modos de reserva. ' +
     'NO usar para una cancelacion definitiva: para eso usa manage_schedule_block_status.',
 
   manage_schedule_block_status:

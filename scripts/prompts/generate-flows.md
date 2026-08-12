@@ -46,7 +46,7 @@ Cada intent que requiere acción del bot DEBE tener al menos un flow:
 
 **Contrato semántico de citas existentes (AMBOS MODOS):**
 - `existing_appointment_reschedule_inquiry` pregunta si se puede cambiar la cita; no confirma, cancela, busca slots ni reserva.
-- `existing_appointment_rescheduling` solo se activa ante una aceptación explícita y, en full, usa `cancel_for_rescheduling` -> `resolve_availability_query` -> `check_availability` -> `schedule_block`.
+- `existing_appointment_rescheduling` solo se activa ante una aceptación explícita y, en full, usa `cancel_for_rescheduling` -> `resolve_availability_query` -> `check_availability` -> `schedule_block`. El target, su metadata y el modo efectivo de reserva son backend-owned: no los expongas ni los pidas al asesor o al LLM.
 - La no asistencia es cancelación definitiva: usa `manage_schedule_block_status`, ofrece una nueva cita y espera aceptación antes de continuar `new_appointment_scheduling`.
 - Usa estados internos descriptivos para continuaciones, nunca ids de intent nuevos. Los recordatorios siguen usando sus flows actuales de confirmación y cancelación, sin cambios.
 - El asesor puede añadir `create_task` o pasos custom si respeta las tools permitidas, las capacidades previas y el orden seguro; no hay combinaciones obligatorias fuera de las invariantes del backend.
@@ -66,10 +66,10 @@ Nueva cita (new_appointment_scheduling):
   ⚠️ INVARIANTE ANTI-CIRCULAR: 'required' solo consume capabilities establecidas por steps ANTERIORES; un step NUNCA requiere lo que establece su propia tool (el validador lo rechaza como error bloqueante).
 
 Reprogramar cita existente (existing_appointment_rescheduling, selection.requiredCapabilities: ["hasActiveAppointment"]):
-  Step 1: cancel_for_rescheduling (cancelar y liberar preparatoriamente la cita elegible; el backend conserva el target)
+  Step 1: cancel_for_rescheduling (cancelar y liberar preparatoriamente la cita elegible; el backend conserva el target y establece la capability de continuación)
   Step 2: resolve_availability_query (resolver nuevas fechas)
-  Step 3: check_availability (buscar nuevos horarios)
-  Step 4: schedule_block (agendar la nueva cita reutilizando el target persistido)
+  Step 3: check_availability (buscar nuevos horarios, usando el profesional original como preferencia cuando sea posible)
+  Step 4: schedule_block (el backend reconcilia sesiones ACTIVE + PENDING del tratamiento capturado: reutiliza CARE_PLAN si quedan sesiones y puede autorizar STANDALONE si no queda ninguna; el LLM no elige el modo)
 
   Excepción para fecha y hora concretas ya presentes al inicio del turno:
   selection.requiredCapabilities incluye "hasConcreteDateTime".
@@ -90,7 +90,7 @@ Cualquier solicitud de agendamiento:
 - `step`: número secuencial (1, 2, 3...)
 - `tools`: array de strings (tool names)
 - `parallel`: `true` solo si las tools no dependen entre sí
-- `required`: array de **capability flags** que deben estar presentes para ejecutar este step. NUNCA tool names. Flags válidas: `hasResolvedTreatment`, `hasResolvedPatient`, `hasResolvedProfessional`, `hasShownSlots`, `hasSelectedSlot`, `hasCreatedAppointment`, `hasCreatedTask`, `hasResolvedAvailabilityQuery`, `hasConcreteDateTime`. Ejemplo: `["hasResolvedPatient"]` en el step final de booking. Si no hay requirements, usar `[]`. `hasConcreteDateTime` es una capability de inicio de turno y solo significa que el paciente ya dio fecha Y hora concretas; habilita omitir `resolve_availability_query` en un flow full de reagendamiento. **INVARIANTE TÉCNICO (bloqueante):** la flag solo puede CONSUMIRSE; debe haber sido establecida por tools de steps ANTERIORES (`resolve_treatment`→`hasResolvedTreatment`, `resolve_patient`/`lookup_patient`→`hasResolvedPatient`, `resolve_professional`→`hasResolvedProfessional`, `check_availability`→`hasShownSlots`, `schedule_block`→`hasCreatedAppointment`, `create_task`→`hasCreatedTask`, `resolve_availability_query`→`hasResolvedAvailabilityQuery`). Un step que requiere lo que su propia tool establece es una dependencia circular y bloquea el flow en runtime.
+- `required`: array de **capability flags** que deben estar presentes para ejecutar este step. NUNCA tool names. Flags válidas: `hasResolvedTreatment`, `hasResolvedPatient`, `hasResolvedProfessional`, `hasShownSlots`, `hasSelectedSlot`, `hasCreatedAppointment`, `hasCreatedTask`, `hasResolvedAvailabilityQuery`, `hasCancelledRescheduleTarget`, `hasConcreteDateTime`. Ejemplo: `["hasResolvedPatient"]` en el step final de booking. Si no hay requirements, usar `[]`. `hasCancelledRescheduleTarget` solo indica que el backend capturó un target elegible; no contiene ni solicita metadata interna. `hasConcreteDateTime` solo significa que el paciente ya dio fecha Y hora concretas. **INVARIANTE TÉCNICO (bloqueante):** la flag solo puede CONSUMIRSE; debe haber sido establecida por tools de steps ANTERIORES (`cancel_for_rescheduling`→`hasCancelledRescheduleTarget`, `resolve_treatment`→`hasResolvedTreatment`, `resolve_patient`/`lookup_patient`→`hasResolvedPatient`, `resolve_professional`→`hasResolvedProfessional`, `check_availability`→`hasShownSlots`, `schedule_block`→`hasCreatedAppointment`, `create_task`→`hasCreatedTask`, `resolve_availability_query`→`hasResolvedAvailabilityQuery`). Un step que requiere lo que su propia tool establece es una dependencia circular y bloquea el flow en runtime.
 - `note`: explicación para el LLM de qué hacer en este step
 - **NO usar `condition` dentro de steps.** El schema del backend solo permite: `step`, `tools`, `parallel`, `required`, `note`. Si un step tiene una condición (ej: "solo si tiene múltiples citas"), escríbela en el campo `note`.
 

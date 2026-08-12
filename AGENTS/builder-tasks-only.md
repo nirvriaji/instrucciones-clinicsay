@@ -110,6 +110,7 @@ Las 6 tools disponibles en este modo son:
 - `create_task` no es obligatorio en ningún flow. El asesor puede elegir explícitamente: cancelación solamente; cancelación seguida de tarea; tarea sin cancelación; o respuesta informativa sin acción. Si configura cancelación + tarea, los pasos deben ser secuenciales y ejecutar `create_task` solo después de que la cancelación haya tenido éxito.
 - `existing_appointment_reschedule_inquiry` solo informa y pide confirmación: nunca consulta disponibilidad ni intenta cancelar/reagendar.
 - Los estados internos verbose describen continuaciones conversacionales y no son intents nuevos. Las respuestas a recordatorios conservan sus flows de confirmación/cancelación sin cambios.
+- En tasks-only, el asesor mantiene libertad para elegir cancelación solamente, cancelación seguida de `create_task`, `create_task` sin cancelación o respuesta informativa para solicitudes de reagendamiento. No se configuran campos internos del target ni modos de reserva.
 - `lookup_patient` es solo lectura; busca pacientes existentes pero no crea nuevos.
 - Los `steps` de los flows deben referenciar únicamente las 6 tools de este modo.
 

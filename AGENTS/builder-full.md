@@ -96,7 +96,7 @@ Las 13 tools disponibles en este modo son:
 
 - `check_availability` — Consultar disponibilidad de horarios. Retorna slots con doctor_id y sala_id.
 - `schedule_block` — Crear cita real. Genera CarePlan, PlannedSessions y ScheduleBlock. Requiere `check_availability` previo y una identidad resuelta en un step anterior.
-- `cancel_for_rescheduling` — Cancelar preparatoriamente una cita existente para reprogramarla. El backend captura el target (carePlanId + plannedSessionIds) y lo conserva para reutilizar en el `schedule_block` posterior. Solo usar en flujos de `existing_appointment_rescheduling`.
+- `cancel_for_rescheduling` — Cancelar preparatoriamente una cita existente para reprogramarla. El backend captura y conserva el target; el asesor/LLM no proporciona ni construye sus datos internos. Solo usar en flujos de `existing_appointment_rescheduling`.
 - `manage_schedule_block_status` — Gestionar UNA cita existente (confirmar, cancelar definitivo, marcar en camino). NO usar para cancelar antes de reagendar; eso es `cancel_for_rescheduling`.
 - `manage_all_schedule_blocks_for_date` — Gestionar TODAS las citas de un paciente en una fecha específica.
 - `create_task` — Crear tarea administrativa para seguimiento humano. Solo para casos especiales.
@@ -119,6 +119,8 @@ Las 13 tools disponibles en este modo son:
 - `check_availability` debe ejecutarse antes de `schedule_block`.
 - Una consulta de reagendamiento (`existing_appointment_reschedule_inquiry`) es informativa: no cancela, consulta disponibilidad ni reserva. La confirmación explícita debe pasar a un flow separado de `existing_appointment_rescheduling`.
 - El orden completo de reagendamiento es `cancel_for_rescheduling` -> `resolve_availability_query` -> `check_availability` -> `schedule_block`. Solo puede omitirse `resolve_availability_query` si `hasConcreteDateTime` está declarado al inicio del turno.
+- En reagendamiento, el profesional original se conserva como preferencia para `check_availability`; si no hay disponibilidad, se aplica la política de la sede.
+- Después de cancelar preparatoriamente, el backend reconcilia el target con el estado actual: reutiliza únicamente sesiones `ACTIVE` + `PENDING` del tratamiento capturado. Si quedan sesiones reutilizables, `schedule_block` conserva el plan (`CARE_PLAN`); si no queda ninguna, el backend puede autorizar el fallback `STANDALONE` manteniendo paciente, tratamiento y preferencia de profesional. El LLM no selecciona ese modo.
 - La cancelación definitiva, incluida la no asistencia, usa `manage_schedule_block_status`; después de cancelar, ofrecer una nueva cita y solo continuar `new_appointment_scheduling` cuando el paciente la acepte.
 - Mantén los estados internos descriptivos (incluidos los estados verbose de continuación) separados de los ids canónicos: no inventes intents nuevos para representar estados.
 - Los recordatorios y sus respuestas mantienen el flujo existente de confirmación/cancelación; no los conviertas en reagendamiento implícito.
@@ -533,7 +535,7 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
 #### Casos que el bot atiende directamente
 - Agendar nueva cita: flow de booking con `check_availability` + `schedule_block`.
 - Consultar disponibilidad: `check_availability`.
-- Reprogramar: `cancel_for_rescheduling` (captura y libera preparatoriamente el target) → `resolve_availability_query` → `check_availability` → `schedule_block` (reutiliza el target persistido). No sustituyas el primer paso por `manage_schedule_block_status`.
+   - Reprogramar: `cancel_for_rescheduling` (captura y libera preparatoriamente el target) → `resolve_availability_query` → `check_availability` → `schedule_block` (el backend decide la reutilización del target). No sustituyas el primer paso por `manage_schedule_block_status`.
 - Consultar citas existentes: el bot lee el contexto y responde directamente.
 - Confirmar/cancelar citas: `manage_schedule_block_status` o `manage_all_schedule_blocks_for_date`.
 
@@ -615,10 +617,10 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
     "requiredCapabilities": ["hasActiveAppointment"]
   },
   "steps": [
-    { "step": 1, "tools": ["cancel_for_rescheduling"], "parallel": false, "required": [], "note": "Cancelar y liberar preparatoriamente la cita elegible. El backend conserva el target y sus sesiones; no inventar carePlanId ni plannedSessionIds." },
+    { "step": 1, "tools": ["cancel_for_rescheduling"], "parallel": false, "required": [], "note": "Cancelar y liberar preparatoriamente la cita elegible. El backend conserva el target; no proporcionar ni inventar datos internos del plan o de sus sesiones." },
     { "step": 2, "tools": ["resolve_availability_query"], "parallel": false, "required": [], "note": "Resolver las nuevas fechas que pide el paciente despues de capturar el target." },
-    { "step": 3, "tools": ["check_availability"], "parallel": false, "required": [], "note": "Buscar nuevos horarios (condicion: dates_resolved). Mantener mismo professionalId de la cita original como preferencia. Para mismo dia: filtrar slots del dia actual." },
-    { "step": 4, "tools": ["schedule_block"], "parallel": false, "required": [], "note": "Agendar la NUEVA cita (condicion: slot_selected) reutilizando el target persistido CARE_PLAN. El backend toma carePlanId y plannedSessionIds del target cancelado." }
+    { "step": 3, "tools": ["check_availability"], "parallel": false, "required": [], "note": "Buscar nuevos horarios (condicion: dates_resolved). Mantener el profesional original como preferencia; si no hay disponibilidad, aplicar la política de la sede." },
+    { "step": 4, "tools": ["schedule_block"], "parallel": false, "required": [], "note": "Agendar la NUEVA cita (condicion: slot_selected). El backend reconcilia el target y decide CARE_PLAN con sesiones ACTIVE + PENDING o el fallback STANDALONE autorizado; no seleccionar ni enviar el modo." }
   ],
   "allowedTools": ["cancel_for_rescheduling", "resolve_availability_query", "check_availability", "schedule_block"]
 }
@@ -654,7 +656,9 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 >
 > **Descripción de `existing_appointment_rescheduling` (sin ambigüedad):** debe excluir explícitamente "el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita" — eso es `new_appointment_scheduling` (continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente.
 >
-> **`bookingMode` (config por sede, en `capabilities`):** `direct` = agendar al elegir slot (default recomendado: la respuesta de `schedule_block` ES la confirmación); `confirm-first` = pedir confirmación explícita antes de agendar. Va en el JSON de cada clínica, no en el estado de conversación.
+> **`bookingMode` (configuración opcional de la clínica, en `capabilities`):** `direct` = agendar al elegir slot (default recomendado: la respuesta de `schedule_block` es la confirmación); `confirm-first` = pedir confirmación explícita antes de agendar. No es estado de conversación.
+>
+> **Distinción importante:** `bookingMode` configura la reserva de una nueva cita. En reagendamiento, `CARE_PLAN` y `STANDALONE` son modos internos que el backend decide al reconciliar el target; el LLM y el asesor no seleccionan ni envían ese modo, metadata técnica o IDs internos.
 
 #### Flow: `cancel_existing_appointment`
 

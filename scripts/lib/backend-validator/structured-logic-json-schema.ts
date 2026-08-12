@@ -35,7 +35,7 @@ export const StructuredLogicJsonSchema = {
         bookingMode: {
           type: ['string', 'null'],
           enum: ['direct', 'confirm-first'],
-          description: 'Modo de agendamiento de la clínica: direct = agendar al elegir slot (default recomendado); confirm-first = pedir confirmación explícita antes de schedule_block.',
+          description: 'Configuración de reserva de la clínica: direct = agendar al elegir slot (default recomendado); confirm-first = pedir confirmación explícita antes de schedule_block. No confundir con el modo interno de reagendamiento CARE_PLAN|STANDALONE, que decide el backend.',
         },
       },
       required: ['sensitiveSituations', 'protocols'],

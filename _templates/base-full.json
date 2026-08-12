@@ -2,7 +2,8 @@
   "version": "1.0",
   "capabilities": {
     "sensitiveSituations": false,
-    "protocols": false
+    "protocols": false,
+    "bookingMode": "direct"
   },
   "identity": {
     "botName": "{{NOMBRE_BOT}}",
@@ -415,7 +416,7 @@
               "cancel_for_rescheduling"
             ],
             "parallel": false,
-            "note": "Cancelar y liberar preparatoriamente la cita elegible. El backend conserva el target y sus sesiones; no inventar carePlanId ni plannedSessionIds."
+            "note": "Cancelar y liberar preparatoriamente la cita elegible. El backend conserva el target; no proporcionar ni inventar datos internos del plan o de sus sesiones."
           },
           {
             "step": 2,
@@ -438,7 +439,7 @@
               "hasCancelledRescheduleTarget",
               "hasResolvedAvailabilityQuery"
             ],
-            "note": "Buscar nuevos horarios (condicion: dates_resolved). Mantener mismo professionalId de la cita original como preferencia. Para mismo dia: filtrar slots del dia actual."
+            "note": "Buscar nuevos horarios (condicion: dates_resolved). Mantener el profesional original como preferencia; si no hay disponibilidad, aplicar la política de la sede. Para mismo dia: filtrar slots del dia actual."
           },
           {
             "step": 4,
@@ -450,7 +451,7 @@
               "hasCancelledRescheduleTarget",
               "hasShownSlots"
             ],
-            "note": "Agendar la NUEVA cita (condicion: slot_selected) reutilizando el target persistido CARE_PLAN. El backend toma carePlanId y plannedSessionIds del target cancelado."
+            "note": "Agendar la NUEVA cita (condicion: slot_selected). El backend reconcilia el target y decide CARE_PLAN con sesiones ACTIVE + PENDING o el fallback STANDALONE autorizado; no seleccionar ni enviar el modo."
           }
         ],
         "allowedTools": [

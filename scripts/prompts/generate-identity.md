@@ -70,11 +70,9 @@ Estructura canónica (copiar del template y ajustar):
 ```
 
 - `sensitiveSituations` / `protocols`: booleanos, según la clínica los declare en sus notas.
-- **`bookingMode`** (OPCIONAL, decisión de cada clínica en SU JSON — es config de clínica, NO estado de conversación):
-  - `"direct"` = agendar apenas el paciente elige slot (**default recomendado**: la respuesta de `schedule_block` ES la confirmación).
-  - `"confirm-first"` = pedir confirmación explícita antes de agendar.
-  - Omitirlo si la clínica no lo decide (el default del backend aplica).
-  - NUNCA añadir `scheduling`, `products`, `shipping` ni `reminders` a capabilities: el modo se define externamente (`full` | `tasks-only`).
+- **`bookingMode`** (OPCIONAL, configuración de la clínica, no estado de conversación): `direct` = agendar al elegir slot (default recomendado; la respuesta de `schedule_block` es la confirmación); `confirm-first` = pedir confirmación explícita antes de agendar. Omitirlo si la clínica no lo decide y aplicar el default del backend.
+- No confundir este ajuste de reserva de una nueva cita con el modo interno de reagendamiento `CARE_PLAN` / `STANDALONE`: el backend conserva el target y decide ese modo. El asesor/LLM no debe seleccionarlo, enviarlo ni proporcionar metadata o IDs internos.
+- NUNCA añadir `scheduling`, `products`, `shipping` ni `reminders` a capabilities: el modo se define externamente (`full` | `tasks-only`).
 
 10. **additionalContacts**: Si hay contactos adicionales, DEBE ser array de objetos:
     ```json

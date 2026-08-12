@@ -175,7 +175,7 @@ export const TOOL_CANCEL_FOR_RESCHEDULING: ChatToolDefinition = {
   description:
     'Cancel and release one existing appointment as preparation for rescheduling. ' +
     'Use only in a configured rescheduling flow, before asking for or checking the new date. ' +
-    'The backend validates the unique eligible appointment and returns the persisted target; never provide carePlanId or plannedSessionIds.',
+    'The backend validates the unique eligible appointment and returns the persisted target; never provide internal plan or session identifiers.',
   parameters: {
     type: 'object',
     additionalProperties: false,

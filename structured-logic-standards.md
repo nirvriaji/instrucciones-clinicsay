@@ -95,7 +95,7 @@ During rescheduling, the preparatory cancellation must never run before — or a
 
 **Why:** cancelling before the new appointment exists leaves the patient **with no appointment at all** when no slot is found, when they do not pick one, or when they simply stop replying. This is irrecoverable data loss and it happened in production.
 
-**Safe reschedule order (full mode):** `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`. The preparatory cancellation captures and persists the backend-owned target; `manage_schedule_block_status` is not the cancellation route for this flow. If no slot is found, the target remains honest and can expire safely.
+**Safe reschedule order (full mode):** `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`. The preparatory cancellation captures and persists the backend-owned target; `manage_schedule_block_status` is not the cancellation route for this flow. The original professional is a backend preference, not a required patient choice. Before booking, the backend reconciles captured sessions against current state and keeps only `ACTIVE` + `PENDING` sessions for the captured treatment: reuse `CARE_PLAN` when any remain, or use a backend-authorized `STANDALONE` fallback when none remain. The LLM/advisor does not select the mode or provide internal metadata.
 
 **Full booking identity rule:** before a full booking flow executes `schedule_block`, it must execute `resolve_patient`. The patient-resolution step may occur before or after availability is resolved and checked; the invariant is only that identity is resolved before the appointment is reserved.
 

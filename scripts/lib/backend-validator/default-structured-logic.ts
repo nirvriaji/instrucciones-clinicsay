@@ -322,7 +322,7 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
             parallel: false,
             note:
               'Cancelar y liberar preparatoriamente la cita elegible. El backend conserva el target y sus sesiones; ' +
-              'no inventar carePlanId ni plannedSessionIds.',
+              'no proporcionar ni inventar datos internos del plan o de sus sesiones.',
           },
           {
             step: 2,
@@ -336,7 +336,7 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
             tools: ['check_availability'],
             parallel: false,
             required: ['hasCancelledRescheduleTarget', 'hasResolvedAvailabilityQuery'],
-            note: 'Buscar nuevos horarios (condicion: dates_resolved). Mantener mismo professionalId de la cita original como preferencia. Para mismo dia: filtrar slots del dia actual.',
+            note: 'Buscar nuevos horarios (condicion: dates_resolved). Mantener el profesional original como preferencia; si no hay disponibilidad, aplicar la política de la sede. Para mismo dia: filtrar slots del dia actual.',
           },
           {
             step: 4,
@@ -344,8 +344,8 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
             parallel: false,
             required: ['hasCancelledRescheduleTarget', 'hasShownSlots'],
             note:
-              'Agendar la NUEVA cita (condicion: slot_selected) reutilizando el target persistido CARE_PLAN. ' +
-              'El backend toma carePlanId y plannedSessionIds del target cancelado.',
+              'Agendar la NUEVA cita (condicion: slot_selected). El backend reconcilia el target y decide CARE_PLAN con sesiones ACTIVE + PENDING o el fallback STANDALONE autorizado; ' +
+              'no seleccionar ni enviar el modo.',
           },
         ],
         allowedTools: [
