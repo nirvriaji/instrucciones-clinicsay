@@ -40,6 +40,7 @@ export const VALID_CAPABILITIES = new Set([
   'hasResolvedTreatment',
   'hasResolvedPatient',
   'hasResolvedProfessional',
+  // Availability evidence is turn-scoped; inherited slots must not authorize booking.
   'hasShownSlots',
   'hasSelectedSlot',
   'hasCreatedAppointment',

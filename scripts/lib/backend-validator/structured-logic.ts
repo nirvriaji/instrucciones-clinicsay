@@ -541,7 +541,9 @@ export const DEFAULT_STRUCTURED_LOGIC: StructuredLogic = {
       recent:
         'Han pasado varios días. Saluda cordialmente reconociendo la ausencia. Ofrece un resumen de 1 línea SOLO si hay algo pendiente relevante (cita, tratamiento, duda sin resolver). No asumas que sigue en el hilo antiguo si no hay pending context claro.',
       distant:
-        'Han pasado semanas o meses. Saluda reconociendo la ausencia ("Hola, hace tiempo que no hablamos"). NO te presentes como nuevo. NO asumas contexto antiguo. Pregunta cómo puedes ayudarle HOY. Si hay citas futuras confirmadas, menciónalas brevemente como recordatorio.',
+      'Han pasado semanas o meses. Saluda reconociendo la ausencia ("Hola, hace tiempo que no hablamos"). NO te presentes como nuevo. ' +
+        'Descarta el contexto operativo anterior, incluido cualquier target de reprogramacion y disponibilidad previa. ' +
+        'Pregunta cómo puedes ayudarle HOY como en una conversacion nueva. Si hay citas futuras confirmadas, menciónalas brevemente como recordatorio.',
     },
   },
 };

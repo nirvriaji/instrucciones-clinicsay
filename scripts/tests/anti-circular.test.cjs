@@ -131,4 +131,22 @@ describe('anti-circular step requirements', () => {
     assert.ok(msg, 'must include unknown-capability error');
     assert.ok(msg.includes('hasResolvedTreatment'), `must mention the correct capability name, got: ${msg}`);
   });
+
+  it('(e) rescheduling keeps the backend target alternative and requires current-turn availability evidence', () => {
+    const logic = JSON.parse(fs.readFileSync(path.join(ROOT, FULLS[0]), 'utf8'));
+    const reschedule = findFlowByIntent(logic, 'existing_appointment_rescheduling');
+    assert.ok(reschedule, 'must have an existing appointment rescheduling flow');
+    assert.deepStrictEqual(reschedule.flow.selection.alternativeRequiredCapabilities, [
+      'hasCancelledRescheduleTarget',
+    ]);
+    const bookingStep = reschedule.flow.steps.find((step) => step.tools.includes('schedule_block'));
+    assert.ok(bookingStep, 'rescheduling must have a booking step');
+    assert.ok(
+      bookingStep.required.includes('hasShownSlots'),
+      'booking must require availability evidence from the current turn',
+    );
+    assert.match(bookingStep.note, /turno actual/i);
+    assert.match(bookingStep.note, /alternativas reales/i);
+    assert.ok(!JSON.stringify(logic).includes('expiresAt'), 'active generated contract must not contain expiresAt');
+  });
 });

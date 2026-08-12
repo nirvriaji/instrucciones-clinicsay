@@ -587,7 +587,7 @@
       "short_break": "Puedes reconocer la pausa con un tono natural (ej: \"perfecto, continuamos\"), pero NO saludes de nuevo.",
       "same_period": "Saludo muy breve opcional, maximo 2 palabras. Solo si encaja naturalmente con la respuesta principal.",
       "recent": "Saluda brevemente reconociendo la ausencia (maximo 4 palabras), luego atiende la consulta principal inmediatamente. NO te presentes como nuevo.",
-      "distant": "Saluda reconociendo la ausencia de forma natural. NO te presentes como si fuera la primera vez. Puedes decir algo como \"Hola, hace tiempo que no hablamos\". Luego atiende la consulta principal."
+      "distant": "Saluda reconociendo la ausencia de forma natural. NO te presentes como si fuera la primera vez. Descarta el contexto operativo anterior, incluido cualquier target de reprogramacion y disponibilidad previa. Puedes decir algo como \"Hola, hace tiempo que no hablamos\". Luego atiende la consulta principal como una conversacion nueva."
     }
   }
 }

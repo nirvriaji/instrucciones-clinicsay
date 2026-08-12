@@ -342,7 +342,9 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
             parallel: false,
             required: ['hasCancelledRescheduleTarget', 'hasShownSlots'],
             note:
-              'Agendar la NUEVA cita (condicion: slot_selected). El backend reconcilia el target y decide CARE_PLAN con sesiones ACTIVE + PENDING o el fallback STANDALONE autorizado; ' +
+              'Agendar la NUEVA cita solo con disponibilidad comprobada en el turno actual (condicion: slot_selected). ' +
+              'Si el horario elegido ya no esta libre, informar que no esta disponible y ofrecer alternativas reales. ' +
+              'El backend reconcilia el target y decide CARE_PLAN con sesiones ACTIVE + PENDING o el fallback STANDALONE autorizado; ' +
               'no seleccionar ni enviar el modo.',
           },
         ],
@@ -891,7 +893,9 @@ function buildDefaultConversationResumption(): ConversationResumptionConfig {
       recent:
         'Saluda brevemente reconociendo la ausencia (maximo 4 palabras), luego atiende la consulta principal inmediatamente. NO te presentes como nuevo.',
       distant:
-        'Saluda reconociendo la ausencia de forma natural. NO te presentes como si fuera la primera vez. Puedes decir algo como "Hola, hace tiempo que no hablamos". Luego atiende la consulta principal.',
+        'Saluda reconociendo la ausencia de forma natural. NO te presentes como si fuera la primera vez. ' +
+          'Descarta el contexto operativo anterior, incluido cualquier target de reprogramacion y disponibilidad previa. ' +
+          'Puedes decir algo como "Hola, hace tiempo que no hablamos". Luego atiende la consulta principal como una conversacion nueva.',
     },
   };
 }
