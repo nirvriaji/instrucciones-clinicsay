@@ -85,17 +85,19 @@ All `description` fields (in intents, rules, and flows) must describe **intent a
 
 **The template is injected ONLY into the tools of the flow's TERMINAL step** — the last element of the `steps` array. It describes how to *close* the flow, so the terminal step must be the tool that performs the real action. Consequences:
 - A template whose terminal step only holds search/resolver tools (`check_availability`, `resolve_*`, `lookup_patient`, `query_*`) is **rejected by the validator**: it would make the bot announce a result it has not produced.
-- `allowedTools` is an unordered whitelist and is ignored for template injection. Optional/conditional tools (e.g. a follow-up `create_task`) belong there, never in the terminal step.
+- `allowedTools` is an unordered whitelist and is ignored for template injection. A configured follow-up `create_task` belongs in a later numbered step when it follows cancellation; `allowedTools` alone cannot establish that order.
 - Write `steps` in execution order (ascending `step` numbers): the terminal step is the **last array item**, not the highest number.
 
-### Destructive Tools Come Last
-A tool that destroys data must never run before — or alongside — the tool that creates its replacement.
+### Replacement-Sensitive Tool Ordering
+During rescheduling, the preparatory cancellation must never run before — or alongside — the tool that creates the replacement appointment. Definitive cancellation is a separate terminal action and does not require a replacement.
 
-**Hard rule (validator-enforced, blocking):** in any flow, `manage_schedule_block_status` (cancel) must not appear in a step earlier than `schedule_block`, nor in the same step (with or without `parallel: true`).
+**Rescheduling rule (validator-enforced, blocking):** in a full rescheduling flow, the preparatory cancellation must not use `manage_schedule_block_status` before `schedule_block`, nor in the same step (with or without `parallel: true`). Use `cancel_for_rescheduling` for that preparatory action. `manage_schedule_block_status` is the tool for definitive cancellation, confirmation, or marking the patient on the way; those flows do not need a replacement `schedule_block`.
 
 **Why:** cancelling before the new appointment exists leaves the patient **with no appointment at all** when no slot is found, when they do not pick one, or when they simply stop replying. This is irrecoverable data loss and it happened in production.
 
-**Safe reschedule order (full mode):** `cancel_for_rescheduling` → resolve dates → check availability → **schedule the new appointment**. The preparatory cancellation captures and persists the backend-owned target; `manage_schedule_block_status` is not the cancellation route for this flow. If no slot is found, the target remains honest and can expire safely.
+**Safe reschedule order (full mode):** `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`. The preparatory cancellation captures and persists the backend-owned target; `manage_schedule_block_status` is not the cancellation route for this flow. If no slot is found, the target remains honest and can expire safely.
+
+**Full booking identity rule:** before a full booking flow executes `schedule_block`, it must execute `resolve_patient`. The patient-resolution step may occur before or after availability is resolved and checked; the invariant is only that identity is resolved before the appointment is reserved.
 
 A reschedule flow (`existing_appointment_rescheduling`) in `full` mode that can cancel MUST also be able to book: `schedule_block` has to be present in `steps` or `allowedTools`.
 
@@ -135,7 +137,7 @@ type IntentDefinition = {
 };
 ```
 
-`intentId` is a `snake_case` semantic identifier taken from the canonical taxonomy (e.g., `existing_appointment_confirmation`).
+`intentId` is a `snake_case` semantic identifier. Use a canonical id for appointment-writing flows and a clinic-defined free id for other topics (e.g., `parking_info`).
 
 ### `ClinicCapabilities`
 
@@ -275,6 +277,21 @@ The prefix is not cosmetic: `existing_appointment_*` is what subjects a flow to 
 
 The list is deliberately short: it holds only the intents a safety rule must classify, and all of them live inside the reserved prefixes. Everything else — `general_inquiry`, `payment_inquiry`, `location_contact_inquiry`, `post_treatment_follow_up`, `special_treatment_request`, `human_follow_up`, `farewell`, `insurance_coverage_inquiry`, `parking_info`… — is a **free intent**: declare it with whatever id fits the clinic. Intent types are practically infinite and not only conversational, so the taxonomy restricts as little as it can. It may grow, but every addition takes freedom away from every clinic, so an id only earns a place here when a guard or a validator rule genuinely needs to classify it.
 
+### Tasks-Only Contract
+
+Tasks-only means the flow cannot schedule appointments or query availability. It does not require `create_task`, and it does not prohibit managing an existing appointment with `manage_schedule_block_status` or `manage_all_schedule_blocks_for_date`.
+
+The advisor may choose the appropriate flow for each request:
+
+- definitive cancellation only;
+- definitive cancellation followed by an optional `create_task`;
+- `create_task` without cancellation;
+- informational response without an action tool.
+
+`create_task` after cancellation is therefore optional and depends on the advisor's operating policy. The reminder flows remain unchanged: confirmation, definitive cancellation, and marking the patient on the way continue to use their existing semantics.
+
+When both `manage_schedule_block_status` and `create_task` are configured in one tasks-only flow, they must be separate numbered steps, with cancellation first and task creation second. Parallel or unordered configurations are rejected.
+
 **Migration (legacy id → canonical id):** `scheduling_request` → `new_appointment_scheduling`; `appointment_reschedule_request` → `existing_appointment_rescheduling`; `appointment_reschedule_inquiry` → `existing_appointment_reschedule_inquiry`; `appointment_confirmation` → `existing_appointment_confirmation`; `appointment_cancellation` → `existing_appointment_cancellation`; `appointment_cancellation_inquiry` → `existing_appointment_cancellation_inquiry`; `appointment_inquiry` → `existing_appointment_inquiry`; `keep_appointment` → `existing_appointment_keep`; `patient_running_late` → `existing_appointment_delay_notice`. There is **no** backward-compatibility mapping in the code: a JSON still using a legacy id is rejected. Ids such as `general_inquiry`, `payment_inquiry` or `farewell` need no migration — they are free intents.
 
 ---
@@ -296,7 +313,7 @@ The list is deliberately short: it holds only the intents a safety rule must cla
 ### Flows and Steps
 - Flow `intent` must exist in the catalog and should be unique per flow (one flow per intent). If the flow can create, move or destroy an appointment, that intent must be canonical.
 - `description` differentiates this flow from similar ones ("NEW session" vs. "move an ALREADY BOOKED appointment" vs. "confirm attendance").
-- Order steps logically (identify patient → resolve entities → check availability → act).
+- Order steps logically. For full booking, `resolve_patient` must precede `schedule_block`, but it may be placed before or after availability resolution and checking. For full rescheduling, use `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`.
 - `parallel: true` only when tools have no dependencies between them — and never for a destructive tool.
 - Flows using `manage_schedule_block_status` MUST set `responseTemplate`.
 - The last step must be the one that performs the flow's real action: it is where the closing template lands.
@@ -322,10 +339,11 @@ The list is deliberately short: it holds only the intents a safety rule must cla
 - `Protocol.responseTemplate` is a non-empty string if the protocol exists.
 
 ### Flow safety (blocking — see "Destructive Tools Come Last" and "Response Template")
-- `manage_schedule_block_status` never in a step before, or in the same step as, `schedule_block`.
+- In full rescheduling, `manage_schedule_block_status` is not the preparatory cancellation; use `cancel_for_rescheduling` and then the replacement-booking sequence.
 - A `full`-mode reschedule flow that can cancel must also have `schedule_block` available.
-- `allowedTools` is an UNORDERED whitelist and can never anchor the safe order. If `manage_schedule_block_status` is a numbered step, `schedule_block` must also be a numbered step placed earlier — booking reachable only through `allowedTools` is rejected. The safe (default) shape is the reverse: `schedule_block` as the terminal step, the cancellation in `allowedTools` as the last movement. In a reschedule flow `schedule_block` must always appear in `steps`.
-- Every `flow.intent`, and every id declared in `intents`, must belong to the canonical taxonomy.
+- `allowedTools` is an UNORDERED whitelist and can never anchor the safe order. In a full reschedule, the ordered `steps` must contain `cancel_for_rescheduling`, `resolve_availability_query`, `check_availability`, and `schedule_block` in that order; `schedule_block` must be the terminal booking step. `manage_schedule_block_status` belongs to definitive cancellation, confirmation, or on-the-way flows, not to the preparatory rescheduling sequence.
+- Appointment-writing flows must use a canonical intent. Free intents are valid outside the reserved `new_appointment_` and `existing_appointment_` namespaces when their flows use only non-writing tools.
+- In a full booking flow, `resolve_patient` must be in a step before `schedule_block`; no relative ordering with availability tools is required.
 - A flow whose intent is `existing_appointment_*` and that uses `manage_schedule_block_status` or `schedule_block` must declare `selection.requiredCapabilities: ["hasActiveAppointment"]`. Informational flows (no tools) do not need it.
 - No `responseTemplate` when the terminal step holds only search/resolver tools.
 - No `responseTemplate` on a tool-using flow whose terminal step declares no tools (e.g. tools only in `allowedTools`, no `steps`).

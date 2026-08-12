@@ -95,12 +95,12 @@ Este bot trabaja con `scheduling: true`. Agenda citas reales directamente, consu
 Las 13 tools disponibles en este modo son:
 
 - `check_availability` — Consultar disponibilidad de horarios. Retorna slots con doctor_id y sala_id.
-- `schedule_block` — Crear cita real. Genera CarePlan, PlannedSessions y ScheduleBlock. Requiere `check_availability` previo; el paciente se resuelve en el mismo step final.
+- `schedule_block` — Crear cita real. Genera CarePlan, PlannedSessions y ScheduleBlock. Requiere `check_availability` previo y una identidad resuelta en un step anterior.
 - `cancel_for_rescheduling` — Cancelar preparatoriamente una cita existente para reprogramarla. El backend captura el target (carePlanId + plannedSessionIds) y lo conserva para reutilizar en el `schedule_block` posterior. Solo usar en flujos de `existing_appointment_rescheduling`.
 - `manage_schedule_block_status` — Gestionar UNA cita existente (confirmar, cancelar definitivo, marcar en camino). NO usar para cancelar antes de reagendar; eso es `cancel_for_rescheduling`.
 - `manage_all_schedule_blocks_for_date` — Gestionar TODAS las citas de un paciente en una fecha específica.
 - `create_task` — Crear tarea administrativa para seguimiento humano. Solo para casos especiales.
-- `resolve_patient` — Identificar paciente existente o crear paciente nuevo (este último solo tras confirmación explícita del paciente). Se ejecuta **junto a** `schedule_block` en el último step, cuando el paciente elige slot.
+- `resolve_patient` — Identificar paciente existente o crear paciente nuevo (este último solo tras confirmación explícita del paciente). Debe ejecutarse antes de `schedule_block`; el asesor decide si se pregunta antes o después de consultar disponibilidad.
 - `resolve_professional` — Identificar profesional por nombre o especialidad.
 - `resolve_treatment` — Identificar tratamiento por nombre o descripción.
 - `resolve_availability_query` — Traducir frases naturales de fecha a fechas concretas (ej: "próximo martes").
@@ -123,7 +123,7 @@ Las 13 tools disponibles en este modo son:
 - Mantén los estados internos descriptivos (incluidos los estados verbose de continuación) separados de los ids canónicos: no inventes intents nuevos para representar estados.
 - Los recordatorios y sus respuestas mantienen el flujo existente de confirmación/cancelación; no los conviertas en reagendamiento implícito.
 - El asesor puede añadir `create_task` y pasos custom cuando los necesite, siempre respetando estas invariantes de seguridad y el contrato de tools.
-- En el patrón canónico de booking (5 steps), el paciente se identifica AL FINAL: `resolve_patient` va en su propio step (step 4, sin `required`) y `schedule_block` en el último (step 5, `required: ["hasResolvedPatient"]`). NO pedir datos personales antes de mostrar horarios. INVARIANTE TÉCNICO: un step NUNCA puede requerir una capability que establece una tool del MISMO step (dependencia circular → bloqueo total en runtime; el validador lo rechaza como error bloqueante).
+- En booking full, `resolve_patient` debe estar en un step anterior a `schedule_block`, y `schedule_block` debe requerir `hasResolvedPatient`. El asesor puede resolver la identidad antes de consultar disponibilidad o después de mostrarla y antes de reservar; ninguna de las dos posiciones es obligatoria. INVARIANTE TÉCNICO: un step NUNCA puede requerir una capability que establece una tool del MISMO step (dependencia circular → bloqueo total en runtime; el validador lo rechaza como error bloqueante).
 
 ---
 
@@ -361,7 +361,7 @@ Sintaxis del draft: válida
    - Seguir exactamente las capabilities del schema y `_templates/base-full.json`; no añadir `scheduling` por suposición si el template canónico no lo declara.
    - Tools permitidas por backend, schema y registry: `check_availability`, `resolve_availability_query`, `schedule_block`, `cancel_for_rescheduling`, `manage_schedule_block_status`, `manage_all_schedule_blocks_for_date`, `create_task`, `resolve_patient`, `resolve_professional`, `resolve_treatment`, `lookup_patient`, `query_protocol`, `query_knowledge_base`.
    - `query_knowledge_base` busca semánticamente en `protocols`, `faq`, `responseTemplates` y `rules`. Debe estar disponible en flows informativos y usarse solo cuando la respuesta no esté ya en contexto. No sustituye tools de pacientes, scheduling o tareas.
-    - Flows de booking (patrón canónico de 4 steps): entidades (`resolve_treatment` + `resolve_availability_query` paralelos) → `check_availability` (`required: ["hasResolvedTreatment"]`) → `resolve_patient` (sin required) → `schedule_block` (`required: ["hasResolvedPatient"]`). `new_appointment_scheduling` usa `selection.excludedCapabilities: ["hasResolvedPatient"]`.
+    - Flows de booking: `resolve_patient` debe preceder a `schedule_block` (`required: ["hasResolvedPatient"]`). El asesor puede colocar la resolución del paciente antes de disponibilidad o después de `check_availability`, siempre antes de reservar. `new_appointment_scheduling` puede usar `selection.excludedCapabilities: ["hasResolvedPatient"]` cuando corresponda.
 5. **NUNCA pongas tool names en `required`.** Usar `required: []`, salvo que el schema y capabilities canónicos definan explícitamente una capability válida. Los tool names van exclusivamente en `tools` y `allowedTools`.
 6. **VALIDACIÓN ESTRICTA DE SCHEMA (NON-NEGOTIABLE):** El backend rechaza CUALQUIER propiedad que no esté en el schema autorizado (additionalProperties: false en TODOS los niveles). Si el validador local no detecta una propiedad desconocida, DEBES corregir el validador local antes de seguir. NUNCA asumas que el JSON es válido solo porque pasó el validador local si el validador local no es estricto. Propiedades comunes que se cuelan y rompen el backend: `products`, `shipping`, `id` en protocols (debe ser `name`), `steps` en protocols (debe ser `sections`), `condition` en steps (deprecated, debe ir en `note`).
 7. **El asesor crea la estructura.** Si no hay archivos en `sedes/<nombre>/input/`, instruir al asesor que cree las carpetas y coloque ahí sus notas. Tú NO debes crear directorios ni archivos automáticamente.
@@ -541,11 +541,7 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
 
 - El `intent` del flow debe existir en el catálogo. Usa `new_appointment_scheduling` para citas nuevas y `existing_appointment_rescheduling` para mover citas existentes; diferéncialos por `description` y `selection`.
 - Ordena los steps con el patrón canónico (ver `_templates/base-full.json`):
-  - **Booking nuevo (new_appointment_scheduling):**
-    - Paso 1: resolución de entidades (`resolve_treatment`, `resolve_availability_query`) — paralelos.
-    - Paso 2: disponibilidad (`check_availability`).
-    - Paso 3: identificación (`resolve_patient`) — SOLO cuando el paciente elige slot.
-    - Paso 4: agendamiento (`schedule_block`) — requiere `hasResolvedPatient`.
+   - **Booking nuevo (new_appointment_scheduling):** `resolve_patient` debe aparecer en un step anterior a `schedule_block`. Puede ir antes de `check_availability` o después de consultar disponibilidad, según la decisión del asesor. `schedule_block` requiere `hasResolvedPatient`.
   - **Reprogramación (existing_appointment_rescheduling):**
     - Paso 1: `cancel_for_rescheduling` (cancela preparatoriamente, backend captura target).
     - Paso 2: `resolve_availability_query` (nuevas fechas).
@@ -601,10 +597,10 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
     "excludedCapabilities": ["hasResolvedPatient"]
   },
   "steps": [
-    { "step": 1, "tools": ["resolve_treatment", "resolve_availability_query"], "parallel": true, "required": [], "note": "Identificar tratamiento y traducir fechas. NO pedir datos del paciente todavia." },
-    { "step": 2, "tools": ["check_availability"], "parallel": false, "required": ["hasResolvedTreatment"], "note": "Buscar horarios con treatmentId + fechas (condicion: treatment_resolved)" },
-    { "step": 3, "tools": ["resolve_patient"], "parallel": false, "required": [], "note": "Solo cuando el paciente elige un slot: resolver identidad (condicion: slot_selected)" },
-    { "step": 4, "tools": ["schedule_block"], "parallel": false, "required": ["hasResolvedPatient"], "note": "Agendar solo cuando el paciente elige un slot y la identidad esta resuelta (condicion: patient_resolved && slot_selected)" }
+     { "step": 1, "tools": ["resolve_treatment", "resolve_availability_query"], "parallel": true, "required": [], "note": "Identificar tratamiento y traducir fechas. La resolución del paciente puede ocurrir antes de disponibilidad o en un step posterior." },
+     { "step": 2, "tools": ["check_availability"], "parallel": false, "required": ["hasResolvedTreatment"], "note": "Buscar horarios con treatmentId + fechas cuando el asesor haya elegido consultar disponibilidad antes de resolver al paciente." },
+     { "step": 3, "tools": ["resolve_patient"], "parallel": false, "required": [], "note": "Resolver la identidad antes de reservar si todavía no está resuelta; también puede ser un step anterior a disponibilidad." },
+     { "step": 4, "tools": ["schedule_block"], "parallel": false, "required": ["hasResolvedPatient"], "note": "Agendar solo cuando el paciente elige un slot y la identidad ya está resuelta." }
   ]
 }
 ```
@@ -702,8 +698,8 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 - `Protocol.responseTemplate` string no vacío si existe.
 - Prohibido intent `price_inquiry` (usar `general_inquiry` + `serviceCatalog`).
 - Flows con `query_knowledge_base` o `query_protocol` NO deben tener `responseTemplate` con modo `literal`.
-- Flow `new_appointment_scheduling` (patrón canónico): `resolve_patient` en step 3 (antes de `schedule_block` en step 4); `selection.excludedCapabilities: ["hasResolvedPatient"]`.
-- Flow `existing_appointment_rescheduling`: `resolve_availability_query` en step 1; `selection.requiredCapabilities: ["hasActiveAppointment"]`.
+- Flow `new_appointment_scheduling`: `resolve_patient` debe estar en un step anterior a `schedule_block`; puede preceder o seguir a `check_availability`, según la configuración del asesor. `schedule_block` requiere `hasResolvedPatient`.
+- Flow `existing_appointment_rescheduling`: `cancel_for_rescheduling` en step 1 y `resolve_availability_query` en step 2; `selection.requiredCapabilities: ["hasActiveAppointment"]`. Si declara `hasConcreteDateTime` al inicio del turno, puede omitir `resolve_availability_query` y pasar de `cancel_for_rescheduling` a `check_availability`.
 
 #### Intents/rules mínimos
 Deben existir intents y rules para: `existing_appointment_confirmation`, `existing_appointment_cancellation`, `existing_appointment_inquiry`, `new_appointment_scheduling`, `general_inquiry`, `human_follow_up`, `farewell`.
@@ -712,7 +708,7 @@ Deben existir intents y rules para: `existing_appointment_confirmation`, `existi
 - Flow de `existing_appointment_confirmation`: existe y usa únicamente `manage_schedule_block_status`.
 - Flow de `existing_appointment_cancellation`: existe con `manage_schedule_block_status`.
 - Flow de `existing_appointment_inquiry`: existe con `tools: []` o `responseTemplate`.
-- `new_appointment_scheduling`: existe con el patrón canónico (`resolve_patient` + `schedule_block` juntos en el último step).
+- `new_appointment_scheduling`: existe con `resolve_patient` antes de `schedule_block`; la posición de `resolve_patient` respecto a disponibilidad puede personalizarse.
 - Flow de `farewell`: existe con `allowsSilence: true`.
 - Flow `general_inquiry` debe tener `query_knowledge_base` en `allowedTools` o steps.
 
@@ -723,8 +719,8 @@ Deben existir intents y rules para: `existing_appointment_confirmation`, `existi
 - [ ] `rules` tiene al menos 1 rule por intent (mínimo 7 rules para los intents críticos).
 - [ ] Flow de confirmación usa únicamente `manage_schedule_block_status`.
 - [ ] Flow de `existing_appointment_inquiry` tiene `tools: []` o `responseTemplate`.
-- [ ] `new_appointment_scheduling` sigue el patrón canónico (paciente identificado al final, con `selection`).
-- [ ] Dependencias correctas: `check_availability` → `schedule_block`; `resolve_patient` junto a `schedule_block` en el último step.
+- [ ] `new_appointment_scheduling` resuelve al paciente antes de reservar, con posición configurable respecto a disponibilidad.
+- [ ] Dependencias correctas: `check_availability` → `schedule_block`; `resolve_patient` → `schedule_block`.
 - [ ] Flow de `farewell` tiene `allowsSilence: true`.
 - [ ] `serviceCatalog.treatments` tiene al menos 1 tratamiento con `name`.
 - [ ] `responseTemplates` incluye `information_not_available`, `out_of_scope`, `farewell`.

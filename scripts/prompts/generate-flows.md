@@ -25,7 +25,7 @@ Cada intent que requiere acción del bot DEBE tener al menos un flow:
 - `resolve_professional`: Identificar profesional por nombre/especialidad
 - `resolve_availability_query`: Convertir frase natural de fecha a fechas concretas
 - `check_availability`: Consultar disponibilidad de horarios
-- `schedule_block`: Crear cita real (requiere resolve_patient + check_availability previos)
+- `schedule_block`: Crear cita real (requiere resolve_patient y check_availability previos)
 - `manage_schedule_block_status`: Confirmar/cancelar/marcar en camino una cita existente
 - `manage_all_schedule_blocks_for_date`: Gestionar TODAS las citas de un día
 - `create_task`: Crear tarea administrativa
@@ -40,7 +40,7 @@ Cada intent que requiere acción del bot DEBE tener al menos un flow:
 - `lookup_patient` (solo lectura)
 - `query_protocol`
 - `query_knowledge_base` (fallback semántico para preguntas informativas)
-- **PROHIBIDAS:** `check_availability`, `schedule_block`, `resolve_availability_query`, `resolve_patient`, `resolve_professional`, `resolve_treatment`
+- **PROHIBIDAS:** `check_availability`, `schedule_block`, `resolve_availability_query`, `cancel_for_rescheduling`, `resolve_patient`, `resolve_professional`, `resolve_treatment`
 
 ### 3. Flujos de agendamiento por modo
 
@@ -48,7 +48,7 @@ Cada intent que requiere acción del bot DEBE tener al menos un flow:
 - `existing_appointment_reschedule_inquiry` pregunta si se puede cambiar la cita; no confirma, cancela, busca slots ni reserva.
 - `existing_appointment_rescheduling` solo se activa ante una aceptación explícita y, en full, usa `cancel_for_rescheduling` -> `resolve_availability_query` -> `check_availability` -> `schedule_block`.
 - La no asistencia es cancelación definitiva: usa `manage_schedule_block_status`, ofrece una nueva cita y espera aceptación antes de continuar `new_appointment_scheduling`.
-- Usa estados internos descriptivos para continuaciones, nunca ids de intent nuevos. Los recordatorios siguen usando sus flows actuales.
+- Usa estados internos descriptivos para continuaciones, nunca ids de intent nuevos. Los recordatorios siguen usando sus flows actuales de confirmación y cancelación, sin cambios.
 - El asesor puede añadir `create_task` o pasos custom si respeta las tools permitidas, las capacidades previas y el orden seguro; no hay combinaciones obligatorias fuera de las invariantes del backend.
 
 **GENERAL INQUIRY — AMBOS MODOS:**
@@ -60,12 +60,9 @@ allowedTools: ["query_knowledge_base"]
 
 **FULL MODE (patrón canónico — ver `_templates/base-full.json`):**
 ```
-Nueva cita (new_appointment_scheduling, selection.excludedCapabilities: ["hasResolvedPatient"]):
-  Step 1: resolve_treatment + resolve_availability_query (paralelos, required: [])
-  Step 2: check_availability (con treatmentId + fechas, required: ["hasResolvedTreatment"])
-  Step 3: resolve_patient (SOLO cuando el paciente elige slot, required: [])
-  Step 4: schedule_block (required: ["hasResolvedPatient"])
-  ⚠️ El paciente se identifica AL FINAL, no al principio. NO pedir datos personales antes de mostrar horarios.
+Nueva cita (new_appointment_scheduling):
+  resolve_patient debe ocurrir antes de schedule_block y schedule_block requiere ["hasResolvedPatient"].
+  El asesor puede resolver al paciente antes de check_availability o después de mostrar disponibilidad, siempre antes de reservar.
   ⚠️ INVARIANTE ANTI-CIRCULAR: 'required' solo consume capabilities establecidas por steps ANTERIORES; un step NUNCA requiere lo que establece su propia tool (el validador lo rechaza como error bloqueante).
 
 Reprogramar cita existente (existing_appointment_rescheduling, selection.requiredCapabilities: ["hasActiveAppointment"]):
@@ -84,9 +81,9 @@ Reprogramar cita existente (existing_appointment_rescheduling, selection.require
 **TASKS-ONLY MODE:**
 ```
 Cualquier solicitud de agendamiento:
-  Step 1: create_task (recopilar datos y crear tarea para equipo humano)
-  ResponseTemplate: "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible."
-La forma concreta del flow es decisión del asesor: `create_task` es el patrón habitual, no una obligación universal. No uses tools de disponibilidad, reserva o resolución de scheduling.
+  El asesor puede elegir: cancelación solamente; cancelación seguida de create_task; create_task sin cancelación; o respuesta informativa sin acción.
+  Si combina cancelación y tarea, usa steps secuenciales: manage_schedule_block_status exitoso y después create_task.
+  `create_task` no es obligatorio. No uses tools de disponibilidad, reserva o resolución de scheduling.
 ```
 
 ### 4. Reglas de steps
@@ -111,7 +108,7 @@ La forma concreta del flow es decisión del asesor: `create_task` es el patrón 
 - **Dependencias críticas (patrón canónico):**
   - `check_availability` DEBE ir antes de `schedule_block`
   - `resolve_availability_query` DEBE ir antes de `check_availability`, salvo que el flow de reagendamiento declare `selection.requiredCapabilities: ["hasConcreteDateTime"]`.
-  - `resolve_patient` va en su **propio step anterior** a `schedule_block` (el paciente se identifica al elegir slot, no antes; `schedule_block` declara `required: ["hasResolvedPatient"]`). En bookings de paciente nuevo NO va en step 1.
+  - `resolve_patient` va en un step anterior a `schedule_block` y `schedule_block` declara `required: ["hasResolvedPatient"]`. Puede ir antes o después de `check_availability`, según el asesor.
 
 ### 5. responseTemplate
 - **OBLIGATORIO** en flows que usan `manage_schedule_block_status`
@@ -256,7 +253,7 @@ Los flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requir
 
 ## FLOW SAFETY RULES (el backend RECHAZA el JSON si se viola alguna)
 
-S1. **NEVER poner una herramienta destructiva antes de su contraparte constructiva.** En particular, `manage_schedule_block_status` (cancel definitivo) NUNCA debe estar en un paso ANTERIOR a `schedule_block`, ni en el MISMO paso (con o sin `parallel: true`). Cancelar antes de que la nueva cita exista deja al paciente SIN CITA cuando no hay hueco o abandona la conversación. Esto ocurrió en producción.
+S1. **En full rescheduling, NEVER poner una herramienta destructiva antes de su contraparte constructiva.** En particular, `manage_schedule_block_status` (cancel definitivo) NUNCA debe estar en un paso ANTERIOR a `schedule_block`, ni en el MISMO paso (con o sin `parallel: true`). En tasks-only no existe `schedule_block`: si se configuran `manage_schedule_block_status` y `create_task` en el mismo flow, deben ser steps separados y secuenciales, con cancelación antes de tarea.
 
 S2. **Orden de reagendamiento en full mode (patrón canónico):**
 `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`.
@@ -280,7 +277,7 @@ S8. Un flujo cuyo intent es `existing_appointment_*` Y que usa una tool de escri
 
 ## Checklist antes de entregar
 - [ ] Un flow por cada intent que requiere acción
-- [ ] En full mode: flows de booking con patrón canónico de 5 steps (entidades → disponibilidad → paciente → agenda al final; `selection` para distinguir nuevo/existente; SIN required circulares: un step nunca requiere lo que establece su propia tool)
+- [ ] En full mode: los flows de booking deben ejecutar `resolve_patient` antes de `schedule_block`, que requiere `hasResolvedPatient`; la posición de `resolve_patient` respecto a `check_availability` es configurable por el asesor. SIN required circulares: un step nunca requiere lo que establece su propia tool.
 - [ ] En tasks-only mode: NINGUNA scheduling tool (check_availability, schedule_block, etc.)
  - [ ] responseTemplate presente en flows de acción real (schedule_block, manage_schedule_block_status, create_task, cancel_for_rescheduling)
 - [ ] allowedTools incluye exactamente las tools del flow (si se usa)

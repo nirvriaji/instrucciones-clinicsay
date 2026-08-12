@@ -112,7 +112,7 @@ Deberías ver `builder-full` y `builder-tasks-only`.
 | Modo | Tu clínica tiene... |
 |---|---|
 | **`builder-full`** | Agenda digital (Google Calendar, software de citas). El bot agenda citas reales. |
-| **`builder-tasks-only`** | No tiene agenda digital / prefiere control humano. El bot crea tareas para el equipo. |
+| **`builder-tasks-only`** | No tiene agenda digital / prefiere control humano. El bot no agenda ni consulta disponibilidad; el asesor decide si cancela, crea una tarea, hace ambas cosas o responde sin acción. |
 
 En opencode desktop, selecciona el agente:
 ```
@@ -384,6 +384,8 @@ Ejemplo de salida válida con warnings:
 | Confirma/cancela existentes | ✅ Sí | ✅ Sí |
 | Crea tareas | ✅ Sí | ✅ Sí |
 | Recomendado para | Clínicas con agenda digital | Clínicas sin agenda / control humano |
+
+En `tasks-only`, `create_task` es opcional. El modo limita scheduling y disponibilidad, pero permite gestionar citas existentes. Una solicitud puede terminar en cancelación, cancelación seguida de tarea, tarea sin cancelación o respuesta informativa. Los flujos de recordatorios para confirmar, cancelar o marcar llegada no cambian.
 
 ---
 

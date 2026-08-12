@@ -35,7 +35,7 @@ Además, crea templates para cada flow que use `responseTemplate`:
 | `confirmation` | Cita confirmada | "Tu cita ha quedado confirmada. Te esperamos." | "Tu cita ha quedado confirmada. Te esperamos." |
 | `cancellation` | Cita cancelada | "Tu cita ha sido cancelada. Si deseas reprogramar, podemos ayudarte." | "Tu cita ha sido cancelada. Si deseas reprogramar, podemos ayudarte." |
 | `no_appointments` | No hay citas | "No aparecen citas programadas. ¿Puedo ayudarte con algo más?" | Igual |
-| `task_created` | Tarea creada | "Un miembro de nuestro equipo se pondrá en contacto contigo." | "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible." |
+| `task_created` | Tarea creada | "Un miembro de nuestro equipo se pondrá en contacto contigo." | "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible." (solo si el asesor configuró `create_task`) |
 
 ### 4. Templates adicionales para full mode
 - `booking_options`: "He encontrado estas opciones: {options}. ¿Cuál prefieres?"
@@ -48,7 +48,8 @@ Además, crea templates para cada flow que use `responseTemplate`:
 - Usa `"model"` para mensajes que requieren variables dinámicas
 - En una consulta informativa de reagendamiento, el texto debe pedir confirmación y nunca afirmar que la cita ya cambió.
 - La cancelación por no asistencia debe confirmar solo la cancelación. La oferta de una cita nueva pertenece a la continuación posterior a la aceptación del paciente.
-- Los templates de recordatorio/confirmación siguen sin cambios.
+- En tasks-only, no presupongas que toda solicitud genera una tarea: el asesor puede elegir cancelación-only, cancelación + tarea, tarea-only o respuesta informativa sin acción.
+- Los templates de recordatorio/confirmación y cancelación siguen sin cambios.
 
 ### 6. Variables (placeholders) en templates
 El backend reemplaza automáticamente estos placeholders con datos reales de la operación:

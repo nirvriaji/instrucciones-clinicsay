@@ -6,7 +6,7 @@ Estos son los **system instructions** (agentes) de opencode desktop que permiten
 
 | Archivo | Modo | Descripción |
 |---|---|---|
-| `builder-tasks-only.md` | Tasks-Only | Bot que NO agenda citas. Solo gestiona citas existentes y crea tareas para el equipo humano. |
+| `builder-tasks-only.md` | Tasks-Only | Bot que NO agenda citas. Gestiona citas existentes y puede crear tareas para el equipo humano según la decisión del asesor. |
 | `builder-full.md` | Full | Bot que SÍ agenda citas reales automáticamente. |
 
 ---

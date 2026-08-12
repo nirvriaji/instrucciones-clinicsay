@@ -425,7 +425,7 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
   return {
     any_scheduling_request: {
       intent: 'new_appointment_scheduling',
-      description: 'El interlocutor quiere reservar una NUEVA sesion. En modo tasks-only, se crea tarea para seguimiento humano.',
+      description: 'El interlocutor quiere reservar una NUEVA sesion. En modo tasks-only, el asesor puede configurar una tarea o una respuesta informativa.',
       steps: [
         {
           step: 1,
@@ -508,18 +508,27 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
       },
       description:
         'Paciente quiere cambiar la fecha u hora de una cita YA AGENDADA. ' +
-        'En modo tasks-only, el flujo por defecto es: cancelar cita actual + crear tarea de seguimiento. ' +
-        'Las clinicas pueden simplificar a solo create_task si no quieren cancelar automaticamente.',
+        'En modo tasks-only, el asesor puede cancelar la cita actual, crear una tarea de seguimiento, ' +
+        'hacer ambas cosas o responder sin accion segun la politica de la clinica.',
       steps: [
         {
           step: 1,
-          tools: ['manage_schedule_block_status', 'create_task'],
-          parallel: true,
+          tools: ['manage_schedule_block_status'],
+          parallel: false,
           required: [],
           note:
-            'Cancelar cita actual (reason="Solicitud del paciente", NO preguntar motivo) + crear tarea para seguimiento humano. ' +
-            'Para correccion de titular: cancelar cita actual, crear tarea indicando paciente correcto y mismo treatmentId. ' +
+            'Cancelar cita actual (reason="Solicitud del paciente", NO preguntar motivo). ' +
+            'Para correccion de titular: mantener el mismo treatmentId en la solicitud de seguimiento. ' +
             'Para restablecer tras cancelacion en este turno: usar datos del historial de tool outputs.',
+        },
+        {
+          step: 2,
+          tools: ['create_task'],
+          parallel: false,
+          required: [],
+          note:
+            'Opcional: crear tarea para seguimiento humano solo si la politica de la clinica o la solicitud del paciente lo requiere. ' +
+            'Ejecutar despues de cancelar, nunca en paralelo.',
         },
       ],
       responseTemplate: 'change_requested',
@@ -673,7 +682,7 @@ function buildDefaultRules(mode: 'full' | 'tasks-only'): BusinessRule[] {
       intent: 'new_appointment_scheduling',
       description: 'El paciente (o alguien en su nombre) quiere agendar cita o consultar disponibilidad.',
       action: 'allow',
-      note: 'En modo tasks-only, el flow any_scheduling_request crea tarea para seguimiento humano.',
+      note: 'Este flow de ejemplo crea una tarea en tasks-only; el asesor puede elegir una respuesta informativa sin tarea.',
       redirectToTask: true,
     },
     {
@@ -684,8 +693,8 @@ function buildDefaultRules(mode: 'full' | 'tasks-only'): BusinessRule[] {
         'Incluye adelantar/atrasar mismo dia, correccion de titular y restablecer tras cancelacion en este turno.',
       action: 'allow',
       note:
-        'En modo tasks-only, el flujo por defecto cancela la cita actual y crea tarea de seguimiento. ' +
-        'Las clinicas pueden simplificar a solo create_task si no quieren cancelar automaticamente. ' +
+        'En modo tasks-only, el asesor decide si cancela la cita, crea una tarea de seguimiento, ' +
+        'hace ambas cosas en orden o responde informativamente. ' +
         'NO preguntar motivo al paciente; usar reason="Solicitud del paciente".',
       redirectToTask: true,
     },

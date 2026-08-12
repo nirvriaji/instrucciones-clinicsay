@@ -456,6 +456,34 @@ export function validateFlowsAndTools(
   // The advisor decides whether reschedule requests redirect to human tasks.
   // Previously enforced as blocking; now advisory only via detectModeAdvisoryGaps.
 
+  // 6d5b. A tasks-only flow may cancel, create a task, do both, or answer
+  // without tools. When it does both, cancellation must be an earlier,
+  // separately numbered step so the configured sequence is deterministic.
+  if (mode === 'tasks-only') {
+    for (const [flowName, flow] of Object.entries(flows)) {
+      const cancellationIndex = flow.steps.findIndex((step) =>
+        (step.tools || []).includes('manage_schedule_block_status'),
+      );
+      const taskIndex = flow.steps.findIndex((step) =>
+        (step.tools || []).includes('create_task'),
+      );
+      const cancellationAllowed = (flow.allowedTools || []).includes('manage_schedule_block_status');
+      const taskAllowed = (flow.allowedTools || []).includes('create_task');
+      const usesCancellation = cancellationIndex >= 0 || cancellationAllowed;
+      const usesTask = taskIndex >= 0 || taskAllowed;
+
+      if (!usesCancellation || !usesTask) continue;
+
+      if (cancellationIndex < 0 || taskIndex < 0 || cancellationIndex >= taskIndex) {
+        errors.push(
+          `Flow '${flowName}' in tasks-only mode combines 'manage_schedule_block_status' and 'create_task' ` +
+            `but does not declare them in separate numbered steps with cancellation before task creation. ` +
+            `Use manage_schedule_block_status in an earlier step, followed by create_task; either tool may be omitted entirely.`,
+        );
+      }
+    }
+  }
+
   // 6d6. new_appointment_scheduling flows must resolve the patient before scheduling
   const schedulingFlows = Object.entries(flows).filter(
     ([, flow]) => flow.intent === 'new_appointment_scheduling',

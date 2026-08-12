@@ -734,19 +734,14 @@ function main() {
     try {
       backendResult = JSON.parse(stdout);
     } catch {
-      // Emergency structural fallback when tsx is unavailable.
-      // Minimal structural checks ONLY — mode/business rules belong to the
-      // replicated backend validator (single source of truth).
-      logger.warn('Backend validator (tsx) not available. Falling back to minimal structural checks. Results may differ from production.');
-      logger.warn(`tsx stderr: ${stderr}`);
-      const errors = [];
-      validateSchema(data, errors);
-      validateCrossReferences(data, errors);
+      // Never save on a validator runtime failure. The old structural fallback
+      // could accept drafts that the replicated backend validator would reject.
+      const detail = stderr.trim() || 'unknown validator execution error';
       backendResult = {
-        valid: errors.length === 0,
-        errors: errors.map(e => e.message || e),
+        valid: false,
+        errors: [`Backend validator could not run: ${detail}`],
         gaps: [],
-        qualityScore: { score: 0, max: 94, gaps: ['minimal fallback active; run with tsx for full validation'] },
+        qualityScore: { score: 0, max: 94, gaps: ['validator execution failed; draft was not saved'] },
       };
     }
   }
