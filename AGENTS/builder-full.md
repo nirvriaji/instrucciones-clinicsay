@@ -180,7 +180,7 @@ Evoluciona `sedes/<nombre>/output/structured-logic.full.draft.json` **sección p
 4. **intents** — Crear baseline (12 mínimos del template) + por servicio usando SOLO datos de los chunks.
 5. **toolOrchestration.flows** — Mapear intents a flows con tools de full mode. DEBE incluir flow `farewell` con `allowsSilence: true`.
 6. **rules** — Crear rules por intent. `new_appointment_scheduling` NO debe tener `redirectToTask: true` en full mode.
-7. **responseTemplates** — Crear templates. OBLIGATORIOS: `information_not_available`, `out_of_scope`, `farewell`.
+7. **responseTemplates** — Crear templates. OBLIGATORIOS: `information_not_available`, `out_of_scope`, `farewell`. Por defecto usa `mode: "model"` en respuestas conversacionales, informativas, de reserva/reprogramación, consultas, despedidas, mantener cita y tareas. Reserva `mode: "literal"` para confirmación, cancelación definitiva y avisos de llegada tarde/en camino de citas existentes, incluidos recordatorios. Es una recomendación no bloqueante; el asesor puede elegir `literal` intencionadamente.
 8. **faq** — Extraer de #Preguntas Frecuentes de los chunks.
 9. **serviceCatalog** — OBLIGATORIO. Extraer tratamientos del input con `name`, `priceDescription`, `requiresConsultation`. Mínimo 1 tratamiento.
 10. **protocols** — Solo si hay protocolos en los chunks leídos.

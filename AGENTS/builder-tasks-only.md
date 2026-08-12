@@ -168,7 +168,7 @@ Evoluciona `sedes/<nombre>/output/structured-logic.tasks-only.draft.json` **secc
 4. **intents** — Crear baseline (12 mínimos del template) + por servicio usando SOLO datos de los chunks.
 5. **toolOrchestration.flows** — Mapear intents a flows SIN scheduling tools. DEBE incluir flow `farewell` con `allowsSilence: true`.
 6. **rules** — Crear rules por intent. Patrón típico en tasks-only: `new_appointment_scheduling` y `existing_appointment_rescheduling` con `redirectToTask: true` (**NO obligatorio** — si la clínica prefiere respuesta informativa sin tarea, omítelo a propósito; el validador mostrará una nota advisory no bloqueante para confirmar que la desviación es intencional).
-7. **responseTemplates** — Crear templates. OBLIGATORIOS: `information_not_available`, `out_of_scope`, `farewell`. Mínimo 15 templates recomendados.
+7. **responseTemplates** — Crear templates. OBLIGATORIOS: `information_not_available`, `out_of_scope`, `farewell`. Mínimo 15 templates recomendados. Por defecto usa `mode: "model"` en respuestas conversacionales, informativas, de reserva/reprogramación, consultas, despedidas, mantener cita y tareas. Reserva `mode: "literal"` para confirmación, cancelación definitiva y avisos de llegada tarde/en camino de citas existentes, incluidos recordatorios. Es una recomendación no bloqueante; el asesor puede elegir `literal` intencionadamente.
 8. **faq** — Extraer de #Preguntas Frecuentes de los chunks.
 9. **serviceCatalog** — OBLIGATORIO. Extraer tratamientos del input con `name`, `priceDescription`, `requiresConsultation`. Mínimo 1 tratamiento.
 10. **protocols** — Solo si hay protocolos en los chunks leídos.

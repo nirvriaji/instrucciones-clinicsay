@@ -142,7 +142,7 @@ function injectFlowResponseTemplates(
     const resolvedTemplate =
       logic.responseTemplates?.[flow.responseTemplate]?.text ?? flow.responseTemplate;
 
-    const mode = flow.responseTemplateMode ?? 'literal';
+    const mode = flow.responseTemplateMode ?? 'model';
     const instruction =
       mode === 'model'
         ? `Usa este modelo como base para responder: "${resolvedTemplate}". ` +

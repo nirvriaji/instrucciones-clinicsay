@@ -80,15 +80,15 @@
     },
     "task_created": {
       "text": "Te contactaremos por WhatsApp lo antes posible.",
-      "mode": "literal"
+      "mode": "model"
     },
     "list_wait": {
       "text": "Te contactaremos por WhatsApp lo antes posible. Quedas en lista de espera.",
-      "mode": "literal"
+      "mode": "model"
     },
     "no_availability": {
       "text": "Te contactaremos por WhatsApp lo antes posible. Quedas en lista de espera.",
-      "mode": "literal"
+      "mode": "model"
     },
     "on_the_way": {
       "text": "No te preocupes, ven con cuidado. Aprovecharemos el tiempo lo mejor posible.",
@@ -96,71 +96,71 @@
     },
     "sensitive_situation": {
       "text": "Para orientarte bien, prefiero que lo revise nuestro equipo especializado. Les paso tu caso ahora mismo y te contactan.",
-      "mode": "literal"
+      "mode": "model"
     },
     "emotional_support": {
       "text": "Gracias por contarmelo. Voy a pasarlo al equipo para que puedan acompanarte y revisarlo con cuidado.",
-      "mode": "literal"
+      "mode": "model"
     },
     "greeting": {
       "text": "Hola, soy {{NOMBRE_BOT}}, el asistente virtual de {{CLINIC_NAME}}. ¿En que puedo ayudarte?",
-      "mode": "literal"
+      "mode": "model"
     },
     "goodbye": {
       "text": "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo mas, estamos aqui.",
-      "mode": "literal"
+      "mode": "model"
     },
     "information_not_available": {
       "text": "No tengo información sobre eso en este momento. ¿Quieres que lo consulte con el equipo?",
-      "mode": "literal"
+      "mode": "model"
     },
     "out_of_scope": {
       "text": "Soy el asistente de {{CLINIC_NAME}} y solo puedo ayudarte con nuestros servicios, tratamientos y citas. ¿En qué puedo ayudarte?",
-      "mode": "literal"
+      "mode": "model"
     },
     "farewell": {
       "text": "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo más, estamos aquí.",
-      "mode": "literal"
+      "mode": "model"
     },
     "home_visit": {
       "text": "Claro, las visitas a domicilio las gestiona directamente el equipo. ¿Quieres que deje la solicitud anotada?",
-      "mode": "literal"
+      "mode": "model"
     },
     "class_issue": {
       "text": "Entendido. Voy a pasar tu caso al equipo para que lo revisen y te contacten.",
-      "mode": "literal"
+      "mode": "model"
     },
     "change_requested": {
       "text": "He pasado tu solicitud al equipo. Te contactarán pronto.",
-      "mode": "literal"
+      "mode": "model"
     },
     "acknowledgement": {
       "text": "Gracias a ti. Si necesitas algo mas, estamos aqui.",
-      "mode": "literal"
+      "mode": "model"
     },
     "cancellation_inquiry": {
       "text": "¿Quieres que cancelemos la cita o prefieres buscar otra fecha?",
-      "mode": "literal"
+      "mode": "model"
     },
     "keep_appointment": {
       "text": "Perfecto, tu cita sigue confirmada.",
-      "mode": "literal"
+      "mode": "model"
     },
     "reschedule_inquiry": {
       "text": "¿Quieres que confirmemos el cambio de tu cita o prefieres que lo gestione el equipo?",
-      "mode": "literal"
+      "mode": "model"
     },
     "appointment_booked": {
       "text": "He agendado su cita. ¿Necesita algo mas?",
-      "mode": "literal"
+      "mode": "model"
     },
     "appointment_multiple": {
       "text": "He agendado tus citas. Si necesitas cambiar alguna, dimelo.",
-      "mode": "literal"
+      "mode": "model"
     },
     "reschedule_inquiry_full": {
       "text": "Sí, podemos gestionar el cambio de tu cita. ¿Quieres que confirmemos el reagendamiento?",
-      "mode": "literal"
+      "mode": "model"
     }
   },
   "faq": [
@@ -374,7 +374,7 @@
           }
         ],
         "responseTemplate": "Perfecto, tu cita del {fecha} a las {hora} queda confirmada. Nos vemos pronto.",
-        "responseTemplateMode": "model"
+        "responseTemplateMode": "literal"
       },
       "cancel_appointment": {
         "intent": "existing_appointment_cancellation",
@@ -398,7 +398,7 @@
           "manage_schedule_block_status"
         ],
         "responseTemplate": "Entendido, hemos cancelado tu cita del {fecha} a las {hora}. Si necesitas otra, avisanos.",
-        "responseTemplateMode": "model"
+        "responseTemplateMode": "literal"
       },
       "reschedule_appointment": {
         "intent": "existing_appointment_rescheduling",
@@ -481,21 +481,21 @@
           }
         ],
         "responseTemplate": "Gracias por avisar. Ajustamos tu cita del {fecha} a las {hora} segun el retraso.",
-        "responseTemplateMode": "model"
+        "responseTemplateMode": "literal"
       },
       "reschedule_inquiry": {
         "intent": "existing_appointment_reschedule_inquiry",
         "description": "Paciente pregunta sobre reagendar o cambiar una cita, sin decidir aun.",
         "steps": [],
         "responseTemplate": "reschedule_inquiry_full",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "cancellation_inquiry": {
         "intent": "existing_appointment_cancellation_inquiry",
         "description": "Paciente pregunta sobre cancelar una cita, sin decidir aun.",
         "steps": [],
         "responseTemplate": "cancellation_inquiry",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "keep_appointment_flow": {
         "intent": "existing_appointment_keep",
@@ -507,7 +507,7 @@
         "description": "Paciente indica que quiere mantener la cita tal como esta.",
         "steps": [],
         "responseTemplate": "keep_appointment",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "farewell": {
         "intent": "farewell",
@@ -520,7 +520,7 @@
           }
         ],
         "responseTemplate": "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo más, estamos aquí.",
-        "responseTemplateMode": "literal",
+        "responseTemplateMode": "model",
         "allowsSilence": true
       }
     }

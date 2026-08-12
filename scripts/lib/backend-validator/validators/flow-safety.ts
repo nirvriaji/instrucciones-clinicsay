@@ -334,7 +334,7 @@ function validateTerminalTemplate(flowName: string, flow: ToolFlow, errors: stri
   if (terminalTools.length === 0) return;
   if (!terminalTools.every((tool) => NEVER_TEMPLATED_TOOLS.has(tool))) return;
 
-  const mode = flow.responseTemplateMode ?? 'literal';
+  const mode = flow.responseTemplateMode ?? 'model';
   errors.push(
     `${header(flowName, flow)}: declara una plantilla de respuesta ("responseTemplate", modo "${mode}") pero su paso final ` +
       `solo usa herramientas de búsqueda o de identificación (${terminalTools.join(', ')}). ` +

@@ -136,7 +136,7 @@ export type ResponseTemplateMode = 'literal' | 'model';
 export type ResponseTemplate = {
   /** Template text */
   text: string;
-  /** Response mode: literal (exact) or model (adapted by LLM). Defaults to literal. */
+  /** Response mode: literal (exact) or model (adapted by LLM). Defaults to model. */
   mode?: ResponseTemplateMode;
 };
 
