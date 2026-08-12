@@ -132,7 +132,7 @@ function buildDefaultResponseTemplates(mode: 'full' | 'tasks-only'): ResponseTem
         mode: 'literal',
       },
       reschedule_inquiry_full: {
-        text: '¿Para qué fecha te gustaría cambiarla? Puedo buscar disponibilidad ahora mismo.',
+        text: 'Sí, podemos gestionar el cambio de tu cita. ¿Quieres que confirmemos el reagendamiento?',
         mode: 'literal',
       },
     };
@@ -291,16 +291,14 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
             parallel: false,
             note:
               'Marcar CANCELADA. El campo "reason" es obligatorio; usar "Solicitud del paciente". NO preguntar motivo al paciente. ' +
-              'Si ademas quiere nueva fecha, crear tarea de seguimiento con create_task DESPUES de cancelar (condicion: patient_wants_new_date).',
+              'Si quiere otra cita, ofrecer el flujo separado de new_appointment_scheduling despues de cancelar; no agendar ni crear una tarea desde este flujo.',
           },
         ],
-        // create_task es opcional y condicional: vive en allowedTools para que
-        // el paso terminal (y por tanto la plantilla de cierre) siga siendo la
-        // cancelacion real, no la tarea.
-        allowedTools: ['manage_schedule_block_status', 'create_task'],
+        allowedTools: ['manage_schedule_block_status'],
         // Modo `model`: cancelar sin decir QUE cita se cancela deja al paciente
         // sin forma de detectar que se ha cancelado la equivocada.
-        responseTemplate: 'Entendido, hemos cancelado tu cita del {fecha} a las {hora}. Si necesitas otra, avisanos.',
+        responseTemplate:
+          'Entendido, hemos cancelado tu cita del {fecha} a las {hora}. Si necesitas otra, avisanos.',
         responseTemplateMode: 'model',
       },
       reschedule_appointment: {
@@ -330,18 +328,21 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
             step: 2,
             tools: ['resolve_availability_query'],
             parallel: false,
+            required: ['hasCancelledRescheduleTarget'],
             note: 'Resolver las nuevas fechas que pide el paciente despues de capturar el target.',
           },
           {
             step: 3,
             tools: ['check_availability'],
             parallel: false,
+            required: ['hasCancelledRescheduleTarget', 'hasResolvedAvailabilityQuery'],
             note: 'Buscar nuevos horarios (condicion: dates_resolved). Mantener mismo professionalId de la cita original como preferencia. Para mismo dia: filtrar slots del dia actual.',
           },
           {
             step: 4,
             tools: ['schedule_block'],
             parallel: false,
+            required: ['hasCancelledRescheduleTarget', 'hasShownSlots'],
             note:
               'Agendar la NUEVA cita (condicion: slot_selected) reutilizando el target persistido CARE_PLAN. ' +
               'El backend toma carePlanId y plannedSessionIds del target cancelado.',

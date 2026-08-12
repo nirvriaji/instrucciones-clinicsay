@@ -67,6 +67,12 @@ Las rules DEBEN usar los intents canónicos exactos. Si una rule referencia un i
 **Full mode:**
 - `new_appointment_scheduling`: `action: "allow"`, `redirectToTask: null` (el bot agenda directamente). **NO** usar `redirectToTask: true` en full mode: el backend lo detectaría como advisory (nota de modo) porque en full el bot agenda directamente.
 
+**Contrato de intención para cancelación y reagendamiento:**
+- Una consulta (`existing_appointment_reschedule_inquiry`) no confirma cambios ni debe activar disponibilidad o cancelación.
+- Una aceptación explícita usa `existing_appointment_rescheduling`; en full el flow debe respetar `cancel_for_rescheduling` -> `resolve_availability_query` -> `check_availability` -> `schedule_block` (con la excepción documentada de `hasConcreteDateTime`).
+- La no asistencia es `existing_appointment_cancellation` con `manage_schedule_block_status`. Una nueva cita posterior es `new_appointment_scheduling` y espera aceptación después de cancelar.
+- Los estados internos verbose no son intents. Los flows pueden incluir `create_task` o pasos custom si el asesor lo decide y no rompe las invariantes del backend. Las respuestas a recordatorios no cambian.
+
 **REGLA DE ORO DEL PACIENTE:**
 - El bot NUNCA asume nombre, apellido ni teléfono del contacto de Kommo (`CALLER_PHONE`, `ASSOCIATED_PATIENTS`).
 - Siempre pregunta al interlocutor explícitamente antes de agendar.

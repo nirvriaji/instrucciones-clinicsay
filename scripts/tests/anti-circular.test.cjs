@@ -6,7 +6,7 @@
  * a step may only REQUIRE capabilities established by EARLIER steps — never by a
  * tool in the same step, or the flow deadlocks at runtime (step_requirements_failed).
  *
- * Run: node --test scripts/tests/anti-circular.test.js
+ * Run: node --test scripts/tests/anti-circular.test.cjs
  */
 
 const { describe, it } = require('node:test');
@@ -20,7 +20,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const RUN_VALIDATION = path.join(ROOT, 'scripts/lib/backend-validator/run-validation.ts');
 
 const FULLS = [
-  'sedes/demo/output/structured-logic.full.json',
+  '_templates/base-full.json',
 ];
 
 function runValidator(jsonPath, mode) {

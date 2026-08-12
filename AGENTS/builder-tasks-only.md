@@ -88,7 +88,7 @@ Para estructura técnica: schema autorizado → tool registry/mode enforcer → 
 
 ### Modo: Tasks-Only (scheduling: false)
 
-Este bot trabaja con `scheduling: false`. Gestiona citas ya existentes (confirmar, cancelar, marcar en camino) y crea tareas administrativas cuando la solicitud excede sus capacidades. No ejecuta scheduling directamente: no consulta disponibilidad, no muestra huecos ni opciones de horario, no asigna profesional ni fija sala. Para agendamiento, disponibilidad y reprogramación, el bot recopila datos y crea tarea.
+Este bot trabaja con `scheduling: false`. Gestiona citas ya existentes (confirmar, cancelar, marcar en camino) y crea tareas administrativas cuando la solicitud excede sus capacidades. No ejecuta scheduling directamente: no consulta disponibilidad, no muestra huecos ni opciones de horario, no asigna profesional ni fija sala. Para agendamiento, disponibilidad y reprogramación, el bot recopila datos y crea tarea. Una cancelación definitiva por no asistencia usa `manage_schedule_block_status`; después ofrece una cita nueva y solo crea la tarea de esa nueva solicitud si el paciente la acepta.
 
 ### Tools Disponibles
 
@@ -107,6 +107,9 @@ Las 6 tools disponibles en este modo son:
 - `create_task` se usa solo en estas situaciones:
   1. Limitaciones técnicas del bot: agendar nueva cita, buscar disponibilidad, reprogramar, resolver profesional/tratamiento.
   2. Reglas explícitas de la clínica: tratamientos o situaciones que los archivos de input indican que van a tarea.
+- No es obligatorio combinar `manage_schedule_block_status` con `create_task` en ningún flow. El asesor puede diseñar flows custom o añadir pasos `create_task` dentro de las invariantes del backend.
+- `existing_appointment_reschedule_inquiry` solo informa y pide confirmación: nunca consulta disponibilidad ni intenta cancelar/reagendar.
+- Los estados internos verbose describen continuaciones conversacionales y no son intents nuevos. Las respuestas a recordatorios conservan sus flows de confirmación/cancelación sin cambios.
 - `lookup_patient` es solo lectura; busca pacientes existentes pero no crea nuevos.
 - Los `steps` de los flows deben referenciar únicamente las 6 tools de este modo.
 
@@ -187,7 +190,7 @@ Evoluciona `sedes/<nombre>/output/structured-logic.tasks-only.draft.json` **secc
 - `query_knowledge_base` busca semánticamente en `protocols`, `faq`, `responseTemplates` y `rules`. Debe estar disponible en flows informativos y usarse solo cuando la respuesta no esté ya en contexto. No sustituye tools de pacientes, citas o tareas.
 - `new_appointment_scheduling` flow: patrón típico es `create_task` (escalation a humanos). Si la clínica prefiere otra aproximación (ej. respuesta puramente informativa), es válido — el validador emitirá una nota advisory no bloqueante; confírmala con el asesor.
 - `existing_appointment_confirmation` flow: usa `manage_schedule_block_status` (gestión de citas existentes)
-- `existing_appointment_cancellation` flow: usa `manage_schedule_block_status` + `create_task` (cancelar + notificar)
+- `existing_appointment_cancellation` flow: usa `manage_schedule_block_status`; añade `create_task` solo si la operativa de la clínica lo requiere.
 - Templates DEBEN gestionar expectativas: "Un miembro de nuestro equipo se pondrá en contacto..."
 
 **Guarda cada avance en:** `sedes/<nombre>/output/structured-logic.tasks-only.draft.json`. El validador promueve el draft válido al archivo final.
@@ -375,7 +378,7 @@ Después de generar TODAS las secciones del JSON y antes de declararlo completo,
 - [ ] `general_inquiry` flow tiene `query_knowledge_base` en `allowedTools` o en al menos un step.
 - [ ] `new_appointment_scheduling` flow usa SOLO `create_task` (nunca `check_availability`, `schedule_block`, `resolve_availability_query`).
 - [ ] `existing_appointment_confirmation` flow usa `manage_schedule_block_status`.
-- [ ] `existing_appointment_cancellation` flow usa `manage_schedule_block_status` (solo step 1; NO `create_task` en step 2, a menos que el asesor lo solicite explícitamente).
+- [ ] `existing_appointment_cancellation` flow usa `manage_schedule_block_status`; `create_task` es opcional y solo se añade si el asesor lo solicita explícitamente.
 - [ ] `human_follow_up` flow usa `create_task`.
 - [ ] `farewell` flow existe con `allowsSilence: true` y `steps: []` o `[{step:1, tools:[], parallel:false}]`.
 - [ ] Rule de `new_appointment_scheduling` tiene `redirectToTask: true` (patrón típico) — si se omite intencionadamente, la nota advisory del validador está confirmada con el asesor.
@@ -518,7 +521,7 @@ Declara al menos estos intents. El template base incluye 12 intents canónicos. 
       "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora.",
       "action": "allow",
       "redirectToTask": true,
-      "note": "En modo tasks-only, cancelar cita actual + crear tarea de seguimiento."
+       "note": "En modo tasks-only, el asesor decide si crear tarea; no se exige cancelar ni combinar tools."
     },
     {
       "id": "general_inquiry",
@@ -587,7 +590,7 @@ Si no se proporciona, el backend usa un template genérico por defecto. Se recom
 
 Usa `allowedTools` para declarar explícitamente qué tools están disponibles en cada flow. La lista debe incluir exactamente las tools que el flow necesita:
 - `confirm_existing_appointment`: `allowedTools: ["manage_schedule_block_status"]` — el flow solo necesita confirmar la cita.
-- `cancel_existing_appointment`: `allowedTools: ["manage_schedule_block_status", "manage_all_schedule_blocks_for_date", "create_task"]` — gestión de citas + tarea de seguimiento.
+- `cancel_existing_appointment`: `allowedTools: ["manage_schedule_block_status", "manage_all_schedule_blocks_for_date"]` — gestión de citas; añade `create_task` solo si la clínica requiere tarea de seguimiento.
 - `existing_appointment_inquiry`: `allowedTools: []` — el bot responde desde el contexto, no usa tools.
 - `new_appointment_scheduling`: `allowedTools: ["create_task"]` — el flow recopila datos y crea una tarea.
 - `product_inquiry` / `shipping_request`: `allowedTools: ["create_task"]` — el flow recopila datos y crea una tarea.

@@ -44,6 +44,7 @@ export const VALID_CAPABILITIES = new Set([
   'hasCreatedAppointment',
   'hasCreatedTask',
   'hasResolvedAvailabilityQuery',
+  'hasCancelledRescheduleTarget',
   'hasActiveAppointment',
 ]);
 
@@ -62,6 +63,7 @@ export const CAPABILITY_ESTABLISHERS: Record<string, string[]> = {
   hasCreatedAppointment: ['schedule_block'],
   hasCreatedTask: ['create_task'],
   hasResolvedAvailabilityQuery: ['resolve_availability_query'],
+  hasCancelledRescheduleTarget: ['cancel_for_rescheduling'],
   hasActiveAppointment: [], // deterministic, computed from conversation context (not a tool)
 };
 

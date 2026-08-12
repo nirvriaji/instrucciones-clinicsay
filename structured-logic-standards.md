@@ -95,7 +95,7 @@ A tool that destroys data must never run before — or alongside — the tool th
 
 **Why:** cancelling before the new appointment exists leaves the patient **with no appointment at all** when no slot is found, when they do not pick one, or when they simply stop replying. This is irrecoverable data loss and it happened in production.
 
-**Safe reschedule order (full mode):** resolve dates → check availability → **schedule the new appointment** → cancel the old one. The cancellation is the last movement of the flow, and the backend additionally blocks it until the new appointment exists (defense in depth: step order is only a suggestion to the model).
+**Safe reschedule order (full mode):** `cancel_for_rescheduling` → resolve dates → check availability → **schedule the new appointment**. The preparatory cancellation captures and persists the backend-owned target; `manage_schedule_block_status` is not the cancellation route for this flow. If no slot is found, the target remains honest and can expire safely.
 
 A reschedule flow (`existing_appointment_rescheduling`) in `full` mode that can cancel MUST also be able to book: `schedule_block` has to be present in `steps` or `allowedTools`.
 
@@ -377,7 +377,7 @@ The **last bot message** determines the meaning of short replies.
 **Symptom:** a flow or rule references `intent: "X"` but `intents["X"]` is missing. **Why wrong:** the validator rejects it and the classifier can never select it. **Fix:** declare `X` in the catalog (or fix the reference).
 
 ### "Cancel First, Ask Later"
-**Symptom:** a reschedule flow whose step 1 contains `manage_schedule_block_status`, often `parallel: true` next to `resolve_availability_query`. **Why wrong:** the appointment is cancelled before any alternative exists; if nothing is available the patient ends up with no appointment (real production incident). **Fix:** resolve dates → check availability → `schedule_block` → cancel the old appointment last.
+**Symptom:** a reschedule flow uses `manage_schedule_block_status` as its preparatory cancellation, often in parallel with `resolve_availability_query`. **Why wrong:** definitive status management is not the rescheduling contract, and the flow can lose the backend-owned target or cancel before a valid replacement path. **Fix:** use `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block` in full mode. Use `manage_schedule_block_status` for definitive cancellation, including non-attendance; offer a new appointment only after the patient accepts it.
 
 ### "Closing Template on a Search"
 **Symptom:** a flow whose terminal step is `check_availability` / `resolve_*` while declaring `responseTemplate: "He movido tu cita"`. **Why wrong:** the template is the flow's closing line, so the bot claims the change is done right after merely listing slots. **Fix:** end the flow with the acting tool and keep the template there; or drop the template and let the model synthesise the search results.

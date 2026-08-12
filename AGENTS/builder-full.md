@@ -117,6 +117,12 @@ Las 13 tools disponibles en este modo son:
   2. Datos incompletos que impiden agendar.
   3. Limitaciones técnicas reales del bot.
 - `check_availability` debe ejecutarse antes de `schedule_block`.
+- Una consulta de reagendamiento (`existing_appointment_reschedule_inquiry`) es informativa: no cancela, consulta disponibilidad ni reserva. La confirmación explícita debe pasar a un flow separado de `existing_appointment_rescheduling`.
+- El orden completo de reagendamiento es `cancel_for_rescheduling` -> `resolve_availability_query` -> `check_availability` -> `schedule_block`. Solo puede omitirse `resolve_availability_query` si `hasConcreteDateTime` está declarado al inicio del turno.
+- La cancelación definitiva, incluida la no asistencia, usa `manage_schedule_block_status`; después de cancelar, ofrecer una nueva cita y solo continuar `new_appointment_scheduling` cuando el paciente la acepte.
+- Mantén los estados internos descriptivos (incluidos los estados verbose de continuación) separados de los ids canónicos: no inventes intents nuevos para representar estados.
+- Los recordatorios y sus respuestas mantienen el flujo existente de confirmación/cancelación; no los conviertas en reagendamiento implícito.
+- El asesor puede añadir `create_task` y pasos custom cuando los necesite, siempre respetando estas invariantes de seguridad y el contrato de tools.
 - En el patrón canónico de booking (5 steps), el paciente se identifica AL FINAL: `resolve_patient` va en su propio step (step 4, sin `required`) y `schedule_block` en el último (step 5, `required: ["hasResolvedPatient"]`). NO pedir datos personales antes de mostrar horarios. INVARIANTE TÉCNICO: un step NUNCA puede requerir una capability que establece una tool del MISMO step (dependencia circular → bloqueo total en runtime; el validador lo rechaza como error bloqueante).
 
 ---
@@ -527,7 +533,7 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
 #### Casos que el bot atiende directamente
 - Agendar nueva cita: flow de booking con `check_availability` + `schedule_block`.
 - Consultar disponibilidad: `check_availability`.
-- Reprogramar: `cancel_for_rescheduling` (captura el target) → `resolve_availability_query` → `check_availability` → `schedule_block` (reutiliza el target). El backend cancela la antigua automáticamente al crear la nueva.
+- Reprogramar: `cancel_for_rescheduling` (captura y libera preparatoriamente el target) → `resolve_availability_query` → `check_availability` → `schedule_block` (reutiliza el target persistido). No sustituyas el primer paso por `manage_schedule_block_status`.
 - Consultar citas existentes: el bot lee el contexto y responde directamente.
 - Confirmar/cancelar citas: `manage_schedule_block_status` o `manage_all_schedule_blocks_for_date`.
 

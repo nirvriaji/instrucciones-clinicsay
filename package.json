@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "fetch:sedes": "tsx scripts/fetch-sedes-from-db.ts",
-    "test:anti-circular": "node --test scripts/tests/anti-circular.test.js",
+    "test:anti-circular": "node --test scripts/tests/anti-circular.test.cjs",
     "validate:full": "tsx scripts/lib/backend-validator/run-validation.ts"
   },
   "dependencies": {

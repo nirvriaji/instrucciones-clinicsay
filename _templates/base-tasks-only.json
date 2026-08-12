@@ -39,7 +39,12 @@
     "additionalRules": [
       "No pensar en voz alta.",
       "Una unica pregunta por turno.",
-      "No terminar con pregunta salvo que sea imprescindible."
+      "No terminar con pregunta salvo que sea imprescindible.",
+      "NUNCA dar ejemplos de frases como \"puedes decir mañana, el lunes, etc.\". Eso genera referencias ambiguas que confunden al time-resolver.",
+      "Si el paciente ya menciono una fecha ambigua (ej. \"el lunes\"), NO pedirle manualmente que aclare si es hoy o la semana que viene. Usar la fecha que el mismo paciente propuso.",
+      "Si el paciente ya menciono un tratamiento o sintoma, NO pedirle manualmente \"que tratamiento necesitas\". Usar lo que ya dijo.",
+      "Si el paciente ya propuso un horario (ej. \"a las 4\"), NO pedirle manualmente \"que horario prefieres\". Usar la fecha/hora que propuso.",
+      "REGLA DE ORO (resolve_patient): Solo puedes pasar nombre, apellido o telefono a resolve_patient si el INTERLOCUTOR los dijo EXPLICITAMENTE en esta conversacion. NUNCA uses CALLER_PHONE, ASSOCIATED_PATIENTS ni los datos del contacto de Kommo como si fueran confirmados por el paciente. Si el paciente dice \"quiero una cita\" sin datos, deja los campos vacios y el sistema te pedira que los preguntes."
     ],
     "mustOfferHumanHandoff": true,
     "timeGreetingRanges": [
@@ -196,7 +201,7 @@
   },
   "intents": {
     "existing_appointment_confirmation": {
-      "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es new_appointment_scheduling (continuar el agendamiento).",
+      "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
       "examples": [
         "confirmo",
         "ahí estaré"
@@ -248,7 +253,7 @@
       ]
     },
     "existing_appointment_rescheduling": {
-      "description": "El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. NO usar cuando el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita (eso es new_appointment_scheduling, continuar el agendamiento). Incluye: cambiar de día, adelantar o atrasar la hora, corregir el titular. Ejemplos válidos: \"muévela al jueves\", \"cámbiamela a la tarde\", \"adelántala una hora\".",
+      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, (c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), (d) \"restablecer\" una cita tras cancelarla en el mismo turno de conversacion. Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs).",
       "examples": [
         "¿podemos cambiar mi cita al jueves?",
         "muevela a la tarde",
@@ -290,7 +295,7 @@
     "flows": {
       "any_scheduling_request": {
         "intent": "new_appointment_scheduling",
-        "description": "Paciente quiere reservar una NUEVA sesion. En modo tasks-only, se crea tarea para seguimiento humano.",
+        "description": "El interlocutor quiere reservar una NUEVA sesion. En modo tasks-only, se crea tarea para seguimiento humano.",
         "steps": [
           {
             "step": 1,
@@ -307,6 +312,11 @@
       },
       "confirm_existing_appointment": {
         "intent": "existing_appointment_confirmation",
+        "selection": {
+          "requiredCapabilities": [
+            "hasActiveAppointment"
+          ]
+        },
         "description": "Paciente confirma asistencia a una cita ya reservada, especialmente como respuesta a un recordatorio.",
         "steps": [
           {
@@ -319,15 +329,15 @@
             "note": "Marcar CONFIRMADA"
           }
         ],
-        "responseTemplate": "appointment_confirmed",
+        "responseTemplate": "appointment_confirmed"
+      },
+      "cancel_existing_appointment": {
+        "intent": "existing_appointment_cancellation",
         "selection": {
           "requiredCapabilities": [
             "hasActiveAppointment"
           ]
-        }
-      },
-      "cancel_existing_appointment": {
-        "intent": "existing_appointment_cancellation",
+        },
         "description": "Paciente comunica que no podra asistir a una cita ya reservada y necesita anularla.",
         "steps": [
           {
@@ -340,15 +350,15 @@
             "note": "Marcar CANCELADA. El campo \"reason\" es obligatorio; usar \"Solicitud del paciente\". NO preguntar motivo al paciente."
           }
         ],
-        "responseTemplate": "appointment_cancelled",
+        "responseTemplate": "appointment_cancelled"
+      },
+      "mark_on_the_way": {
+        "intent": "existing_appointment_delay_notice",
         "selection": {
           "requiredCapabilities": [
             "hasActiveAppointment"
           ]
-        }
-      },
-      "mark_on_the_way": {
-        "intent": "existing_appointment_delay_notice",
+        },
         "description": "Paciente avisa que llega tarde a una cita confirmada.",
         "steps": [
           {
@@ -361,15 +371,15 @@
             "note": "Marcar EN_CAMINO"
           }
         ],
-        "responseTemplate": "on_the_way",
+        "responseTemplate": "on_the_way"
+      },
+      "reschedule_existing_appointment": {
+        "intent": "existing_appointment_rescheduling",
         "selection": {
           "requiredCapabilities": [
             "hasActiveAppointment"
           ]
-        }
-      },
-      "reschedule_existing_appointment": {
-        "intent": "existing_appointment_rescheduling",
+        },
         "description": "Paciente quiere cambiar la fecha u hora de una cita YA AGENDADA. En modo tasks-only, el flujo por defecto es: cancelar cita actual + crear tarea de seguimiento. Las clinicas pueden simplificar a solo create_task si no quieren cancelar automaticamente.",
         "steps": [
           {
@@ -380,15 +390,10 @@
             ],
             "parallel": true,
             "required": [],
-            "note": "Cancelar cita actual (reason=\"Solicitud del paciente\", NO preguntar motivo) + crear tarea para seguimiento humano. Para correccion de titular: cancelar cita actual, crear tarea indicando nuevo paciente y mismo treatmentId. Para restablecer tras cancelacion en este turno: usar datos del historial de tool outputs."
+            "note": "Cancelar cita actual (reason=\"Solicitud del paciente\", NO preguntar motivo) + crear tarea para seguimiento humano. Para correccion de titular: cancelar cita actual, crear tarea indicando paciente correcto y mismo treatmentId. Para restablecer tras cancelacion en este turno: usar datos del historial de tool outputs."
           }
         ],
-        "responseTemplate": "change_requested",
-        "selection": {
-          "requiredCapabilities": [
-            "hasActiveAppointment"
-          ]
-        }
+        "responseTemplate": "change_requested"
       },
       "reschedule_inquiry": {
         "intent": "existing_appointment_reschedule_inquiry",
@@ -406,15 +411,15 @@
       },
       "keep_appointment_flow": {
         "intent": "existing_appointment_keep",
-        "description": "Paciente indica que quiere mantener la cita tal como esta.",
-        "steps": [],
-        "responseTemplate": "Perfecto, tu cita sigue confirmada.",
-        "responseTemplateMode": "literal",
         "selection": {
           "requiredCapabilities": [
             "hasActiveAppointment"
           ]
-        }
+        },
+        "description": "Paciente indica que quiere mantener la cita tal como esta.",
+        "steps": [],
+        "responseTemplate": "Perfecto, tu cita sigue confirmada.",
+        "responseTemplateMode": "literal"
       },
       "farewell": {
         "intent": "farewell",
@@ -478,7 +483,7 @@
     {
       "id": "all_scheduling_to_task",
       "intent": "new_appointment_scheduling",
-      "description": "El paciente quiere agendar cita o consultar disponibilidad.",
+      "description": "El paciente (o alguien en su nombre) quiere agendar cita o consultar disponibilidad.",
       "action": "allow",
       "note": "En modo tasks-only, el flow any_scheduling_request crea tarea para seguimiento humano.",
       "redirectToTask": true
@@ -513,7 +518,7 @@
       "note": "Consulta sobre cancelacion. El bot pregunta si quiere cancelar o buscar otra fecha."
     },
     {
-      "id": "existing_appointment_keep",
+      "id": "keep_appointment",
       "intent": "existing_appointment_keep",
       "description": "Paciente indica que quiere mantener la cita tal como esta.",
       "action": "allow",

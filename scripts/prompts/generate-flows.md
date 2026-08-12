@@ -44,6 +44,13 @@ Cada intent que requiere acción del bot DEBE tener al menos un flow:
 
 ### 3. Flujos de agendamiento por modo
 
+**Contrato semántico de citas existentes (AMBOS MODOS):**
+- `existing_appointment_reschedule_inquiry` pregunta si se puede cambiar la cita; no confirma, cancela, busca slots ni reserva.
+- `existing_appointment_rescheduling` solo se activa ante una aceptación explícita y, en full, usa `cancel_for_rescheduling` -> `resolve_availability_query` -> `check_availability` -> `schedule_block`.
+- La no asistencia es cancelación definitiva: usa `manage_schedule_block_status`, ofrece una nueva cita y espera aceptación antes de continuar `new_appointment_scheduling`.
+- Usa estados internos descriptivos para continuaciones, nunca ids de intent nuevos. Los recordatorios siguen usando sus flows actuales.
+- El asesor puede añadir `create_task` o pasos custom si respeta las tools permitidas, las capacidades previas y el orden seguro; no hay combinaciones obligatorias fuera de las invariantes del backend.
+
 **GENERAL INQUIRY — AMBOS MODOS:**
 ```text
 Step 1: query_knowledge_base disponible.
@@ -79,6 +86,7 @@ Reprogramar cita existente (existing_appointment_rescheduling, selection.require
 Cualquier solicitud de agendamiento:
   Step 1: create_task (recopilar datos y crear tarea para equipo humano)
   ResponseTemplate: "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible."
+La forma concreta del flow es decisión del asesor: `create_task` es el patrón habitual, no una obligación universal. No uses tools de disponibilidad, reserva o resolución de scheduling.
 ```
 
 ### 4. Reglas de steps

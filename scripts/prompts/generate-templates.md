@@ -46,6 +46,9 @@ Además, crea templates para cada flow que use `responseTemplate`:
 - `"model"`: El LLM genera respuesta libre basada en el contexto
 - Usa `"literal"` para mensajes cortos y estandarizados
 - Usa `"model"` para mensajes que requieren variables dinámicas
+- En una consulta informativa de reagendamiento, el texto debe pedir confirmación y nunca afirmar que la cita ya cambió.
+- La cancelación por no asistencia debe confirmar solo la cancelación. La oferta de una cita nueva pertenece a la continuación posterior a la aceptación del paciente.
+- Los templates de recordatorio/confirmación siguen sin cambios.
 
 ### 6. Variables (placeholders) en templates
 El backend reemplaza automáticamente estos placeholders con datos reales de la operación:

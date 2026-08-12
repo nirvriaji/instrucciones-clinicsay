@@ -63,6 +63,24 @@ const BULK_DESTRUCTIVE_TOOL = 'manage_all_schedule_blocks_for_date';
  */
 const APPOINTMENT_WRITING_TOOLS = [CONSTRUCTIVE_TOOL, DESTRUCTIVE_TOOL, BULK_DESTRUCTIVE_TOOL];
 
+/** Tools that either mutate an appointment or inspect replacement availability. */
+const RESCHEDULE_INQUIRY_FORBIDDEN_TOOLS = [
+  'cancel_for_rescheduling',
+  CONSTRUCTIVE_TOOL,
+  DESTRUCTIVE_TOOL,
+  BULK_DESTRUCTIVE_TOOL,
+  'resolve_availability_query',
+  'check_availability',
+];
+
+/** Tools that can legitimately close a flow and receive its closing template. */
+const TERMINAL_ACTION_TOOLS = new Set([
+  CONSTRUCTIVE_TOOL,
+  DESTRUCTIVE_TOOL,
+  BULK_DESTRUCTIVE_TOOL,
+  'create_task',
+]);
+
 const APPOINTMENT_WRITING_TOOLS_TEXT = APPOINTMENT_WRITING_TOOLS.join('", "');
 
 /** Deterministic gate proving the patient really has an appointment to act on. */
@@ -114,6 +132,21 @@ export const FLOW_SAFETY_PROMPT_RULES =
   `declare "selection": { "requiredCapabilities": ["hasActiveAppointment"] }. Without that deterministic gate a bare "sí" can ` +
   `select the flow when the patient has no appointment at all, and the bot acts on an appointment that does not exist. ` +
   `Informational flows (no tools) do not need the gate.\n`;
+
+/** Shared semantic contract used by all builder prompts for appointment flows. */
+export const RESCHEDULING_SEMANTIC_PROMPT_RULES =
+  `RESCHEDULING SEMANTIC RULES (apply these meanings before choosing intents, flows, or tools):\n` +
+  `R1. An informational reschedule inquiry asks whether an existing appointment can be rescheduled, without confirming the change. ` +
+  `Use canonical intent "existing_appointment_reschedule_inquiry"; do not cancel, check availability, or book, and do not claim the appointment changed.\n` +
+  `R2. An explicit rescheduling confirmation clearly agrees to move the existing appointment. Use canonical intent "existing_appointment_rescheduling" ` +
+  `and a separate "reschedule_appointment" flow for the real operation; an inquiry must never be silently upgraded.\n` +
+  `R3. definitive non-attendance cancellation means the patient will not attend and wants the existing appointment cancelled, not moved. ` +
+  `Use canonical intent "existing_appointment_cancellation" and "manage_schedule_block_status", not "cancel_for_rescheduling"; do not check availability before a new appointment is accepted.\n` +
+  `R4. A new appointment after cancellation is a new scheduling request. Use canonical intent "new_appointment_scheduling" and a separate new-appointment flow; never reuse the rescheduling target.\n` +
+  `R5. Full and tasks-only are different contracts. In full mode, explicit rescheduling may use availability and appointment tools and must follow the validated full order. In tasks-only mode, do not generate scheduling, rebooking, or availability tools; scheduling requests use "create_task" for human follow-up. Definitive cancellation remains allowed through "manage_schedule_block_status".\n` +
+  `R6. Preserve canonical intents exactly. Use verbose internal states such as "PATIENT_ONLY_ASKED_IF_EXISTING_APPOINTMENT_CAN_BE_RESCHEDULED_WITHOUT_CONFIRMING_RESCHEDULING", "PATIENT_EXPLICITLY_CONFIRMED_EXISTING_APPOINTMENT_RESCHEDULING_BEFORE_NEW_DATE_OR_TIME", "EXISTING_APPOINTMENT_WAS_CANCELLED_BECAUSE_PATIENT_WILL_NOT_ATTEND_AND_BOT_IS_OFFERING_A_NEW_APPOINTMENT", and "PATIENT_ACCEPTED_NEW_APPOINTMENT_AFTER_CANCELLING_PREVIOUS_APPOINTMENT" only as internal conversational states, never as new intent ids.\n` +
+  `R7. Keep "reschedule_inquiry" and "reschedule_appointment" separate: the first answers whether a change is possible and requests confirmation; the second performs the confirmed operation.\n` +
+  `R8. A short affirmative inherits meaning from persisted state: after a reschedule-confirmation question in state PATIENT_ONLY_ASKED_IF_EXISTING_APPOINTMENT_CAN_BE_RESCHEDULED_WITHOUT_CONFIRMING_RESCHEDULING, "sí" means explicit reschedule confirmation and transitions to PATIENT_EXPLICITLY_CONFIRMED_EXISTING_APPOINTMENT_RESCHEDULING_BEFORE_NEW_DATE_OR_TIME; after non-attendance cancellation in state EXISTING_APPOINTMENT_WAS_CANCELLED_BECAUSE_PATIENT_WILL_NOT_ATTEND_AND_BOT_IS_OFFERING_A_NEW_APPOINTMENT, "sí" means acceptance of a new appointment and transitions to PATIENT_ACCEPTED_NEW_APPOINTMENT_AFTER_CANCELLING_PREVIOUS_APPOINTMENT.\n`;
 
 function toolsOf(step: { tools?: string[] } | undefined): string[] {
   return Array.isArray(step?.tools) ? step!.tools : [];
@@ -311,6 +344,22 @@ function validateTerminalTemplate(flowName: string, flow: ToolFlow, errors: stri
       `CÓMO SE CORRIGE: termina el flujo con la herramienta que realiza la acción real ` +
       `(por ejemplo "schedule_block", "manage_schedule_block_status" o "create_task") y deja la plantilla en ese paso final; ` +
       `si el flujo solo informa, quita la plantilla y deja que el bot redacte la respuesta con los resultados.`,
+  );
+}
+
+function validateTerminalAction(flowName: string, flow: ToolFlow, errors: string[]): void {
+  if (!flow.responseTemplate) return;
+  const steps = stepsOf(flow);
+  if (steps.length === 0) return;
+
+  const terminalTools = toolsOf(steps[steps.length - 1]);
+  if (terminalTools.length > 0 && terminalTools.every((tool) => TERMINAL_ACTION_TOOLS.has(tool))) return;
+  if (terminalTools.length === 0 || terminalTools.every((tool) => NEVER_TEMPLATED_TOOLS.has(tool))) return;
+
+  errors.push(
+    `${header(flowName, flow)} declara una plantilla de cierre, pero el último paso no realiza una acción terminal ` +
+      `real (${terminalTools.join(', ')}). CÓMO SE CORRIGE: termina con schedule_block, ` +
+      `manage_schedule_block_status, manage_all_schedule_blocks_for_date o create_task.`
   );
 }
 
@@ -533,6 +582,124 @@ function validateActiveAppointmentGate(flowName: string, flow: ToolFlow, errors:
   );
 }
 
+function validateRescheduleInquiry(flowName: string, flow: ToolFlow, errors: string[]): void {
+  if (flow.intent !== 'existing_appointment_reschedule_inquiry') return;
+
+  const forbidden = RESCHEDULE_INQUIRY_FORBIDDEN_TOOLS.filter((tool) => flowUsesTool(flow, tool));
+  if (forbidden.length === 0) return;
+
+  errors.push(
+    `${header(flowName, flow)}: es una consulta informativa de reagendamiento, pero usa herramientas ` +
+      `que modifican la cita o consultan disponibilidad (${forbidden.join(', ')}). ` +
+      `POR QUÉ ES PELIGROSO: la consulta no confirma ningún cambio y no debe iniciar ni preparar una reprogramación. ` +
+      `CÓMO SE CORRIGE: deja este flujo sin herramientas o usa únicamente herramientas informativas; ` +
+      `reserva las herramientas de reagendamiento para "existing_appointment_rescheduling".`
+  );
+}
+
+function validateFullReschedulingContract(
+  flowName: string,
+  flow: ToolFlow,
+  mode: StructuredLogicChatMode,
+  errors: string[],
+): void {
+  if (mode !== 'full' || flow.intent !== 'existing_appointment_rescheduling') return;
+
+  const requiredCapabilities = flow.selection?.requiredCapabilities;
+  if (!Array.isArray(requiredCapabilities) || !requiredCapabilities.includes(ACTIVE_APPOINTMENT_CAPABILITY)) {
+    errors.push(
+      `${header(flowName, flow)} en modo full debe declarar "selection.requiredCapabilities" con ` +
+        `"${ACTIVE_APPOINTMENT_CAPABILITY}". La reprogramación solo puede actuar sobre una cita activa.`
+    );
+  }
+
+  const requiredTools = [
+    'cancel_for_rescheduling',
+    'resolve_availability_query',
+    'check_availability',
+    'schedule_block',
+  ];
+  const concreteDateTime = Array.isArray(requiredCapabilities) && requiredCapabilities.includes('hasConcreteDateTime');
+  const steps = stepsOf(flow);
+  const positions = requiredTools.map((tool) =>
+    steps.findIndex((step) => toolsOf(step).includes(tool)),
+  );
+
+  if (positions[0] < 0) {
+    errors.push(
+      `${header(flowName, flow)} en modo full debe incluir "cancel_for_rescheduling" en un paso numerado ` +
+        `antes de consultar disponibilidad; es la cancelación preparatoria que conserva el target técnico.`
+    );
+  }
+  if (positions[3] < 0) {
+    errors.push(
+      `${header(flowName, flow)} en modo full debe incluir "schedule_block" como acción terminal de la reprogramación.`
+    );
+  }
+  if (positions[2] < 0) {
+    errors.push(
+      `${header(flowName, flow)} en modo full debe incluir "check_availability" antes de "schedule_block".`
+    );
+  }
+  if (positions[1] < 0 && !concreteDateTime) {
+    errors.push(
+      `${header(flowName, flow)} en modo full debe incluir "resolve_availability_query" antes de "check_availability" ` +
+        `cuando no declara "hasConcreteDateTime".`
+    );
+  }
+
+  const orderedPositions = positions.filter((position) => position >= 0);
+  if (
+    orderedPositions.length > 1 &&
+    orderedPositions.some((position, index) => index > 0 && orderedPositions[index - 1] >= position)
+  ) {
+    errors.push(
+      `${header(flowName, flow)} en modo full debe ordenar ` +
+        `cancel_for_rescheduling -> resolve_availability_query -> check_availability -> schedule_block ` +
+        `(resolve_availability_query puede omitirse solo con hasConcreteDateTime).`
+    );
+  }
+}
+
+function validateNonAttendanceCancellation(flowName: string, flow: ToolFlow, errors: string[]): void {
+  if (flow.intent !== 'existing_appointment_cancellation') return;
+
+  const forbidden = [
+    'cancel_for_rescheduling',
+    'resolve_availability_query',
+    'check_availability',
+    'schedule_block',
+  ].filter((tool) => flowUsesTool(flow, tool));
+  if (forbidden.length === 0) return;
+
+  errors.push(
+    `${header(flowName, flow)} representa la cancelación definitiva por no asistencia, pero usa ` +
+      `herramientas de reagendamiento/disponibilidad (${forbidden.join(', ')}). ` +
+      `CÓMO SE CORRIGE: antes de que el paciente acepte una nueva cita, usa únicamente ` +
+      `"manage_schedule_block_status" para cancelar y ofrece después un flujo separado de ` +
+      `"new_appointment_scheduling".`
+  );
+}
+
+function validateInformationalTemplate(
+  flowName: string,
+  flow: ToolFlow,
+  templates: StructuredLogic['responseTemplates'],
+  errors: string[],
+): void {
+  if (flow.intent !== 'existing_appointment_reschedule_inquiry' || !flow.responseTemplate) return;
+
+  const configured = templates?.[flow.responseTemplate]?.text;
+  const text = (configured ?? flow.responseTemplate).toLowerCase();
+  if (!/(he|hemos|ya|i have|we have|has been).*(mov|cambi|reprogram|agend|reserv)/i.test(text)) return;
+
+  errors.push(
+    `${header(flowName, flow)} tiene una plantilla informativa que anuncia que la cita ya fue modificada. ` +
+      `CÓMO SE CORRIGE: la plantilla debe explicar que el cambio aún no está confirmado y pedir confirmación, ` +
+      `sin afirmar que la cita fue movida, reprogramada o agendada.`
+  );
+}
+
 /**
  * Validate advisor-authored flow safety invariants.
  * Every finding is blocking: a silent degradation is worse than a loud error.
@@ -551,10 +718,15 @@ export function validateFlowSafety(
 
     validateFlowIntentIsClassifiable(flowName, flow, errors);
     validateActiveAppointmentGate(flowName, flow, errors);
+    validateRescheduleInquiry(flowName, flow, errors);
+    validateFullReschedulingContract(flowName, flow, mode, errors);
+    validateNonAttendanceCancellation(flowName, flow, errors);
     validateStepArrayOrder(flowName, flow, errors);
     validateDestructiveOrder(flowName, flow, errors);
     validateRescheduleCanRebook(flowName, flow, mode, errors);
     validateTerminalTemplate(flowName, flow, errors);
     validateTemplateIsDeliverable(flowName, flow, errors);
+    validateTerminalAction(flowName, flow, errors);
+    validateInformationalTemplate(flowName, flow, sl.responseTemplates, errors);
   }
 }

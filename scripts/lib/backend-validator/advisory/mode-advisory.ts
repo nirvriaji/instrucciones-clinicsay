@@ -36,6 +36,57 @@ export function detectModeAdvisoryGaps(
     'resolve_availability_query',
   ]);
 
+  const flowUsesAnyTool = (flow: (typeof allFlows)[number], tools: Set<string>): boolean =>
+    [...(flow.allowedTools ?? []), ...(flow.steps ?? []).flatMap((step) => step.tools ?? [])].some(
+      (tool) => tools.has(tool),
+    );
+
+  // ── Caso F: full + consulta de reagendamiento mezclada con herramientas ──
+  const inquiryToolSet = new Set([
+    'cancel_for_rescheduling',
+    'schedule_block',
+    'manage_schedule_block_status',
+    'manage_all_schedule_blocks_for_date',
+    'resolve_availability_query',
+    'check_availability',
+  ]);
+  const rescheduleInquiryFlows = allFlows.filter(
+    (flow) => flow.intent === 'existing_appointment_reschedule_inquiry',
+  );
+  if (mode === 'full' && rescheduleInquiryFlows.some((flow) => flowUsesAnyTool(flow, inquiryToolSet))) {
+    gaps.push({
+      severity: 'advisory',
+      type: 'mode_note',
+      description:
+        'La consulta existing_appointment_reschedule_inquiry debe ser solo informativa. ' +
+        'Está mezclada con herramientas de reagendamiento o disponibilidad, mientras que la confirmación explícita debe usar un flujo separado de existing_appointment_rescheduling. ' +
+        'Separa ambos flujos para que una pregunta no cancele, busque horarios ni modifique la cita.',
+    });
+  }
+
+  // ── Caso G: rama de no asistencia con herramientas del reagendamiento ──
+  const cancellationFlows = allFlows.filter(
+    (flow) => flow.intent === 'existing_appointment_cancellation',
+  );
+  const nonAttendanceForbiddenTools = new Set([
+    'cancel_for_rescheduling',
+    'resolve_availability_query',
+    'check_availability',
+    'schedule_block',
+  ]);
+  if (
+    mode === 'full' &&
+    cancellationFlows.some((flow) => flowUsesAnyTool(flow, nonAttendanceForbiddenTools))
+  ) {
+    gaps.push({
+      severity: 'advisory',
+      type: 'mode_note',
+      description:
+        'La rama de no asistencia debe cancelar primero con manage_schedule_block_status y ofrecer una nueva cita después de la aceptación del paciente. ' +
+        'No uses cancel_for_rescheduling ni herramientas de disponibilidad o reserva antes de esa aceptación; la nueva cita debe continuar en new_appointment_scheduling.',
+    });
+  }
+
   // ── Caso A: Modo full + new_appointment_scheduling solo con create_task ──
   if (mode === 'full') {
     const schedulingFlows = allFlows.filter((f) => f.intent === 'new_appointment_scheduling');
