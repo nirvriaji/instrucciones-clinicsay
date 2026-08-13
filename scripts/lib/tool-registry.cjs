@@ -17,6 +17,7 @@ const FULL_MODE_TOOLS = [
   'resolve_availability_query',
   'check_availability',
   'schedule_block',
+  'cancel_for_rescheduling',
   'manage_schedule_block_status',
   'manage_all_schedule_blocks_for_date',
   'create_task',

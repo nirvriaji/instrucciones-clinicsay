@@ -165,6 +165,18 @@ async function main() {
       const inputDir = path.join(sedeDir, 'input');
       const outputDir = path.join(sedeDir, 'output');
 
+      const fullLogic = metadata['structuredLogicFull'];
+      const tasksOnlyLogic = metadata['structuredLogic'];
+
+      // Do not create an empty sede when the bot has no structured logic.
+      const hasFullLogic = fullLogic !== null && typeof fullLogic === 'object';
+      const hasTasksOnlyLogic = tasksOnlyLogic !== null && typeof tasksOnlyLogic === 'object';
+      if (!hasFullLogic && !hasTasksOnlyLogic) {
+        console.warn(`  ⚠️  Bot ${botId} (site ${siteSlug}) has no structured logic. Skipped.`);
+        skipped++;
+        continue;
+      }
+
       // Clean both folders so input/ only contains the downloaded JSONs
       // and output/ is empty for the next generation step.
       cleanDirectory(inputDir);
@@ -172,10 +184,7 @@ async function main() {
 
       console.log(`[${sedeDirName}] ${orgName} → ${clinicName} → ${siteName} (bot ${botId})`);
 
-      const fullLogic = metadata['structuredLogicFull'];
-      const tasksOnlyLogic = metadata['structuredLogic'];
-
-      if (fullLogic && typeof fullLogic === 'object') {
+      if (hasFullLogic) {
         const fullPath = path.join(inputDir, 'structured-logic.full.json');
         writeJsonPretty(fullPath, fullLogic);
         console.log(`  ✓ written ${fullPath.replace(ROOT + '/', '')}`);
@@ -184,7 +193,7 @@ async function main() {
         warnMissing(metadata, botId, siteSlug, 'structuredLogicFull');
       }
 
-      if (tasksOnlyLogic && typeof tasksOnlyLogic === 'object') {
+      if (hasTasksOnlyLogic) {
         const tasksOnlyPath = path.join(inputDir, 'structured-logic.tasks-only.json');
         writeJsonPretty(tasksOnlyPath, tasksOnlyLogic);
         console.log(`  ✓ written ${tasksOnlyPath.replace(ROOT + '/', '')}`);
