@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "sede": "demo",
+    "mode": "tasks-only",
+    "timestamp": "2026-08-13T19:22:51.805Z",
+    "inputFiles": [
+      "README.md"
+    ],
+    "inputFilesCount": 1,
+    "combinedTextLength": 991
+  },
+  "summary": {
+    "total": 0,
+    "errors": 0,
+    "warnings": 0,
+    "info": 0
+  },
+  "entities": {
+    "servicesFound": 3,
+    "professionalsFound": 0,
+    "signalsFound": 0,
+    "faqFound": 4
+  },
+  "gaps": []
+}

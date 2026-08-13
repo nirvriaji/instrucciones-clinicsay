@@ -87,7 +87,7 @@
       "description": "El paciente indica que no puede asistir, no asistirá, quiere cancelar una o más citas existentes, o responde negativamente a un recordatorio. La cancelación se ejecuta de forma previa y obligatoria."
     },
     {
-      "id": "scheduling_request_to_task",
+      "id": "new_appointment_scheduling",
       "note": "El bot no ejecuta scheduling directamente. Debe recopilar motivo de consulta, fechas, horarios, profesional si aplica, convenio/bono y crear una tarea para el equipo humano. La primera pregunta debe ser '¿Qué te ocurre?'. Si el contexto indica last_action: 'cancelled_appointment', la primera pregunta debe ser '¿Qué día y horario te vendría bien?' en lugar de '¿Qué te ocurre?'. No listar ni nombrar tratamientos específicos al paciente; para él todo es sesión de fisioterapia. Si el paciente dice 'modificar mi cita por retraso' o 'voy tarde', no es scheduling_request; clasificar como patient_running_late.",
       "action": "allow",
       "intent": "new_appointment_scheduling",
@@ -298,7 +298,7 @@
         "vale, voy",
         "de acuerdo"
       ],
-      "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es scheduling_request (continuar el agendamiento)."
+      "description": "El paciente confirma asistencia a una cita YA EXISTENTE: respondiendo a un recordatorio (IS_REMINDER_REPLY=true) o teniendo una cita activa en el contexto. NO usar cuando el bot acaba de PROPONER una hora nueva para agendar: en ese caso la intención es new_appointment_scheduling (continuar el agendamiento)."
     },
     "location_contact_inquiry": {
       "examples": [
@@ -347,7 +347,7 @@
         "la cita es para mi pareja, no para mi",
         "restablecer la cita que acabo de cancelar"
       ],
-      "description": "El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. NO usar cuando el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita (eso es scheduling_request, continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente: 'muévela al jueves', 'cámbiamela a la tarde', 'adelántala una hora'."
+      "description": "El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. NO usar cuando el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita (eso es new_appointment_scheduling, continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente: 'muévela al jueves', 'cámbiamela a la tarde', 'adelántala una hora'."
     },
     "existing_appointment_cancellation_inquiry": {
       "examples": [
@@ -583,6 +583,18 @@
         "description": "Bono de 3 sesiones de fisioterapia",
         "priceDescription": "110 €",
         "requiresConsultation": false
+      },
+      {
+        "name": "Osteopatía",
+        "description": "Sesión de osteopatía",
+        "priceDescription": "50 €/sesión",
+        "requiresConsultation": false
+      },
+      {
+        "name": "Indiba",
+        "description": "Sesión de Indiba",
+        "priceDescription": "45 €/sesión",
+        "requiresConsultation": true
       }
     ]
   },
@@ -636,7 +648,7 @@
   ],
   "responseTemplates": {
     "farewell": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Gracias por contactar con Clínica Vázquez Fisioterapia. Si necesitas algo más, estamos aquí."
     },
     "greeting": {
@@ -656,39 +668,39 @@
       "text": "¡Muchas gracias!"
     },
     "list_waiting": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Por el momento, no quedan huecos disponibles en la franja que me indicas. Puedo pasar aviso a recepción para que te incluyan en lista de espera o revisen alternativas."
     },
     "out_of_scope": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Soy el asistente de Clínica Vázquez Fisioterapia y solo puedo ayudarte con nuestros servicios, tratamientos y citas. ¿En qué puedo ayudarte?"
     },
     "task_created": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Lo paso a recepción para que puedan revisarlo y contactar contigo lo antes posible."
     },
     "clinical_case": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Para orientarte bien, voy a pasar tu caso al equipo para que puedan revisarlo con criterio profesional."
     },
     "urgency_report": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Si es una situación grave o de emergencia, contacta con los servicios de emergencia. Si lo prefieres, también puedo pasar aviso a la clínica."
     },
     "human_follow_up": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Hemos tomado nota de tu solicitud. Un miembro de nuestro equipo la revisará y se pondrá en contacto contigo."
     },
     "incident_report": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Hemos tomado nota de tu solicitud. Un miembro de nuestro equipo la revisará y se pondrá en contacto contigo."
     },
     "no_appointments": {
-      "mode": "literal",
+      "mode": "model",
       "text": "No aparecen citas programadas. ¿Puedo ayudarte con algo más?"
     },
     "thank_you_close": {
-      "mode": "literal",
+      "mode": "model",
       "text": "De nada. Si necesitas algo más, aquí estoy."
     },
     "appointment_info": {
@@ -696,11 +708,11 @@
       "text": "Responde con la información de las citas del paciente usando ASSOCIATED_PATIENTS. Si no hay citas, indica que no aparecen citas programadas."
     },
     "change_requested": {
-      "mode": "literal",
+      "mode": "model",
       "text": "He pasado tu solicitud al equipo. Te contactarán pronto."
     },
     "existing_appointment_keep": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Perfecto, tu cita sigue confirmada."
     },
     "payment_response": {
@@ -712,15 +724,15 @@
       "text": "Responde con la dirección, teléfono, email, web, referencias de llegada, parking y transporte público disponibles en el contexto."
     },
     "reschedule_inquiry": {
-      "mode": "literal",
+      "mode": "model",
       "text": "¿Quieres que confirmemos el cambio de tu cita o prefieres otra fecha?"
     },
     "new_appointment_scheduling": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Lo paso a recepción para que puedan revisarlo y contactar contigo lo antes posible."
     },
     "cancellation_inquiry": {
-      "mode": "literal",
+      "mode": "model",
       "text": "¿Quieres que cancelemos la cita o prefieres buscar otra fecha?"
     },
     "existing_appointment_delay_notice": {
@@ -736,15 +748,15 @@
       "text": "Tu cita ha quedado confirmada. Te esperamos."
     },
     "post_treatment_follow_up": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Para orientarte bien, voy a pasar tu caso al equipo para que puedan revisarlo con criterio profesional."
     },
     "information_not_available": {
-      "mode": "literal",
+      "mode": "model",
       "text": "No tengo información sobre eso en este momento. ¿Quieres que lo consulte con el equipo?"
     },
     "special_treatment_request": {
-      "mode": "literal",
+      "mode": "model",
       "text": "Lo paso a recepción para que puedan revisarlo y contactar contigo lo antes posible."
     }
   },
@@ -763,7 +775,7 @@
         "description": "El paciente se despide, agradece o cierra la conversación de forma amable.",
         "allowsSilence": true,
         "responseTemplate": "farewell",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "general_inquiry": {
         "steps": [
@@ -801,7 +813,7 @@
           "create_task"
         ],
         "responseTemplate": "human_follow_up",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "mark_on_the_way": {
         "steps": [
@@ -859,7 +871,7 @@
         "intent": "existing_appointment_reschedule_inquiry",
         "description": "El paciente pregunta sobre reagendar o cambiar una cita, sin decidir aún.",
         "responseTemplate": "reschedule_inquiry",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "existing_appointment_inquiry": {
         "steps": [
@@ -882,7 +894,7 @@
         "intent": "existing_appointment_cancellation_inquiry",
         "description": "El paciente pregunta sobre cancelar una cita, sin decidir aún.",
         "responseTemplate": "cancellation_inquiry",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "keep_appointment_flow": {
         "steps": [],
@@ -894,7 +906,7 @@
         },
         "description": "El paciente indica que quiere mantener la cita tal como está.",
         "responseTemplate": "keep_appointment",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "any_scheduling_request": {
         "steps": [
@@ -914,7 +926,7 @@
           "create_task"
         ],
         "responseTemplate": "task_created",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "location_contact_inquiry": {
         "steps": [
@@ -950,7 +962,7 @@
           "create_task"
         ],
         "responseTemplate": "special_treatment_request",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "cancel_existing_appointment": {
         "steps": [
@@ -1017,13 +1029,21 @@
       "reschedule_existing_appointment": {
         "steps": [
           {
-            "note": "Cancelar cita actual (reason='Solicitud del paciente', NO preguntar motivo) + crear tarea para seguimiento humano. Para corrección de titular: cancelar cita actual, crear tarea indicando nuevo paciente y mismo treatmentId. Para restablecer tras cancelación en este turno: usar datos del historial de tool outputs.",
+            "note": "Cancelar cita actual con manage_schedule_block_status (reason='Solicitud del paciente', NO preguntar motivo).",
             "step": 1,
             "tools": [
-              "manage_schedule_block_status",
-              "create_task"
+              "manage_schedule_block_status"
             ],
             "parallel": true,
+            "required": []
+          },
+          {
+            "note": "Crear tarea para seguimiento humano de la reprogramación. Para corrección de titular, indicar el nuevo paciente y el mismo treatmentId. Para restablecer tras cancelación en este turno, usar datos del historial de tool outputs.",
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
             "required": []
           }
         ],
@@ -1039,7 +1059,7 @@
           "create_task"
         ],
         "responseTemplate": "change_requested",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       },
       "post_treatment_follow_up_to_task": {
         "steps": [
@@ -1059,7 +1079,7 @@
           "create_task"
         ],
         "responseTemplate": "post_treatment_follow_up",
-        "responseTemplateMode": "literal"
+        "responseTemplateMode": "model"
       }
     }
   },

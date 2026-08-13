@@ -47,7 +47,7 @@ function extractEntitiesFromAnotaciones(text) {
   };
 
   // Extract services from "Tratamientos y Servicios Disponibles" or "Tratamientos que se pueden agendar"
-  const servicesSection = text.match(/#\s*(?:Tratamientos y Servicios|Tratamientos que se pueden agendar|Servicios).*?\n([\s\S]*?)(?=\n#\s|$)/i);
+  const servicesSection = text.match(/#\s*(?:Tratamientos y Servicios|Tratamientos que se pueden agendar|Servicios).*?\n([\s\S]*?)(?=\n#{1,6}\s|$)/i);
   if (servicesSection) {
     const lines = servicesSection[1].split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'));
     for (const line of lines) {
@@ -66,7 +66,7 @@ function extractEntitiesFromAnotaciones(text) {
   }
 
   // Extract professionals
-  const profSection = text.match(/#\s*(?:Profesionales asignados|Equipo médico).*?\n([\s\S]*?)(?=\n#\s|$)/i);
+  const profSection = text.match(/#\s*(?:Profesionales asignados|Equipo médico).*?\n([\s\S]*?)(?=\n#{1,6}\s|$)/i);
   if (profSection) {
     const lines = profSection[1].split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'));
     for (const line of lines) {
@@ -106,7 +106,7 @@ function extractEntitiesFromAnotaciones(text) {
   if (hoursMatch) entities.hours = hoursMatch[1].trim();
 
   // Extract FAQ
-  const faqSection = text.match(/#\s*(?:Preguntas Frecuentes|FAQ).*?\n([\s\S]*?)(?=\n#\s|$)/i);
+  const faqSection = text.match(/#\s*(?:Preguntas Frecuentes|FAQ).*?\n([\s\S]*?)(?=\n#{1,6}\s|$)/i);
   if (faqSection) {
     const lines = faqSection[1].split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'));
     for (const line of lines) {
