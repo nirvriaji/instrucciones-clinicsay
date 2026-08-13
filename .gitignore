@@ -1,8 +1,8 @@
 # Ignore all sede directories EXCEPT demo/ (which serves as the canonical example).
 # The fetch-sedes script generates these from the DB; they are environment data.
-sedes/*
-!sedes/demo/
-!sedes/demo/**
+/sedes/*
+!/sedes/demo/
+!/sedes/demo/**
 
 # Node modules (if installed locally)
 node_modules/

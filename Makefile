@@ -2,6 +2,7 @@
 #
 # Copy .env.example to .env and fill DATABASE_URL, then run:
 #   make fetch-sedes
+# The command asks for confirmation because it destructively replaces generated sedes.
 
 .PHONY: fetch-sedes push-sedes install help
 
@@ -13,7 +14,7 @@ install: ## Install Node dependencies (run once)
 	npm install
 
 fetch-sedes: ## Download full/tasks-only structuredLogic from DB into sedes/<site>/input/
-	npx tsx scripts/fetch-sedes-from-db.ts
+	$(if $(CONFIRM),CONFIRM="$(CONFIRM)") npx tsx scripts/fetch-sedes-from-db.ts
 
 push-sedes: ## Push final JSONs present in sede output/ to the DB (asks for confirmation)
-	SEDE="$(SEDE)" CONFIRM="$(CONFIRM)" npx tsx scripts/push-sedes-to-db.ts
+	SEDE="$(SEDE)" $(if $(CONFIRM),CONFIRM="$(CONFIRM)") npx tsx scripts/push-sedes-to-db.ts

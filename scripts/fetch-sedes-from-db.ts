@@ -18,6 +18,8 @@
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
+import readline from 'readline/promises';
+import { stdin as input, stdout as output } from 'process';
 import { fileURLToPath } from 'url';
 import { Client } from 'pg';
 
@@ -72,6 +74,24 @@ function cleanDirectory(dir: string): void {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+async function confirmFetch(): Promise<boolean> {
+  if (process.env.CONFIRM === '1') return true;
+
+  if (!input.isTTY || !output.isTTY) {
+    throw new Error('No hay terminal interactiva. Usa CONFIRM=1 solo después de revisar el destino.');
+  }
+
+  const rl = readline.createInterface({ input, output });
+  try {
+    const answer = await rl.question(
+      'Esto borrará todas las sedes locales excepto sedes/demo y reemplazará sus input/output. ¿Confirmas? [y/N] '
+    );
+    return /^(y|yes|s|si|sí)$/i.test(answer.trim());
+  } finally {
+    rl.close();
+  }
+}
+
 function warnMissing(metadata: Record<string, unknown>, botId: string, siteSlug: string, key: string): void {
   if (metadata[key] === undefined || metadata[key] === null) {
     console.warn(`  ⚠️  Bot ${botId} (site ${siteSlug}) has no '${key}' in metadata. Skipped.`);
@@ -79,6 +99,16 @@ function warnMissing(metadata: Record<string, unknown>, botId: string, siteSlug:
 }
 
 async function main() {
+  try {
+    if (!(await confirmFetch())) {
+      console.log('Operación cancelada.');
+      return;
+    }
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
+  }
+
   // Strip sslmode from the connection string so pg-connection-string
   // does NOT override our manual ssl config (it treats 'require' as
   // 'verify-full' which rejects Aiven's self-signed certs).
@@ -98,12 +128,16 @@ async function main() {
     await client.connect();
     console.log('Connected to database. Fetching active CHAT_BOT bots...\n');
 
-    // Wipe the entire sedes/ directory before downloading so ONLY
-    // the active bots from the DB remain.
+    // Remove every generated sede, but preserve the canonical demo assets.
     if (fs.existsSync(SEDES_DIR)) {
-      fs.rmSync(SEDES_DIR, { recursive: true, force: true });
+      for (const entry of fs.readdirSync(SEDES_DIR)) {
+        if (entry !== 'demo') {
+          fs.rmSync(path.join(SEDES_DIR, entry), { recursive: true, force: true });
+        }
+      }
+    } else {
+      fs.mkdirSync(SEDES_DIR, { recursive: true });
     }
-    fs.mkdirSync(SEDES_DIR, { recursive: true });
 
     const result = await client.query(
       `
@@ -168,14 +202,8 @@ async function main() {
       const fullLogic = metadata['structuredLogicFull'];
       const tasksOnlyLogic = metadata['structuredLogic'];
 
-      // Do not create an empty sede when the bot has no structured logic.
       const hasFullLogic = fullLogic !== null && typeof fullLogic === 'object';
       const hasTasksOnlyLogic = tasksOnlyLogic !== null && typeof tasksOnlyLogic === 'object';
-      if (!hasFullLogic && !hasTasksOnlyLogic) {
-        console.warn(`  ⚠️  Bot ${botId} (site ${siteSlug}) has no structured logic. Skipped.`);
-        skipped++;
-        continue;
-      }
 
       // Clean both folders so input/ only contains the downloaded JSONs
       // and output/ is empty for the next generation step.

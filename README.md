@@ -147,6 +147,8 @@ Si la clínica ya tiene configurado un chatbot en el backend de Clinicsay, puede
    npx tsx scripts/fetch-sedes-from-db.ts
    ```
 
+   El comando pide confirmación antes de borrar las sedes descargadas localmente. La sede `sedes/demo/` se conserva siempre como ejemplo canónico; las demás sedes y sus carpetas `input/`/`output/` se reemplazan de forma destructiva con el contenido activo de la base de datos. Para una automatización no interactiva, revisa primero el destino y usa `CONFIRM=1` explícitamente.
+
 El script creará automáticamente:
 
 ```
@@ -157,7 +159,7 @@ sedes\<site-slug>\output\
 
 Solo se traen los bots activos de tipo `CHAT_BOT`. Si un bot no tiene `full` o `tasks-only` configurado, se omite ese archivo con un aviso.
 
-> ⚠️ **El script limpia las carpetas `input/` y `output/` de cada sede procesada** antes de escribir: `input/` quedará solo con los dos JSONs descargados, y `output/` quedará vacío para el siguiente paso de generación.
+> ⚠️ **El script limpia las carpetas `input/` y `output/` de cada sede procesada** antes de escribir: `input/` quedará solo con los JSONs descargados, y `output/` quedará vacío para el siguiente paso de generación. `sedes/demo/` no se modifica.
 
 ### Paso 0.1: Publicar JSONs generados en el backend
 
