@@ -160,7 +160,7 @@
       "mode": "model"
     },
     "reschedule_inquiry_full": {
-      "text": "Sí, podemos gestionar el cambio de tu cita. ¿Quieres que confirmemos el reagendamiento?",
+      "text": "Claro, sí podemos buscar otro horario para tu cita. ¿Quieres que la reprogramemos?",
       "mode": "model"
     }
   },

@@ -159,6 +159,39 @@ Solo se traen los bots activos de tipo `CHAT_BOT`. Si un bot no tiene `full` o `
 
 > ⚠️ **El script limpia las carpetas `input/` y `output/` de cada sede procesada** antes de escribir: `input/` quedará solo con los dos JSONs descargados, y `output/` quedará vacío para el siguiente paso de generación.
 
+### Paso 0.1: Publicar JSONs generados en el backend
+
+Cuando una sede tenga JSONs finales en `output/`, puedes publicarlos con:
+
+```powershell
+make push-sedes
+```
+
+El comando muestra la base de datos destino con la contraseña oculta, lista los bots y modos que se actualizarán, y pide confirmación en el CLI. Pulsar Enter cancela la operación.
+
+Solo se publican los archivos que existan:
+
+| Archivo en `output/` | Clave de metadata actualizada |
+|---|---|
+| `structured-logic.full.json` | `structuredLogicFull` |
+| `structured-logic.tasks-only.json` | `structuredLogic` |
+
+Por ejemplo, si solo existe `structured-logic.full.json`, se actualiza únicamente FULL y se conserva TASKS-ONLY en el backend. Los borradores `.draft.json` nunca se publican.
+
+Para limitar el push a una sede:
+
+```powershell
+make push-sedes SEDE=vazquez-fisioterapia_sede-principal-cordoba
+```
+
+En automatizaciones sin terminal interactiva, primero revisa el destino y usa `CONFIRM=1` para autorizar explícitamente:
+
+```powershell
+make push-sedes SEDE=vazquez-fisioterapia_sede-principal-cordoba CONFIRM=1
+```
+
+Cada JSON se valida antes de conectar/escribir. La actualización conserva el resto de `metadata` y se ejecuta en una transacción.
+
 ### Paso 1: Prepara tus notas
 
 Crea la carpeta para tu clínica dentro del repo:
