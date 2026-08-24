@@ -373,6 +373,15 @@ Sintaxis del draft: válida
 10. **REGLA DE ORO DEL PACIENTE:** El bot NUNCA asume nombre, apellido ni teléfono del contacto de Kommo (CALLER_PHONE, ASSOCIATED_PATIENTS). Siempre pregunta al interlocutor explícitamente antes de agendar. Solo si el paciente dice "para mí", "a este número" o "mi número", usar `useInterlocutorPhone=true`.
 11. **NUNCA mostrar IDs técnicos al paciente.** En `responseTemplates` y `patientOutcome`, NUNCA incluir `blockId` (ej: `01KZH...`). Usar mensajes en español natural: "Tu cita ha sido cancelada", "Tu cita ha quedado confirmada".
 12. **NO toques código del repo.** Solo el administrador del sistema sabe cuándo actualizar el código importado del backend, cuándo pedir actualizar el validador local y cuándo actualizar prompts. El código de este repo (`scripts/`, `_templates/`, `structured-logic-standards.md`) es la versión correcta en producción. Si encuentras una discrepancia, **confía en el validador local**. NUNCA ejecutes `scripts/sync-backend.sh`, NUNCA modifiques archivos en `scripts/lib/backend-validator/` ni en `_templates/`, y NUNCA le pidas al asesor que sincronice nada del backend.
+13. **Investigación de leads con comportamiento inesperado.** Si un lead nuevo presenta un comportamiento anómalo (ej. no crea tarea cuando debería, crea tarea cuando no debería, responde fuera de contexto, no responde a consultas), sigue estos pasos:
+
+    a. **Pide al asesor** el `structured-logic.full.json` actualmente en producción en el backend (el asesor puede obtenerlo desde el dashboard o solicitándolo al equipo técnico).
+    
+    b. **Lee el código del backend** en `scripts/lib/backend-source/` — esta carpeta contiene el context codebase del módulo del chatbot (validadores, tool policies, intents canónicos, schemas). Es el código real que el backend ejecuta en producción.
+    
+    c. **Compara el JSON de producción con el código del backend** para identificar si el bug está en el JSON de la clínica (error de configuración) o en el código del backend (bug del sistema). Por ejemplo, si una tool fue bloqueada, revisa `backend-source/application/chat/use-cases/RunToolCycle/tool-call-policy.ts` para entender la regla exacta.
+    
+    d. **Reporta tu diagnóstico** al asesor con: qué encontraste en el JSON, qué dice el código del backend, y si el problema está en el JSON o en el backend.
 
 ### 7.1. Cross-Check contra Template Base (OBLIGATORIO antes de entregar)
 

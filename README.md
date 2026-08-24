@@ -426,7 +426,25 @@ En `tasks-only`, `create_task` es opcional. El modo limita scheduling y disponib
 
 ## 🔄 Sincronización con el backend (mantenimiento)
 
-Este repo es **independiente**: la réplica del validador vive en `scripts/lib/backend-validator/` (copia local, imports relativos, cero dependencias del repo backend). Cuando el backend cambie, hay que resincronizar.
+Este repo es **independiente**: incluye el código del módulo del chatbot del backend como **context codebase** para que los agentes puedan leerlo y diagnosticar leads.
+
+### Dos copias del backend en este repo
+
+| Carpeta | Propósito | Quién la usa |
+|---|---|---|
+| `scripts/lib/backend-source/` | **Context codebase** — mirror exacto del backend para que la IA lea el código real cuando investiga un lead con comportamiento inesperado | Los agentes (la IA) |
+| `scripts/lib/backend-validator/` | **Réplica funcional** — versión adaptada que usan los scripts de validación (`validate-and-save.js`, `run-validation.ts`) | Los scripts de validación |
+
+**Regla clave:** Solo el administrador del sistema actualiza el código importado del backend. Los asesores no ejecutan `sync-backend.sh` ni tocan estas carpetas.
+
+### Diagnóstico de leads con backend-source
+
+Cuando un lead presenta un comportamiento anómalo, el agente puede leer el código del backend en `scripts/lib/backend-source/` para compararlo con el JSON de producción de la clínica y determinar:
+
+- ¿El problema está en el **JSON de la clínica** (error de configuración)?
+- ¿El problema está en el **código del backend** (bug del sistema)?
+
+Esto funciona porque `backend-source/` contiene la lógica real que el backend ejecuta en producción: validadores, tool policies, intents canónicos, schemas.
 
 ### Script automático de sincronización
 
