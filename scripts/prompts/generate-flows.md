@@ -45,7 +45,7 @@ Cada intent que requiere acción del bot DEBE tener al menos un flow:
 ### 3. Flujos de agendamiento por modo
 
 **Contrato semántico de citas existentes (AMBOS MODOS):**
-- `existing_appointment_reschedule_inquiry` pregunta si se puede cambiar la cita; no confirma, cancela, busca slots ni reserva.
+- `existing_appointment_reschedule_inquiry` pregunta si se puede cambiar la cita; no confirma, cancela ni reserva. En **full mode DEBE consultar disponibilidad real** (`resolve_availability_query` + `check_availability`) para mostrar opciones concretas; en tasks-only no usa scheduling tools.
 - `existing_appointment_rescheduling` solo se activa ante una aceptación explícita y, en full, usa `cancel_for_rescheduling` -> `resolve_availability_query` -> `check_availability` -> `schedule_block`. El target, su metadata y el modo efectivo de reserva son backend-owned: no los expongas ni los pidas al asesor o al LLM.
 - `hasCancelledRescheduleTarget` es la alternativa de selección para la continuidad backend-owned; no requiere ni genera campos temporales como `expiresAt`.
 - La no asistencia es cancelación definitiva: usa `manage_schedule_block_status`, ofrece una nueva cita y espera aceptación antes de continuar `new_appointment_scheduling`.

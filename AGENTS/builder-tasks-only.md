@@ -366,12 +366,13 @@ Sintaxis del draft: válida
    - Los templates de flows con `create_task` deben decir "te contactará nuestro equipo"; los flows informativos sin acción no deben prometer una tarea ni una cita agendada.
    - `redirectToTask: true` en rule de `new_appointment_scheduling` es el patrón típico (no obligatorio; su ausencia solo genera una nota advisory)
 5. **NUNCA pongas tool names en `required`.** En tasks-only usar `required: []`, salvo que el schema y capabilities canónicos definan explícitamente otra capability válida. Los tool names van exclusivamente en `tools` y `allowedTools`.
-6. **VALIDACIÓN ESTRICTA DE SCHEMA (NON-NEGOTIABLE):** El backend rechaza CUALQUIER propiedad que no esté en el schema autorizado (additionalProperties: false en TODOS los niveles). Si el validador local no detecta una propiedad desconocida, DEBES corregir el validador local antes de seguir. NUNCA asumas que el JSON es válido solo porque pasó el validador local si el validador local no es estricto. Propiedades comunes que se cuelan y rompen el backend: `products`, `shipping`, `id` en protocols (debe ser `name`), `steps` en protocols (debe ser `sections`), `condition` en steps (deprecated, debe ir en `note`).
+6. **VALIDACIÓN ESTRICTA DE SCHEMA (NON-NEGOTIABLE):** El backend rechaza CUALQUIER propiedad que no esté en el schema autorizado (additionalProperties: false en TODOS los niveles). Si el validador local no detecta una propiedad desconocida, **NO intentes corregir el validador tú mismo** (eso solo lo hace el administrador del sistema). En su lugar, reporta al asesor: "El validador local no detectó esta propiedad desconocida, pero el backend la rechazará. Necesito que el administrador actualice el validador local." NUNCA asumas que el JSON es válido solo porque pasó el validador local si el validador local no es estricto. Propiedades comunes que se cuelan y rompen el backend: `products`, `shipping`, `id` en protocols (debe ser `name`), `steps` en protocols (debe ser `sections`), `condition` en steps (deprecated, debe ir en `note`).
 7. **El asesor crea la estructura.** Si no hay archivos en `sedes/<nombre>/input/`, instruir al asesor que cree las carpetas y coloque ahí sus notas. Tú NO debes crear directorios ni archivos automáticamente.
 8. **Esperar al asesor.** Si no hay archivos en input, explicar el formato esperado y esperar a que el asesor los cree.
 9. **God Mode:** Si `isGodMode: true`, puedes saltar validación y gaps para generar configs de prueba.
 10. **REGLA DE ORO DEL PACIENTE:** El bot NUNCA asume nombre, apellido ni teléfono del contacto de Kommo (CALLER_PHONE, ASSOCIATED_PATIENTS). Siempre pregunta al interlocutor explícitamente antes de agendar. Solo si el paciente dice "para mí", "a este número" o "mi número", usar `useInterlocutorPhone=true`.
 11. **NUNCA mostrar IDs técnicos al paciente.** En `responseTemplates` y `patientOutcome`, NUNCA incluir `blockId` (ej: `01KZH...`). Usar mensajes en español natural: "Tu cita ha sido cancelada", "Tu cita ha quedado confirmada".
+12. **NO toques código del repo.** Solo el administrador del sistema sabe cuándo actualizar el código importado del backend, cuándo pedir actualizar el validador local y cuándo actualizar prompts. El código de este repo (`scripts/`, `_templates/`, `structured-logic-standards.md`) es la versión correcta en producción. Si encuentras una discrepancia, **confía en el validador local**. NUNCA ejecutes `scripts/sync-backend.sh`, NUNCA modifiques archivos en `scripts/lib/backend-validator/` ni en `_templates/`, y NUNCA le pidas al asesor que sincronice nada del backend.
 
 ### 7.1. Cross-Check contra Template Base (OBLIGATORIO antes de entregar)
 
@@ -455,16 +456,16 @@ Declara al menos estos intents. El template base incluye 12 intents canónicos. 
       "examples": ["adios", "gracias", "hasta luego", "nos vemos", "chao", "ok"]
     },
     "existing_appointment_rescheduling": {
-      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye adelantar/atrasar el mismo día, corrección de titular, o restablecer tras cancelación en el mismo turno.",
-      "examples": ["¿podemos cambiar mi cita al jueves?", "muevela a la tarde", "adelantala a las 10h"]
+      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. TAMBIEN es este intent cuando ELIGE uno de los huecos que se le acaban de enseñar. NO lo es proponer un dia sin haber visto huecos todavia.",
+      "examples": ["¿podemos cambiar mi cita al jueves?", "muevela a la tarde", "me quedo con la de las 16:00", "la primera opcion me sirve", "esa misma, el jueves a las 10"]
     },
     "existing_appointment_delay_notice": {
       "description": "El paciente avisa que llegará tarde a una cita confirmada.",
       "examples": ["voy con 10 minutos de retraso"]
     },
     "existing_appointment_reschedule_inquiry": {
-      "description": "El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía.",
-      "examples": ["¿Se puede cambiar mi cita?", "¿Podria moverla a otro dia?"]
+      "description": "El paciente pregunta si puede cambiar una cita existente, o dice CUANDO le vendria bien sin haber visto todavia ningun hueco concreto. Proponer un dia o una franja es parte de la consulta: dice donde mirar, no que se confirme el cambio. El intent pasa a existing_appointment_rescheduling cuando el paciente ELIGE uno de los huecos que ya se le enseñaron. En tasks-only este flujo no usa scheduling tools.",
+      "examples": ["¿Se puede cambiar mi cita?", "¿Podria moverla a otro dia?", "el viernes por la tarde o el sabado", "el lunes 7 a partir de las 12:30", "si, el jueves"]
     },
     "existing_appointment_cancellation_inquiry": {
       "description": "El paciente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente.",

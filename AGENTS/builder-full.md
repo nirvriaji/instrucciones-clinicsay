@@ -117,7 +117,7 @@ Las 13 tools disponibles en este modo son:
   2. Datos incompletos que impiden agendar.
   3. Limitaciones técnicas reales del bot.
 - `check_availability` debe ejecutarse antes de `schedule_block`.
-- Una consulta de reagendamiento (`existing_appointment_reschedule_inquiry`) es informativa: no cancela, consulta disponibilidad ni reserva. La confirmación explícita debe pasar a un flow separado de `existing_appointment_rescheduling`.
+- Una consulta de reagendamiento (`existing_appointment_reschedule_inquiry`) es informativa: no cancela ni reserva. En **full mode** DEBE consultar disponibilidad real (`resolve_availability_query` + `check_availability`) para mostrar opciones concretas al paciente; en tasks-only no usa scheduling tools. La confirmación explícita debe pasar a un flow separado de `existing_appointment_rescheduling`.
 - El orden completo de reagendamiento es `cancel_for_rescheduling` -> `resolve_availability_query` -> `check_availability` -> `schedule_block`. Solo puede omitirse `resolve_availability_query` si `hasConcreteDateTime` está declarado al inicio del turno. `schedule_block` siempre exige disponibilidad comprobada en el turno actual; los slots heredados no autorizan la reserva.
 - En reagendamiento, el profesional original se conserva como preferencia para `check_availability`; si no hay disponibilidad, se aplica la política de la sede y se muestran alternativas reales, sin hablar de expiración.
 - Después de cancelar preparatoriamente, el backend reconcilia el target con el estado actual: reutiliza únicamente sesiones `ACTIVE` + `PENDING` del tratamiento capturado. Si quedan sesiones reutilizables, `schedule_block` conserva el plan (`CARE_PLAN`); si no queda ninguna, el backend puede autorizar el fallback `STANDALONE` manteniendo paciente, tratamiento y preferencia de profesional. El LLM no selecciona ese modo.
@@ -185,11 +185,12 @@ Evoluciona `sedes/<nombre>/output/structured-logic.full.draft.json` **sección p
 7. **responseTemplates** — Crear templates. OBLIGATORIOS: `information_not_available`, `out_of_scope`, `farewell`. Por defecto usa `mode: "model"` en respuestas conversacionales, informativas, de reserva/reprogramación, consultas, despedidas, mantener cita y tareas. Reserva `mode: "literal"` para confirmación, cancelación definitiva y avisos de llegada tarde/en camino de citas existentes, incluidos recordatorios. Es una recomendación no bloqueante; el asesor puede elegir `literal` intencionadamente.
 8. **faq** — Extraer de #Preguntas Frecuentes de los chunks.
 9. **serviceCatalog** — OBLIGATORIO. Extraer tratamientos del input con `name`, `priceDescription`, `requiresConsultation`. Mínimo 1 tratamiento.
-10. **protocols** — Solo si hay protocolos en los chunks leídos.
-11. **errorCategories** — 3 categorías genéricas mínimas basadas en situaciones del input.
-12. **treatmentPolicyHints** — Extraer señales, precios, restricciones de agendamiento de los chunks.
-13. **systemPromptInstructions** — Notas para el asesor, gaps detectados, next steps.
-14. **conversationResumption** — Instrucciones de saludo tras pausa conversacional. Usar defaults del template si no hay especificaciones en input.
+10. **treatmentSelectionGuidance** — Opcional. Prosa libre que guía a `resolve_treatment` cuando el paciente parece nuevo en la clínica. Nombres de tratamiento tal cual en la BD, sin IDs. Si el asesor no lo menciona, omitir.
+11. **protocols** — Solo si hay protocolos en los chunks leídos.
+12. **errorCategories** — 3 categorías genéricas mínimas basadas en situaciones del input.
+13. **treatmentPolicyHints** — Extraer señales, precios, restricciones de agendamiento de los chunks.
+14. **systemPromptInstructions** — Notas para el asesor, gaps detectados, next steps.
+15. **conversationResumption** — Instrucciones de saludo tras pausa conversacional. Usar defaults del template si no hay especificaciones en input.
 
 **Regla de fusión de fuentes:**
 - Si la carpeta `input/` contiene un archivo `.json` con lógica estructurada previa, úsalo como base para `intents`, `rules`, `toolOrchestration.flows`, `protocols` y `errorCategories`.
@@ -365,12 +366,13 @@ Sintaxis del draft: válida
    - `query_knowledge_base` busca semánticamente en `protocols`, `faq`, `responseTemplates` y `rules`. Debe estar disponible en flows informativos y usarse solo cuando la respuesta no esté ya en contexto. No sustituye tools de pacientes, scheduling o tareas.
     - Flows de booking: `resolve_patient` debe preceder a `schedule_block` (`required: ["hasResolvedPatient"]`). El asesor puede colocar la resolución del paciente antes de disponibilidad o después de `check_availability`, siempre antes de reservar. `new_appointment_scheduling` puede usar `selection.excludedCapabilities: ["hasResolvedPatient"]` cuando corresponda.
 5. **NUNCA pongas tool names en `required`.** Usar `required: []`, salvo que el schema y capabilities canónicos definan explícitamente una capability válida. Los tool names van exclusivamente en `tools` y `allowedTools`.
-6. **VALIDACIÓN ESTRICTA DE SCHEMA (NON-NEGOTIABLE):** El backend rechaza CUALQUIER propiedad que no esté en el schema autorizado (additionalProperties: false en TODOS los niveles). Si el validador local no detecta una propiedad desconocida, DEBES corregir el validador local antes de seguir. NUNCA asumas que el JSON es válido solo porque pasó el validador local si el validador local no es estricto. Propiedades comunes que se cuelan y rompen el backend: `products`, `shipping`, `id` en protocols (debe ser `name`), `steps` en protocols (debe ser `sections`), `condition` en steps (deprecated, debe ir en `note`).
+6. **VALIDACIÓN ESTRICTA DE SCHEMA (NON-NEGOTIABLE):** El backend rechaza CUALQUIER propiedad que no esté en el schema autorizado (additionalProperties: false en TODOS los niveles). Si el validador local no detecta una propiedad desconocida, **NO intentes corregir el validador tú mismo** (eso solo lo hace el administrador del sistema). En su lugar, reporta al asesor: "El validador local no detectó esta propiedad desconocida, pero el backend la rechazará. Necesito que el administrador actualice el validador local." NUNCA asumas que el JSON es válido solo porque pasó el validador local si el validador local no es estricto. Propiedades comunes que se cuelan y rompen el backend: `products`, `shipping`, `id` en protocols (debe ser `name`), `steps` en protocols (debe ser `sections`), `condition` en steps (deprecated, debe ir en `note`).
 7. **El asesor crea la estructura.** Si no hay archivos en `sedes/<nombre>/input/`, instruir al asesor que cree las carpetas y coloque ahí sus notas. Tú NO debes crear directorios ni archivos automáticamente.
 8. **Esperar al asesor.** Si no hay archivos en input, explicar el formato esperado y esperar a que el asesor los cree.
 9. **God Mode:** Si `isGodMode: true`, puedes saltar validación y gaps para generar configs de prueba.
 10. **REGLA DE ORO DEL PACIENTE:** El bot NUNCA asume nombre, apellido ni teléfono del contacto de Kommo (CALLER_PHONE, ASSOCIATED_PATIENTS). Siempre pregunta al interlocutor explícitamente antes de agendar. Solo si el paciente dice "para mí", "a este número" o "mi número", usar `useInterlocutorPhone=true`.
 11. **NUNCA mostrar IDs técnicos al paciente.** En `responseTemplates` y `patientOutcome`, NUNCA incluir `blockId` (ej: `01KZH...`). Usar mensajes en español natural: "Tu cita ha sido cancelada", "Tu cita ha quedado confirmada".
+12. **NO toques código del repo.** Solo el administrador del sistema sabe cuándo actualizar el código importado del backend, cuándo pedir actualizar el validador local y cuándo actualizar prompts. El código de este repo (`scripts/`, `_templates/`, `structured-logic-standards.md`) es la versión correcta en producción. Si encuentras una discrepancia, **confía en el validador local**. NUNCA ejecutes `scripts/sync-backend.sh`, NUNCA modifiques archivos en `scripts/lib/backend-validator/` ni en `_templates/`, y NUNCA le pidas al asesor que sincronice nada del backend.
 
 ### 7.1. Cross-Check contra Template Base (OBLIGATORIO antes de entregar)
 
@@ -438,8 +440,8 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
       "examples": ["cancela mi cita", "no podré ir mañana"]
     },
     "existing_appointment_rescheduling": {
-      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora.",
-      "examples": ["¿podemos cambiar mi cita al jueves?", "muévela a la tarde"]
+      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. TAMBIEN es este intent cuando ELIGE uno de los huecos que se le acaban de enseñar. NO lo es proponer un dia sin haber visto huecos todavia.",
+      "examples": ["¿podemos cambiar mi cita al jueves?", "muévela a la tarde", "me quedo con la de las 16:00", "la primera opcion me sirve", "esa misma, el jueves a las 10"]
     },
     "existing_appointment_inquiry": {
       "description": "El paciente pregunta por citas que ya tiene reservadas. La información ya está en el contexto.",
@@ -462,8 +464,8 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
       "examples": ["adios", "gracias", "hasta luego", "nos vemos", "chao", "ok"]
     },
     "existing_appointment_reschedule_inquiry": {
-      "description": "El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía.",
-      "examples": ["¿Se puede cambiar mi cita?", "¿Podria moverla a otro dia?"]
+      "description": "El paciente pregunta si puede cambiar una cita existente, o dice CUANDO le vendria bien sin haber visto todavia ningun hueco concreto. Proponer un dia o una franja es parte de la consulta: dice donde mirar, no que se confirme el cambio. El intent pasa a existing_appointment_rescheduling cuando el paciente ELIGE uno de los huecos que ya se le enseñaron.",
+      "examples": ["¿Se puede cambiar mi cita?", "¿Podria moverla a otro dia?", "el viernes por la tarde o el sabado", "el lunes 7 a partir de las 12:30", "si, el jueves"]
     },
     "existing_appointment_cancellation_inquiry": {
       "description": "El paciente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente.",
@@ -643,10 +645,10 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 
 > **GATE DETERMINISTA DEL CICLO DE VIDA DE CITAS (obligatorio):** los 4 flujos que ACTÚAN sobre una cita existente SIEMPRE llevan `selection.requiredCapabilities: ["hasActiveAppointment"]`:
 > - `confirm_appointment` (confirmar)
-> - `reschedule_appointment` (mover/reagendar)
 > - `cancel_appointment` (cancelar)
 > - `on_the_way` (existing_appointment_delay_notice)
 > - `keep_appointment_flow` ("tu cita sigue confirmada")
+> - `reschedule_appointment` (mover/reagendar) también acepta `alternativeRequiredCapabilities: ["hasCancelledRescheduleTarget"]` para continuar un reagendamiento iniciado en un turno anterior
 >
 > Sin cita real (bloque futuro no cancelado o link de recordatorio), el flow es **inelegible por construcción**: un "sí" desnudo NUNCA produce acción ni mensaje falso ("He movido tu cita", "He cancelado tu cita", "¡Muchas gracias!", "tu cita sigue confirmada"). La capability es turn-start, computada por el backend desde el contexto (nunca del LLM).
 >
@@ -703,7 +705,7 @@ Regla: si `allowedTools` está presente, debe incluir exactamente las tools que 
 - Prohibido intent `price_inquiry` (usar `general_inquiry` + `serviceCatalog`).
 - Flows con `query_knowledge_base` o `query_protocol` NO deben tener `responseTemplate` con modo `literal`.
 - Flow `new_appointment_scheduling`: `resolve_patient` debe estar en un step anterior a `schedule_block`; puede preceder o seguir a `check_availability`, según la configuración del asesor. `schedule_block` requiere `hasResolvedPatient`.
-- Flow `existing_appointment_rescheduling`: `cancel_for_rescheduling` en step 1 y `resolve_availability_query` en step 2; `selection.requiredCapabilities: ["hasActiveAppointment"]`. Si declara `hasConcreteDateTime` al inicio del turno, puede omitir `resolve_availability_query` y pasar de `cancel_for_rescheduling` a `check_availability`.
+- Flow `existing_appointment_rescheduling`: `cancel_for_rescheduling` en step 1 y `resolve_availability_query` en step 2; `selection.requiredCapabilities: ["hasActiveAppointment"]` y `alternativeRequiredCapabilities: ["hasCancelledRescheduleTarget"]`. Si declara `hasConcreteDateTime` al inicio del turno, puede omitir `resolve_availability_query` y pasar de `cancel_for_rescheduling` a `check_availability`.
 
 #### Intents/rules mínimos
 Deben existir intents y rules para: `existing_appointment_confirmation`, `existing_appointment_cancellation`, `existing_appointment_inquiry`, `new_appointment_scheduling`, `general_inquiry`, `human_follow_up`, `farewell`.
@@ -731,6 +733,9 @@ Deben existir intents y rules para: `existing_appointment_confirmation`, `existi
 - [ ] `conversationResumption` existe con `instructions` para los 5 hitos.
 - [ ] Todas las `description` son descripciones semánticas en lenguaje natural.
 - [ ] Las capabilities coinciden con `_templates/base-full.json` y no contienen propiedades inventadas.
+- [ ] Flow `existing_appointment_rescheduling` declara `alternativeRequiredCapabilities: ["hasCancelledRescheduleTarget"]` en `selection`.
+- [ ] Flow `existing_appointment_reschedule_inquiry` en full mode tiene `resolve_availability_query` + `check_availability` en steps o allowedTools.
+- [ ] `treatmentSelectionGuidance` existe en la raíz del JSON si el asesor quiere guiar `resolve_treatment` para pacientes nuevos.
 - [x] Todos los archivos de input han sido leídos por bloques de ~100 líneas.
 - [x] La información se extrajo incrementalmente, bloque por bloque.
 - [x] El JSON se generó sección por sección, no de una sola vez.

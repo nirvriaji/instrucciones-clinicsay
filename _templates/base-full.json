@@ -212,6 +212,7 @@
       }
     ]
   },
+  "treatmentSelectionGuidance": "Si el paciente parece nuevo en la clinica y pide un tratamiento concreto, lo recomendable es una primera cita de valoracion: el profesional debe verlo antes de aplicar cualquier tratamiento. Los tratamientos de valoracion son Primera Consulta y Valoracion Estetica. Si el paciente ya viene siguiendo un tratamiento y pide continuar con el, respeta el que pida.",
   "intents": {
     "existing_appointment_confirmation": {
       "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
@@ -266,13 +267,16 @@
       ]
     },
     "existing_appointment_rescheduling": {
-      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, (c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), (d) \"restablecer\" una cita tras cancelarla en el mismo turno de conversacion. Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs).",
+      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. TAMBIEN es este intent cuando ELIGE uno de los huecos que se le acaban de enseñar. NO lo es proponer un dia sin haber visto huecos todavia.",
       "examples": [
         "¿podemos cambiar mi cita al jueves?",
         "muevela a la tarde",
         "adelantala a las 10h",
         "la cita es para mi pareja, no para mi",
-        "restablecer la cita que acabo de cancelar"
+        "restablecer la cita que acabo de cancelar",
+        "me quedo con la de las 16:00",
+        "la primera opcion me sirve",
+        "esa misma, el jueves a las 10"
       ]
     },
     "existing_appointment_delay_notice": {
@@ -282,10 +286,13 @@
       ]
     },
     "existing_appointment_reschedule_inquiry": {
-      "description": "El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavia.",
+      "description": "El paciente pregunta si puede cambiar una cita existente, o dice CUANDO le vendria bien sin haber visto todavia ningun hueco concreto. Proponer un dia o una franja es parte de la consulta: dice donde mirar, no que se confirme el cambio. El intent pasa a existing_appointment_rescheduling cuando el paciente ELIGE uno de los huecos que ya se le enseñaron.",
       "examples": [
         "¿Se puede cambiar mi cita?",
-        "¿Podria moverla a otro dia?"
+        "¿Podria moverla a otro dia?",
+        "el viernes por la tarde o el sabado",
+        "el lunes 7 a partir de las 12:30",
+        "si, el jueves"
       ]
     },
     "existing_appointment_cancellation_inquiry": {
@@ -489,8 +496,16 @@
       },
       "reschedule_inquiry": {
         "intent": "existing_appointment_reschedule_inquiry",
-        "description": "Paciente pregunta sobre reagendar o cambiar una cita, sin decidir aun.",
-        "steps": [],
+        "description": "Paciente pregunta si es posible reagendar, o propone un dia o franja sin haber visto huecos todavia. Puede CONSULTAR disponibilidad para enseñarle opciones, nunca modificar la cita.",
+        "steps": [
+          {
+            "step": 1,
+            "tools": ["resolve_availability_query", "check_availability"],
+            "parallel": false,
+            "required": [],
+            "note": "SOLO si el paciente ya ha dado un dia o una franja. Consultar e informar qué opciones hay; NUNCA afirmar que la cita se ha movido ni prometer una busqueda futura: se consulta y se dice lo que hay."
+          }
+        ],
         "responseTemplate": "reschedule_inquiry_full",
         "responseTemplateMode": "model"
       },

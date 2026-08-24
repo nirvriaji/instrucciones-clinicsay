@@ -426,16 +426,55 @@ En `tasks-only`, `create_task` es opcional. El modo limita scheduling y disponib
 
 ## 🔄 Sincronización con el backend (mantenimiento)
 
-Este repo es **independiente**: la réplica del validador vive en `scripts/lib/backend-validator/` (copia local, imports relativos, cero dependencias del repo backend). Cuando el backend cambie, hay que resincronizar:
+Este repo es **independiente**: la réplica del validador vive en `scripts/lib/backend-validator/` (copia local, imports relativos, cero dependencias del repo backend). Cuando el backend cambie, hay que resincronizar.
 
-| Artefacto | Fuente canónica en backend | Cómo regenerar |
+### Script automático de sincronización
+
+```bash
+# Comparar resumidamente (default)
+bash scripts/sync-backend.sh
+
+# Ver diffs detallados de todos los archivos diferentes
+bash scripts/sync-backend.sh --diff
+
+# Aplicar cambios del backend a la réplica local (interactivo, pide confirmación)
+bash scripts/sync-backend.sh --apply
+
+# Solo listar qué se importaría, sin copiar
+bash scripts/sync-backend.sh --list
+```
+
+**Qué hace el script:**
+1. Detecta automáticamente el backend en rutas comunes (`/root/clinicsay-backend`, `../clinicsay-backend`, `~/clinicsay-backend`)
+2. Importa 22 archivos relevantes a `scripts/lib/backend-source/` (mirror de solo lectura)
+3. Compara cada archivo con la réplica funcional en `scripts/lib/backend-validator/`
+4. Muestra estado: ✅ IGUAL | 🔴 DIFERENTE | 🆕 NUEVO
+5. En modo `--diff`: muestra el diff completo (`diff -u`) de cada archivo
+6. En modo `--apply`: copia los archivos diferentes tras confirmación del usuario
+
+### Artefactos que se sincronizan
+
+| Artefacto | Fuente canónica en backend | Destino en repo |
 |---|---|---|
-| Validador (`*.ts`, `validators/`, `advisory/`) | `src/domain/chatbot-instruction-builder/` | Copiar archivos y normalizar imports (`'../chat/'` → `'./'`, `'../../chat/'` → `'../'`) |
-| Tool definitions | `src/domain/chat/tool-definitions-*.ts` | Copiar y normalizar `'../../ports/secondary/chat/'` → `'./'` |
+| Validador (`*.ts`, `validators/`, `advisory/`) | `src/domain/chatbot-instruction-builder/` | `scripts/lib/backend-validator/` |
+| Tool definitions | `src/domain/chat/tool-definitions-*.ts` | `scripts/lib/backend-validator/` |
+| Tool call policy | `src/application/chat/use-cases/RunToolCycle/tool-call-policy.ts` | `scripts/lib/backend-validator/` |
+| Intents canónicos | `src/domain/chat/canonical-intents.ts` | `scripts/lib/backend-validator/` |
+
+**Nota sobre imports:** La réplica local usa imports relativos simplificados (sin las rutas de backend). El script detecta diferencias en el código real, no en los imports. Cuando apliques cambios, verifica que los imports sigan funcionando ejecutando:
+
+```bash
+npx tsx scripts/lib/backend-validator/run-validation.ts _templates/base-full.json full
+```
+
+### Artefactos que NO se sincronizan automáticamente (requieren comandos manuales)
+
+| Artefacto | Fuente canónica | Comando manual |
+|---|---|---|
 | `_templates/base-*.json` | `buildDefaultStructuredLogicForMode(mode)` en `src/domain/chat/default-structured-logic.ts` | `npx tsx -e "import {buildDefaultStructuredLogicForMode as b} from '<backend>/src/domain/chat/default-structured-logic'; import fs from 'fs'; fs.writeFileSync('_templates/base-full.json', JSON.stringify(b('full'), null, 2)); fs.writeFileSync('_templates/base-tasks-only.json', JSON.stringify(b('tasks-only'), null, 2));"` |
 | `scripts/lib/schemas/structured-logic-schema.json` | `StructuredLogicJsonSchema` en `structured-logic-json-schema.ts` | `npx tsx -e "import {StructuredLogicJsonSchema as S} from './scripts/lib/backend-validator/structured-logic-json-schema'; import fs from 'fs'; fs.writeFileSync('scripts/lib/schemas/structured-logic-schema.json', JSON.stringify(S, null, 2));"` |
 
-**Verificación de paridad:** tras copiar, `diff` por archivo (con la normalización de imports aplicada al original) debe dar 0 líneas. Después, valida los templates: `npx tsx scripts/lib/backend-validator/run-validation.ts _templates/base-<mode>.json <mode>`.
+**Verificación de paridad:** tras sincronizar, ejecuta `bash scripts/sync-backend.sh --diff` para confirmar que no quedan diferencias inesperadas.
 
 ---
 

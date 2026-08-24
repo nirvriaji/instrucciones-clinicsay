@@ -75,6 +75,7 @@ export function validateBasicSchema(
     'protocols',
     'errorCategories',
     'treatmentPolicyHints',
+    'treatmentSelectionGuidance',
     'systemPromptInstructions',
     'conversationResumption',
     'serviceCatalog',

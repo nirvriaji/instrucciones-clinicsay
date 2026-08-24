@@ -41,26 +41,29 @@ export function detectModeAdvisoryGaps(
       (tool) => tools.has(tool),
     );
 
-  // ── Caso F: full + consulta de reagendamiento mezclada con herramientas ──
-  const inquiryToolSet = new Set([
+  // ── Caso F: full + consulta de reagendamiento con herramientas prohibidas ──
+  // En full mode, resolve_availability_query + check_availability están PERMITIDAS
+  // en existing_appointment_reschedule_inquiry (necesarias para mostrar opciones reales).
+  // Solo se advierte si usa herramientas que modifican la cita.
+  const inquiryForbiddenToolSet = new Set([
     'cancel_for_rescheduling',
     'schedule_block',
     'manage_schedule_block_status',
     'manage_all_schedule_blocks_for_date',
-    'resolve_availability_query',
-    'check_availability',
   ]);
   const rescheduleInquiryFlows = allFlows.filter(
     (flow) => flow.intent === 'existing_appointment_reschedule_inquiry',
   );
-  if (mode === 'full' && rescheduleInquiryFlows.some((flow) => flowUsesAnyTool(flow, inquiryToolSet))) {
+  if (mode === 'full' && rescheduleInquiryFlows.some((flow) => flowUsesAnyTool(flow, inquiryForbiddenToolSet))) {
     gaps.push({
       severity: 'advisory',
       type: 'mode_note',
       description:
         'La consulta existing_appointment_reschedule_inquiry debe ser solo informativa. ' +
-        'Está mezclada con herramientas de reagendamiento o disponibilidad, mientras que la confirmación explícita debe usar un flujo separado de existing_appointment_rescheduling. ' +
-        'Separa ambos flujos para que una pregunta no cancele, busque horarios ni modifique la cita.',
+        'Está mezclada con herramientas que modifican la cita (cancel_for_rescheduling, schedule_block, manage_schedule_block_status), ' +
+        'mientras que la confirmación explícita debe usar un flujo separado de existing_appointment_rescheduling. ' +
+        'Separa ambos flujos para que una pregunta no cancele ni modifique la cita. ' +
+        'Nota: resolve_availability_query y check_availability SÍ están permitidas en full mode para consultar disponibilidad real.',
     });
   }
 

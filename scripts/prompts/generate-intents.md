@@ -22,7 +22,7 @@ Crea exactamente estos 12 intents canónicos como mínimo (copia los del templat
 | `farewell` | El paciente se despide, agradece o cierra la conversación de forma amable. |
 | `existing_appointment_rescheduling` | El paciente quiere MOVER una cita YA AGENDADA a otra fecha u hora. NO usar cuando el paciente elige una hora de las opciones que el bot acaba de ofrecer para una NUEVA cita (eso es `new_appointment_scheduling`, continuar el agendamiento). Ejemplos válidos SOLO de mover cita existente: "muévela al jueves", "cámbiamela a la tarde", "adelántala una hora". |
 | `existing_appointment_delay_notice` | El paciente avisa que llegará tarde a una cita confirmada. |
-| `existing_appointment_reschedule_inquiry` | El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavía. No debe iniciar disponibilidad ni tools de modificación. |
+| `existing_appointment_reschedule_inquiry` | El paciente pregunta si puede cambiar una cita existente, o dice CUANDO le vendria bien sin haber visto todavia ningun hueco concreto. Proponer un dia o una franja es parte de la consulta: dice donde mirar, no que se confirme el cambio. El intent pasa a `existing_appointment_rescheduling` cuando el paciente ELIGE uno de los huecos que ya se le enseñaron. En full mode este flujo DEBE poder consultar disponibilidad real (`resolve_availability_query` + `check_availability`). |
 | `existing_appointment_cancellation_inquiry` | El paciente consulta sobre cancelación o pregunta qué pasaría si no puede asistir, sin ordenar la cancelación directamente. |
 | `existing_appointment_keep` | El paciente indica que quiere mantener la cita tal como está. |
 

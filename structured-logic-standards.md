@@ -97,7 +97,13 @@ During rescheduling, the preparatory cancellation must never run before — or a
 
 **Safe reschedule order (full mode):** `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`. The preparatory cancellation captures and persists the backend-owned target; `manage_schedule_block_status` is not the cancellation route for this flow. The original professional is a backend preference, not a required patient choice. `schedule_block` requires availability evidence from the current turn; inherited slots never authorize booking. If the selected time is occupied, report that it is no longer available and offer real alternatives. Before booking, the backend reconciles captured sessions against current state and keeps only `ACTIVE` + `PENDING` sessions for the captured treatment: reuse `CARE_PLAN` when any remain, or use a backend-authorized `STANDALONE` fallback when none remain. The LLM/advisor does not select the mode or provide internal metadata or temporal fields such as `expiresAt`.
 
+**Exception:** when the flow declares `selection.requiredCapabilities: [..., "hasConcreteDateTime"]` — the patient already gave a concrete date AND time at turn start — `resolve_availability_query` MAY be omitted and the mandatory order becomes `cancel_for_rescheduling` → `check_availability` → `schedule_block`.
+
 **Full booking identity rule:** before a new full booking flow executes `schedule_block`, it must execute `resolve_patient`. A rescheduling flow with a backend-owned `hasCancelledRescheduleTarget` is the exception: the target already identifies the original patient and `resolve_patient` must not replace that identity. The patient-resolution step for new bookings may occur before or after availability is resolved and checked; the invariant is only that identity is resolved before the appointment is reserved.
+
+**Rescheduling selection gate:** a reschedule flow (`existing_appointment_rescheduling`) MUST declare `selection: { requiredCapabilities: ["hasActiveAppointment"], alternativeRequiredCapabilities: ["hasCancelledRescheduleTarget"] }`. The alternative allows the flow to run when a reschedule target was already captured in a previous turn.
+
+**Reschedule inquiry (full mode):** a flow with intent `existing_appointment_reschedule_inquiry` in full mode MUST declare a step with `tools: ["resolve_availability_query", "check_availability"]`. Without them the flow has no tools at all, so when the patient gives a day or time the bot can only promise to look at the schedule — which is rejected and loops. The slots shown are informational and do not authorize booking; tools that modify the appointment (`cancel_for_rescheduling`, `schedule_block`, `manage_schedule_block_status`) stay forbidden here.
 
 A reschedule flow (`existing_appointment_rescheduling`) in `full` mode that can cancel MUST also be able to book: `schedule_block` has to be present in `steps` or `allowedTools`.
 
@@ -121,7 +127,7 @@ The person sending the message (interlocutor) may be the patient, a partner, a f
   toolOrchestration: ToolOrchestration; // Required
   rules: BusinessRule[];              // Required. MUST contain at least one rule. Never empty.
   protocols?: Record<string, Protocol>;  // Optional
-  products?: ProductConfig;           // Optional
+  treatmentSelectionGuidance?: string; // Optional. Prose guidance for resolve_treatment when the patient seems new.
   errorCategories?: ErrorCategory[];  // Optional
 }
 ```

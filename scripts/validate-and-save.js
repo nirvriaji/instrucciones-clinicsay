@@ -89,8 +89,8 @@ function validateSchema(data, errors) {
   const allowedTopLevelKeys = new Set([
     'version', 'capabilities', 'identity', 'styleRules', 'responseTemplates',
     'faq', 'serviceCatalog', 'intents', 'toolOrchestration', 'rules', 'protocols',
-    'errorCategories', 'treatmentPolicyHints', 'systemPromptInstructions',
-    'conversationResumption',
+    'errorCategories', 'treatmentPolicyHints', 'treatmentSelectionGuidance',
+    'systemPromptInstructions', 'conversationResumption',
   ]);
   rejectUnknownKeys(data, allowedTopLevelKeys, 'root', errors);
 
@@ -648,6 +648,205 @@ function validateStepRequirements(data, errors) {
         }
       }
     });
+  }
+}
+
+/**
+ * Flow Safety — configuration-time guards against flows that are dangerous
+ * or silently broken at runtime. Copied from backend flow-safety.ts and
+ * flow-validation.ts to ensure local validation matches backend rejection.
+ */
+function validateFlowSafety(data, mode, errors) {
+  const flows = data.toolOrchestration?.flows || {};
+
+  // Helper: check if a flow uses a tool in steps or allowedTools
+  const flowUsesTool = (flow, toolName) => {
+    const inAllowed = Array.isArray(flow.allowedTools) && flow.allowedTools.includes(toolName);
+    const inSteps = Array.isArray(flow.steps) && flow.steps.some((step) => (step.tools || []).includes(toolName));
+    return inAllowed || inSteps;
+  };
+
+  // Helper: get first step index that uses a tool
+  const firstStepWithTool = (flow, toolName) => {
+    if (!Array.isArray(flow.steps)) return -1;
+    return flow.steps.findIndex((step) => (step.tools || []).includes(toolName));
+  };
+
+  // 1. existing_appointment_rescheduling MUST have alternativeRequiredCapabilities
+  for (const [flowName, flow] of Object.entries(flows)) {
+    if (flow.intent === 'existing_appointment_rescheduling') {
+      const alternatives = flow.selection?.alternativeRequiredCapabilities;
+      const hasCancelledTarget = Array.isArray(alternatives) && alternatives.includes('hasCancelledRescheduleTarget');
+      if (!hasCancelledTarget) {
+        errors.push({
+          category: 'business',
+          message: `Flow "${flowName}" (intent: existing_appointment_rescheduling) MUST declare "selection.alternativeRequiredCapabilities": ["hasCancelledRescheduleTarget"] so the flow can also run when a reschedule target has already been captured in a previous turn.`,
+        });
+      }
+    }
+  }
+
+  // 2. In full mode, existing_appointment_reschedule_inquiry MUST have resolve_availability_query + check_availability
+  if (mode === 'full') {
+    for (const [flowName, flow] of Object.entries(flows)) {
+      if (flow.intent === 'existing_appointment_reschedule_inquiry') {
+        const hasResolve = flowUsesTool(flow, 'resolve_availability_query');
+        const hasCheck = flowUsesTool(flow, 'check_availability');
+        if (!hasResolve || !hasCheck) {
+          errors.push({
+            category: 'business',
+            message: `Flow "${flowName}" (intent: existing_appointment_reschedule_inquiry) in full mode MUST declare "resolve_availability_query" and "check_availability" in steps or allowedTools. Without them the flow has no tools at all, so when the patient gives a day or time the bot can only promise to look at the schedule — which is rejected and loops. This is CONSULTING, not modifying: the slots shown are informational and do not authorize booking.`,
+          });
+        }
+        // Forbidden tools in reschedule inquiry
+        const forbiddenTools = ['cancel_for_rescheduling', 'schedule_block', 'manage_schedule_block_status', 'manage_all_schedule_blocks_for_date'];
+        for (const tool of forbiddenTools) {
+          if (flowUsesTool(flow, tool)) {
+            errors.push({
+              category: 'business',
+              message: `Flow "${flowName}" (intent: existing_appointment_reschedule_inquiry) MUST NOT use "${tool}". A reschedule inquiry only CONSULTS availability; it never cancels, moves or books appointments.`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 3. cancel_for_rescheduling is ONLY valid in rescheduling flows
+  const RESCHEDULING_INTENTS = new Set(['existing_appointment_rescheduling']);
+  for (const [flowName, flow] of Object.entries(flows)) {
+    if (flowUsesTool(flow, 'cancel_for_rescheduling') && !RESCHEDULING_INTENTS.has(flow.intent)) {
+      errors.push({
+        category: 'business',
+        message: `Flow "${flowName}" (intent: ${flow.intent}) uses "cancel_for_rescheduling" outside a rescheduling flow. "cancel_for_rescheduling" is the preparatory cancellation of the rescheduling contract and is ONLY valid in flows whose intent is "existing_appointment_rescheduling". For definitive cancellation, confirmation, or EN_ROUTE actions use "manage_schedule_block_status".`,
+      });
+    }
+  }
+
+  // 4. Full rescheduling flows with schedule_block cannot use manage_schedule_block_status
+  if (mode === 'full') {
+    for (const [flowName, flow] of Object.entries(flows)) {
+      if (RESCHEDULING_INTENTS.has(flow.intent) && flowUsesTool(flow, 'schedule_block') && flowUsesTool(flow, 'manage_schedule_block_status')) {
+        errors.push({
+          category: 'business',
+          message: `Flow "${flowName}" (intent: ${flow.intent}) in full mode cannot use "manage_schedule_block_status" as the rescheduling cancellation route. Use "cancel_for_rescheduling" before availability resolution; "manage_schedule_block_status" is reserved for definitive cancellation, confirmation, or EN_ROUTE flows.`,
+        });
+      }
+    }
+  }
+
+  // 5. Full rescheduling flows with schedule_block MUST have cancel_for_rescheduling before schedule_block
+  if (mode === 'full') {
+    for (const [flowName, flow] of Object.entries(flows)) {
+      if (RESCHEDULING_INTENTS.has(flow.intent) && flowUsesTool(flow, 'schedule_block')) {
+        const cancelIndex = firstStepWithTool(flow, 'cancel_for_rescheduling');
+        const resolveIndex = firstStepWithTool(flow, 'resolve_availability_query');
+        const availabilityIndex = firstStepWithTool(flow, 'check_availability');
+        const scheduleIndex = firstStepWithTool(flow, 'schedule_block');
+
+        if (cancelIndex < 0) {
+          errors.push({
+            category: 'business',
+            message: `Flow "${flowName}" (intent: ${flow.intent}) in full mode must declare "cancel_for_rescheduling" when it includes "schedule_block".`,
+          });
+          continue;
+        }
+
+        const requiredCapabilities = flow.selection?.requiredCapabilities;
+        const declaresConcreteDateTime = Array.isArray(requiredCapabilities) && requiredCapabilities.includes('hasConcreteDateTime');
+
+        if (declaresConcreteDateTime) {
+          const orderIsValid = scheduleIndex >= 0 && availabilityIndex >= 0 && cancelIndex < availabilityIndex && availabilityIndex < scheduleIndex && (resolveIndex < 0 || (cancelIndex < resolveIndex && resolveIndex < availabilityIndex));
+          if (!orderIsValid) {
+            errors.push({
+              category: 'business',
+              message: `Flow "${flowName}" (intent: ${flow.intent}) declares "hasConcreteDateTime", so "resolve_availability_query" may be omitted, but it must still order cancel_for_rescheduling -> check_availability -> schedule_block in numbered steps (when "resolve_availability_query" is present it must stay between cancel_for_rescheduling and check_availability). "check_availability" never runs without a concrete date and time.`,
+            });
+          }
+          continue;
+        }
+
+        if (scheduleIndex < 0 || availabilityIndex < 0 || resolveIndex < 0 || !(cancelIndex < resolveIndex && resolveIndex < availabilityIndex && availabilityIndex < scheduleIndex)) {
+          errors.push({
+            category: 'business',
+            message: `Flow "${flowName}" (intent: ${flow.intent}) declares "cancel_for_rescheduling" but must order cancel_for_rescheduling -> resolve_availability_query -> check_availability -> schedule_block in numbered steps. The backend target is captured before the new date and booking reuses it. If the patient always gives a concrete date AND time at turn start, declare "hasConcreteDateTime" in selection.requiredCapabilities to make "resolve_availability_query" optional.`,
+          });
+        }
+      }
+    }
+  }
+
+  // 6. new_appointment_scheduling flows must resolve patient before schedule_block
+  for (const [flowName, flow] of Object.entries(flows)) {
+    if (flow.intent === 'new_appointment_scheduling') {
+      const scheduleBlockStepIndex = firstStepWithTool(flow, 'schedule_block');
+      if (scheduleBlockStepIndex >= 0) {
+        const hasResolvePatientBefore = flow.steps
+          .slice(0, scheduleBlockStepIndex)
+          .some((step) => (step.tools || []).includes('resolve_patient'));
+        if (!hasResolvePatientBefore) {
+          errors.push({
+            category: 'business',
+            message: `Flow '${flowName}' intent 'new_appointment_scheduling' uses schedule_block but does not have resolve_patient in an earlier step. Add resolve_patient before schedule_block to avoid booking with an unresolved patient.`,
+          });
+        }
+      }
+      // Also check allowedTools
+      const hasScheduleBlockInAllowedTools = Array.isArray(flow.allowedTools) && flow.allowedTools.includes('schedule_block');
+      if (hasScheduleBlockInAllowedTools && scheduleBlockStepIndex < 0) {
+        const hasResolvePatientAnyStep = Array.isArray(flow.steps) && flow.steps.some((step) => (step.tools || []).includes('resolve_patient'));
+        if (!hasResolvePatientAnyStep) {
+          errors.push({
+            category: 'business',
+            message: `Flow '${flowName}' intent 'new_appointment_scheduling' allows schedule_block in allowedTools but does not have resolve_patient in any step. Add resolve_patient before the bot can use schedule_block to avoid booking with an unresolved patient.`,
+          });
+        }
+      }
+    }
+  }
+
+  // 7. existing_appointment_cancellation flows must have responseTemplate
+  for (const [flowName, flow] of Object.entries(flows)) {
+    if (flow.intent === 'existing_appointment_cancellation' && !flow.responseTemplate) {
+      errors.push({
+        category: 'business',
+        message: `Flow "${flowName}" (intent: existing_appointment_cancellation) must have a "responseTemplate". The patient needs confirmation that the cancellation was processed.`,
+      });
+    }
+  }
+
+  // 8. Flows using manage_schedule_block_status should have responseTemplate
+  for (const [flowName, flow] of Object.entries(flows)) {
+    const usesStatusTool = Array.isArray(flow.steps) && flow.steps.some((step) => (step.tools || []).includes('manage_schedule_block_status'));
+    if (usesStatusTool && !flow.responseTemplate) {
+      errors.push({
+        category: 'business',
+        message: `Flow '${flowName}' uses 'manage_schedule_block_status' but has no 'responseTemplate'. The backend will use a generic fallback. Consider adding a custom responseTemplate for better patient experience.`,
+      });
+    }
+  }
+
+  // 9. general_inquiry must have query_knowledge_base
+  const generalInquiryFlow = flows['general_inquiry'];
+  if (generalInquiryFlow) {
+    const hasQkbInAllowed = Array.isArray(generalInquiryFlow.allowedTools) && generalInquiryFlow.allowedTools.includes('query_knowledge_base');
+    const hasQkbInSteps = Array.isArray(generalInquiryFlow.steps) && generalInquiryFlow.steps.some((step) => (step.tools || []).includes('query_knowledge_base'));
+    if (!hasQkbInAllowed && !hasQkbInSteps) {
+      errors.push({
+        category: 'business',
+        message: `Flow "general_inquiry" must have "query_knowledge_base" available in allowedTools or steps. This is required in both full and tasks-only modes so the bot can search protocols, FAQ, responseTemplates and rules when the answer is not already in context.`,
+      });
+    }
+  }
+
+  // 10. human_follow_up must use create_task
+  for (const [flowName, flow] of Object.entries(flows)) {
+    if (flow.intent === 'human_follow_up' && !flowUsesTool(flow, 'create_task')) {
+      errors.push({
+        category: 'business',
+        message: `Flow "${flowName}" (intent: human_follow_up) must use "create_task" in allowedTools or steps. This is required to escalate to human staff.`,
+      });
+    }
   }
 }
 
