@@ -81,7 +81,7 @@ export function validateStructuredLogic(
     return { valid: false, errors: ['structuredLogic must be an object'] };
   }
 
-  const sl = logic as Partial<import('../chat/structured-logic').StructuredLogic>;
+  const sl = logic as Partial<import('./structured-logic').StructuredLogic>;
 
   // 1. Basic schema validation
   validateBasicSchema(sl, errors);

@@ -26,10 +26,10 @@ export type ResponseTemplateDefinition = {
 export type ResponseTemplates = Readonly<Record<string, ResponseTemplateDefinition>>;
 
 export type ResponseTemplateResolution =
-  | { readonly status: 'not_configured' }
-  | { readonly status: 'not_found'; readonly key: string }
+  | { readonly resolutionStatus: 'not_configured' }
+  | { readonly resolutionStatus: 'not_found'; readonly key: string }
   | {
-      readonly status: 'resolved';
+      readonly resolutionStatus: 'resolved';
       readonly key: string;
       readonly mode: ResponseTemplateMode;
       readonly text: string;
@@ -37,7 +37,7 @@ export type ResponseTemplateResolution =
     }
   | {
       /** Diagnostic state only: this result has no patient-facing text. */
-      readonly status: 'missing_data';
+      readonly resolutionStatus: 'missing_data';
       readonly key: string;
       readonly mode: ResponseTemplateMode;
       readonly missing: readonly string[];
@@ -102,19 +102,19 @@ export function resolveResponseTemplateKey(
   data: ResponseTemplateData,
 ): ResponseTemplateResolution {
   if (typeof responseTemplateKey !== 'string' || responseTemplateKey.trim().length === 0) {
-    return { status: 'not_configured' };
+    return { resolutionStatus: 'not_configured' };
   }
 
   const key = responseTemplateKey.trim();
   const definition = registry && Object.prototype.hasOwnProperty.call(registry, key) ? registry[key] : undefined;
   if (!definition || typeof definition.text !== 'string' || definition.text.trim().length === 0) {
-    return { status: 'not_found', key };
+    return { resolutionStatus: 'not_found', key };
   }
 
   const rendered = renderResponseTemplate(definition.text, data);
   if (rendered.missing.length > 0) {
     return {
-      status: 'missing_data',
+      resolutionStatus: 'missing_data',
       key,
       mode: definition.mode === 'literal' || definition.mode === 'model' ? definition.mode : 'model',
       missing: rendered.missing,
@@ -122,7 +122,7 @@ export function resolveResponseTemplateKey(
   }
 
   return {
-    status: 'resolved',
+    resolutionStatus: 'resolved',
     key,
     mode: definition.mode === 'literal' || definition.mode === 'model' ? definition.mode : 'model',
     text: rendered.text,
