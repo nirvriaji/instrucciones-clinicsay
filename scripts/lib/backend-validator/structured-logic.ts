@@ -24,6 +24,7 @@ export type ClinicCapabilities = {
 // Re-export conversation resumption types from their canonical domain file.
 export { type ConversationResumptionConfig, type ConversationResumptionType } from './conversation-resumption';
 import type { ConversationResumptionConfig } from './conversation-resumption';
+import { reconcileFlowSelections } from './canonical-flow-selection';
 
 /**
  * Derive scheduling capability from the external chat mode.
@@ -136,7 +137,7 @@ export type ResponseTemplateMode = 'literal' | 'model';
 export type ResponseTemplate = {
   /** Template text */
   text: string;
-  /** Response mode: literal (exact) or model (adapted by LLM). Defaults to model. */
+  /** Response mode: literal (exact) or model (adapted by LLM). Defaults vary by policy. */
   mode?: ResponseTemplateMode;
 };
 
@@ -183,14 +184,8 @@ export type ToolFlow = {
    */
   selection?: ToolFlowSelection;
   steps: ToolStep[];
-  /** Optional. If defined, the bot uses this text after completing the flow. */
-  responseTemplate?: string;
-  /**
-   * Optional response mode for the template.
-   * - 'literal': respond with the exact template text; reserved for deterministic appointment operations.
-   * - 'model': use the template as a base and adapt to the patient's question (default).
-   */
-  responseTemplateMode?: 'literal' | 'model';
+  /** Registry key for the response template used after the flow completes. */
+  responseTemplateKey?: string;
   /** Optional explicit tool whitelist for the LLM in this flow */
   allowedTools?: string[];
   /**
@@ -396,6 +391,21 @@ export type StructuredLogic = {
    */
   treatmentPolicyHints?: TreatmentPolicyHint[];
   /**
+   * Indicaciones de la clínica sobre CÓMO IDENTIFICAR el tratamiento correcto
+   * para lo que pide el paciente. Prosa libre que se inyecta en el prompt de
+   * `resolve_treatment`, junto al catálogo real de la sede.
+   *
+   * No confundir con `treatmentPolicyHints`, que trata de las políticas de
+   * scheduling (FILTRAN qué se puede agendar y cuándo). Esto IDENTIFICA cuál es
+   * el tratamiento adecuado: p. ej. "si el paciente es nuevo y pide un
+   * tratamiento concreto, lo recomendable es una cita de valoración".
+   *
+   * Se escriben los NOMBRES tal cual están en el catálogo, nunca IDs: el modelo
+   * ve la lista de tratamientos en la misma llamada y el `treatmentId` sale de
+   * ahí, así que un nombre inventado simplemente no casa con nada.
+   */
+  treatmentSelectionGuidance?: string;
+  /**
    * Builder-facing metadata: notes, known gaps, and recommended next steps.
    * The runtime does NOT render this into the LLM system prompt.
    */
@@ -406,6 +416,13 @@ export type StructuredLogic = {
    * Thresholds are fixed by the domain; only the text instructions are configurable.
    */
   conversationResumption?: ConversationResumptionConfig;
+  /**
+   * @deprecated Ignored by runtime delegation. Availability is automatic in
+   * full mode; retained for compatibility with existing JSON configuration.
+   */
+  availabilitySubagent?: {
+    enabled?: boolean;
+  };
 };
 
 /**
@@ -454,13 +471,24 @@ export const BASELINE_INTENTS: IntentCatalog = {
       '(c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), ' +
       '(d) "restablecer" una cita tras cancelarla en el mismo turno de conversacion. ' +
       'Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. ' +
-      'Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs).',
+      'Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs). ' +
+      'TAMBIEN es este intent cuando el paciente ELIGE uno de los huecos que se le acaban de enseñar ' +
+      'durante una consulta de cambio: elegir ES la confirmacion de que quiere moverla. ' +
+      'NO lo es proponer un dia o una franja sin haber visto huecos todavia ("el viernes por la tarde"): ' +
+      'eso sigue siendo la consulta, porque reprogramar cancela la cita actual y no se cancela nada ' +
+      'hasta que el paciente ha visto opciones reales y ha escogido una.',
     examples: [
       '¿podemos cambiar mi cita al jueves?',
       'muevela a la tarde',
       'adelantala a las 10h',
       'la cita es para mi pareja, no para mi',
       'restablecer la cita que acabo de cancelar',
+      // Elegir entre los huecos ya enseñados: esto SI confirma el cambio.
+      'me quedo con la de las 16:00',
+      'la primera opcion me sirve',
+      'esa misma, el jueves a las 10',
+      'perfecto, la de las 09:05',
+      'si, esa',
     ],
   },
   existing_appointment_delay_notice: {
@@ -468,8 +496,23 @@ export const BASELINE_INTENTS: IntentCatalog = {
     examples: ['voy con 10 minutos de retraso'],
   },
   existing_appointment_reschedule_inquiry: {
-    description: 'El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavia.',
-    examples: ['¿Se puede cambiar mi cita?', '¿Podria moverla a otro dia?'],
+    description:
+      'El paciente pregunta si puede cambiar una cita existente, o dice CUANDO le vendria bien sin ' +
+      'haber visto todavia ningun hueco concreto. Proponer un dia o una franja ("el viernes por la ' +
+      'tarde", "el lunes 7 a partir de las 12:30") es parte de la consulta: dice donde mirar, no que ' +
+      'se confirme el cambio. El bot consulta la agenda y le enseña opciones sin tocar su cita. ' +
+      'El intent pasa a "existing_appointment_rescheduling" cuando el paciente ELIGE uno de los huecos ' +
+      'que ya se le enseñaron.',
+    examples: [
+      '¿Se puede cambiar mi cita?',
+      '¿Podria moverla a otro dia?',
+      '¿es posible reprogramar?',
+      // Proponer cuando, sin haber visto huecos: sigue siendo consulta.
+      'el viernes por la tarde o el sabado',
+      'el lunes 7 a partir de las 12:30',
+      'podria ser el jueves por la mañana?',
+      'si, el jueves',
+    ],
   },
   existing_appointment_cancellation_inquiry: {
     description: 'El paciente consulta sobre cancelacion o pregunta que pasaria si no puede asistir, sin ordenar la cancelacion directamente.',
@@ -500,9 +543,9 @@ export const DEFAULT_STRUCTURED_LOGIC: StructuredLogic = {
     ],
   },
   responseTemplates: {
-    information_not_available: { text: 'No tengo esa información en este momento.', mode: 'literal' },
-    out_of_scope: { text: 'Eso está fuera de mi alcance. ¿Puedo ayudarte con algo más?', mode: 'literal' },
-    farewell: { text: '¡Hasta luego! Que tengas un buen día.', mode: 'literal' },
+    information_not_available: { text: 'No tengo esa información en este momento.', mode: 'model' },
+    out_of_scope: { text: 'Eso está fuera de mi alcance. ¿Puedo ayudarte con algo más?', mode: 'model' },
+    farewell: { text: '¡Hasta luego! Que tengas un buen día.', mode: 'model' },
   },
   faq: [],
   serviceCatalog: {
@@ -517,7 +560,7 @@ export const DEFAULT_STRUCTURED_LOGIC: StructuredLogic = {
         intent: 'farewell',
         description: 'Despedirse del paciente',
         steps: [{ step: 1, tools: [], parallel: false }],
-        responseTemplate: 'farewell',
+        responseTemplateKey: 'farewell',
         allowsSilence: true,
       },
     },
@@ -541,7 +584,7 @@ export const DEFAULT_STRUCTURED_LOGIC: StructuredLogic = {
       recent:
         'Han pasado varios días. Saluda cordialmente reconociendo la ausencia. Ofrece un resumen de 1 línea SOLO si hay algo pendiente relevante (cita, tratamiento, duda sin resolver). No asumas que sigue en el hilo antiguo si no hay pending context claro.',
       distant:
-      'Han pasado semanas o meses. Saluda reconociendo la ausencia ("Hola, hace tiempo que no hablamos"). NO te presentes como nuevo. ' +
+        'Han pasado semanas o meses. Saluda reconociendo la ausencia ("Hola, hace tiempo que no hablamos"). NO te presentes como nuevo. ' +
         'Descarta el contexto operativo anterior, incluido cualquier target de reprogramacion y disponibilidad previa. ' +
         'Pregunta cómo puedes ayudarle HOY como en una conversacion nueva. Si hay citas futuras confirmadas, menciónalas brevemente como recordatorio.',
     },
@@ -617,7 +660,12 @@ export function extractStructuredLogic(
     return { type: 'corrupt', reason: 'Missing or invalid required field: serviceCatalog (must have treatments array with at least one item)' };
   }
 
-  return { type: 'success', logic: effectiveLogic };
+  const logic: StructuredLogic = {
+    ...effectiveLogic,
+    toolOrchestration: reconcileFlowSelections(effectiveLogic.toolOrchestration),
+  };
+
+  return { type: 'success', logic };
 }
 
 function stableStringify(value: unknown): string {

@@ -170,12 +170,11 @@ export function validateFlowsAndTools(
       errors,
     );
     if (
-      flow.responseTemplateMode !== undefined &&
-      flow.responseTemplateMode !== null &&
-      flow.responseTemplateMode !== 'literal' &&
-      flow.responseTemplateMode !== 'model'
+      flow.responseTemplateKey !== undefined &&
+      flow.responseTemplateKey !== null &&
+      typeof flow.responseTemplateKey !== 'string'
     ) {
-      errors.push(`Flow '${flowName}' responseTemplateMode must be 'literal' or 'model'.`);
+      errors.push(`Flow '${flowName}' responseTemplateKey must be a string or null.`);
     }
 
     if (flow.selection !== undefined && flow.selection !== null) {
@@ -291,10 +290,10 @@ export function validateFlowsAndTools(
     // 4.3 Validate that flows without tools have response mechanism
     const hasTools = flow.steps.some((step) => step.tools.length > 0);
     const hasAllowedTools = (flow.allowedTools || []).length > 0;
-    const hasResponse = !!flow.responseTemplate || flow.allowsSilence === true;
+    const hasResponse = !!flow.responseTemplateKey || flow.allowsSilence === true;
     if (!hasTools && !hasAllowedTools && !hasResponse) {
       errors.push(
-        `Flow '${flowName}' has no tools and no response mechanism (responseTemplate or allowsSilence). The bot will not know how to respond.`,
+        `Flow '${flowName}' has no tools and no response mechanism (responseTemplateKey or allowsSilence). The bot will not know how to respond.`,
       );
     }
   });
@@ -516,19 +515,6 @@ export function validateFlowsAndTools(
           `Flow '${flowName}' intent 'new_appointment_scheduling' allows schedule_block in allowedTools but does not have resolve_patient in any step. Add resolve_patient before the bot can use schedule_block to avoid booking with an unresolved patient.`,
         );
       }
-    }
-  }
-
-  // 6d7. cancellation flows must have responseTemplate
-  const cancellationFlows = Object.entries(flows).filter(
-    ([, flow]) => flow.intent === 'existing_appointment_cancellation',
-  );
-  for (const [flowName, flow] of cancellationFlows) {
-    if (!flow.responseTemplate) {
-      errors.push(
-        `Flow "${flowName}" (intent: existing_appointment_cancellation) must have a "responseTemplate". ` +
-          `The patient needs confirmation that the cancellation was processed.`,
-      );
     }
   }
 

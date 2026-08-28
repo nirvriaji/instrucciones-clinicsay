@@ -40,20 +40,18 @@ describe('response template modes', () => {
   it('rejects literal mode for reschedule inquiries', () => {
     const logic = baseLogic();
     logic.responseTemplates.reschedule_inquiry_full.mode = 'literal';
-    logic.toolOrchestration.flows.reschedule_inquiry.responseTemplateMode = 'literal';
 
     const result = runValidator(logic);
 
     assert.strictEqual(result.valid, false, 'conversational literal mode must block validation');
     assert.ok(
-      result.errors.some((message) => message.toLowerCase().includes('responsetemplatemode') && message.toLowerCase().includes('model')),
+      result.errors.some((message) => message.toLowerCase().includes('responsetemplates') && message.toLowerCase().includes('model')),
       `expected a model-mode correction, got: ${result.errors.join(' | ')}`,
     );
   });
 
   it('allows literal mode only for appointment operations', () => {
     const logic = baseLogic();
-    logic.toolOrchestration.flows.reschedule_inquiry.responseTemplateMode = 'model';
 
     const result = runValidator(logic);
 

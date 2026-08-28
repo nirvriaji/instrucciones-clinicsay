@@ -14,6 +14,7 @@ const ALLOWED_RESPONSE_TEMPLATE_KEYS = extractAllowedKeys(StructuredLogicJsonSch
 const ALLOWED_RULE_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.rules.items.properties');
 const ALLOWED_CONDITION_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.rules.items.properties.conditions.items.properties');
 const ALLOWED_INTENT_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.intents.additionalProperties.properties');
+const TECHNICAL_TEMPLATE_TEXT = /^(?:word\d+_)+$/;
 
 function rejectUnknownKeys(
   obj: Record<string, unknown> | null | undefined,
@@ -151,6 +152,9 @@ export function validateCrossReferences(
         }
         if (obj.text !== undefined && typeof obj.text !== 'string') {
           errors.push(`responseTemplates["${key}"].text must be a string`);
+        }
+        if (typeof obj.text === 'string' && TECHNICAL_TEMPLATE_TEXT.test(obj.text.trim())) {
+          errors.push(`responseTemplates["${key}"].text "${obj.text}" must be patient-facing text, not a technical template key`);
         }
       } else if (value !== null) {
         errors.push(`responseTemplates["${key}"] must be an object {text, mode}`);

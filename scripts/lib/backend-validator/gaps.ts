@@ -53,20 +53,6 @@ export function detectGaps(
     });
   }
 
-  // 2. Missing response templates
-  const flowsWithoutTemplate = flowNames.filter((name) => {
-    const flow = logic.toolOrchestration?.flows?.[name];
-    return flow && !flow.responseTemplate;
-  });
-  if (flowsWithoutTemplate.length > 0) {
-    gaps.push({
-      type: 'missing_response_template',
-      description: `Flows missing responseTemplate: ${flowsWithoutTemplate.join(', ')}.`,
-      severity: 'medium',
-      affectedFields: flowsWithoutTemplate,
-    });
-  }
-
   // 3. Missing protocols
   const protocolIds = Object.keys(logic.protocols ?? {});
   if (protocolIds.length === 0) {
@@ -97,26 +83,6 @@ export function detectGaps(
       description: `ErrorCategories at indices ${categoriesWithoutSuggestions.join(', ')} are missing suggestions.`,
       severity: 'high',
       affectedIndices: categoriesWithoutSuggestions,
-    });
-  }
-
-  // 5b. Missing response templates for status flows
-  const allFlows = logic.toolOrchestration?.flows ?? {};
-  const statusFlowsWithoutTemplate = Object.entries(allFlows)
-    .filter(([_, flow]) => {
-      const usesStatusTool = flow.steps.some((step: { tools: string[] }) =>
-        step.tools.includes('manage_schedule_block_status')
-      );
-      return usesStatusTool && !flow.responseTemplate;
-    })
-    .map(([flowName]) => flowName);
-  if (statusFlowsWithoutTemplate.length > 0) {
-    gaps.push({
-      type: 'missing_response_template',
-      description: `Flows using manage_schedule_block_status without responseTemplate: ${statusFlowsWithoutTemplate.join(', ')}. ` +
-        `The backend will use generic fallbacks. Consider adding custom templates for better patient experience.`,
-      severity: 'medium',
-      affectedFields: statusFlowsWithoutTemplate,
     });
   }
 
@@ -232,10 +198,7 @@ export function generateFixSuggestions(gaps: LogicGap[]): string[] {
       case 'missing_flows':
         return 'Add at least one conversation flow (e.g., "schedule_appointment", "cancel_appointment"). Define trigger, description, and steps with tools.';
       case 'missing_response_template':
-        return `Add responseTemplate to status flows: ${gap.affectedFields?.join(', ')}. ` +
-          `Examples: confirm: "Tu cita ha quedado confirmada. Te esperamos." | ` +
-          `cancel: "Tu cita ha sido cancelada. Si deseas reprogramar, podemos ayudarte." | ` +
-          `running_late: "No te preocupes, si vienes con un poco de retraso te ajustamos la cita..."`;
+        return `Add a responseTemplates registry entry and reference it with responseTemplateKey in flows: ${gap.affectedFields?.join(', ')}.`;
       case 'missing_protocols':
         return 'Add protocols for common clinic procedures (e.g., "signature_implants", "first_visit"). Define name, description, and responseTemplate.';
       case 'missing_error_categories':
@@ -258,7 +221,7 @@ export function generateFixSuggestions(gaps: LogicGap[]): string[] {
       case 'missing_farewell_flow':
         return 'Add a farewell flow with intent "farewell" and allowsSilence: true. ' +
           'This is required for graceful conversation endings (e.g., when the patient says "thanks" or "bye"). ' +
-          'Example: { intent: "farewell", description: "Say goodbye", steps: [{ step: 1, tools: [], parallel: false }], responseTemplate: "farewell", allowsSilence: true }';
+           'Example: { intent: "farewell", description: "Say goodbye", steps: [{ step: 1, tools: [], parallel: false }], responseTemplateKey: "farewell", allowsSilence: true }';
       case 'unresolved_placeholder':
         return `Ask the advisor for the real values needed at: ${gap.affectedFields?.join(', ')}. ` +
           `Replace unknown placeholders with actual text, or fill in identity.website/identity.openingHours ` +
@@ -279,7 +242,7 @@ export function generateFixSuggestions(gaps: LogicGap[]): string[] {
  * - 44 points: required sections present (4 points per section).
  * - 10 points: at least 1 rule with description.
  * - 10 points: at least 1 flow.
- * - 10 points: at least 1 flow with responseTemplate.
+ * - 10 points: at least 1 flow with a response template reference.
  * - 10 points: at least 1 protocol.
  * - 10 points: at least 1 errorCategory.
  *
@@ -328,12 +291,12 @@ export function generateQualityScore(logic: StructuredLogic): QualityScore {
     gaps.push('No conversation flows defined');
   }
 
-  // +10 points: has at least 1 flow with responseTemplate
-  const hasTemplates = Object.values(logic.toolOrchestration?.flows ?? {}).some((f) => f.responseTemplate);
+  // +10 points: has at least 1 flow with a responseTemplateKey.
+  const hasTemplates = Object.values(logic.toolOrchestration?.flows ?? {}).some((f) => f.responseTemplateKey);
   if (hasTemplates) {
     score += 10;
   } else {
-    gaps.push('No flows have responseTemplate for controlled responses');
+    gaps.push('No flows have responseTemplateKey for controlled responses');
   }
 
   // +10 points: has protocols

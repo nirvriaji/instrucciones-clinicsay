@@ -113,13 +113,14 @@ Cualquier solicitud de agendamiento:
   - `resolve_availability_query` DEBE ir antes de `check_availability`, salvo que el flow de reagendamiento declare `selection.requiredCapabilities: ["hasConcreteDateTime"]`.
   - `resolve_patient` va en un step anterior a `schedule_block` y `schedule_block` declara `required: ["hasResolvedPatient"]`. Puede ir antes o después de `check_availability`, según el asesor.
 
-### 5. responseTemplate
-- **OBLIGATORIO** en flows que usan `manage_schedule_block_status`
-- Opcional en otros flows
-- Si presente, usa `responseTemplateMode: "model"` por defecto para que la IA adapte la respuesta al contexto.
-- Solo usa `responseTemplateMode: "literal"` en flows de confirmación, cancelación definitiva y llegada tarde/en camino de citas existentes.
+### 5. responseTemplateKey
+- Usa `responseTemplateKey` como referencia denotativa a una entrada de `responseTemplates`; nunca escribas el texto del paciente en el flow.
+- Es **opcional en todos los flows**, incluidos los que usan `manage_schedule_block_status`.
+- Si está ausente, no es un error: el backend lo registra y la respuesta usa `patientOutcome` cuando exista o la genera la IA desde el contexto.
+- Si está presente, el `mode` se define en `responseTemplates.<key>`; no añadas `responseTemplateMode` al flow ni a sus steps.
+- El template es opcional y su ausencia no bloquea: se usa `patientOutcome` cuando exista o una respuesta contextual de la IA.
 - Un flow informativo como `existing_appointment_reschedule_inquiry` debe usar `model`; nunca fuerces una pregunta literal genérica.
-- Si ausente, el LLM genera respuesta natural (o usa fallback del backend)
+- Nunca expongas la key, el nombre del registro ni otros identificadores técnicos al paciente.
 
 ### 6. allowedTools
 - **Opcional pero recomendado**
@@ -129,10 +130,10 @@ Cualquier solicitud de agendamiento:
 ## Anti-patrones a Evitar
 
 ❌ **Tasks-only con scheduling tools**: `check_availability` o `schedule_block` en modo tasks-only → ERROR CRÍTICO
-❌ **Flow sin steps ni responseTemplate**: Un flow puede tener `steps: []` si tiene `responseTemplate` o `allowsSilence` (ej: inquiry flows o farewell). Si no tiene ninguno de los dos, el bot no sabrá cómo responder.
+⚠️ **Flow sin steps ni mecanismo declarado**: Un flow puede tener `steps: []` y no declarar `responseTemplateKey`; la ausencia no bloquea y la IA responde desde el contexto o `patientOutcome`.
 ❌ **Step sin tools array**: Siempre debe ser array, incluso vacío `[]` para flows informativos
 ❌ **schedule_block sin resolve_patient previo**: Violación de dependencia
-❌ **responseTemplate en flow informativo**: No es necesario, el LLM responde naturalmente
+❌ **Texto de paciente en el flow**: `responseTemplateKey` debe ser una key denotativa, no una frase como "He movido tu cita".
 ❌ **parallel=true con dependencias**: Si step 2 usa resultado de step 1, parallel debe ser false
 ❌ **`required` con tool names**: `required` debe contener capability flags (ej: `["hasResolvedPatient"]`) o `[]`, NUNCA nombres de tools como `["create_task"]` o `["manage_schedule_block_status"]` → BLOQUEA LA EJECUCIÓN DE TOOLS
 
@@ -192,8 +193,7 @@ Cualquier solicitud de agendamiento:
         "note": "Marcar CONFIRMADA cada cita del día. El gate determinista de selection impide activar este flow sin cita real (nunca confirmar aire)."
       }
     ],
-    "responseTemplate": "Tu cita ha quedado confirmada. Te esperamos.",
-    "responseTemplateMode": "literal",
+    "responseTemplateKey": "appointment_confirmed",
     "allowedTools": ["manage_schedule_block_status"]
   }
 }
@@ -238,8 +238,7 @@ Los flujos que ACTÚAN sobre una cita existente llevan un gate determinista. Con
         "note": "Recopilar nombre, apellidos, teléfono, tratamiento deseado, fechas/horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento."
       }
     ],
-    "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al teléfono de la clínica.",
-    "responseTemplateMode": "literal",
+    "responseTemplateKey": "task_created",
     "allowedTools": ["create_task"]
   }
 }
@@ -268,11 +267,11 @@ S3. Un flujo de reagendamiento (intent `existing_appointment_rescheduling`) en f
 
 S3b. `allowedTools` es una lista blanca SIN ORDEN y no puede anclar el orden seguro. En reagendamiento full mode, las tools de escritura (`cancel_for_rescheduling`, `schedule_block`) deben vivir en `steps` numeradas en el orden canónico. `manage_schedule_block_status` NO debe aparecer en este flow.
 
-S4. `responseTemplate` se inyecta SOLO en las tools del paso TERMINAL (el ÚLTIMO elemento del array de steps). Por tanto, el paso terminal debe ser la herramienta que realiza la acción real (`schedule_block`, `manage_schedule_block_status`, `create_task`). Una plantilla cuyo paso terminal solo contiene tools de búsqueda (`check_availability`, `resolve_*`, `lookup_patient`, `query_*`) es RECHAZADA: hace que el bot anuncie como hecho algo que todavía no ha hecho.
+S4. `responseTemplateKey` es una referencia denotativa opcional al registro `responseTemplates`; nunca es texto dirigido al paciente. Si falta, no es un error: se loguea y se usa `patientOutcome` cuando exista o la IA.
 
-S5. Un flujo que usa tools y declara `responseTemplate` DEBE declarar `steps` con la herramienta de cierre en el último paso. `allowedTools` no sirve para saber cuál es el paso final.
+S5. Si un flow usa `responseTemplateKey`, la key debe ser una referencia denotativa al registro `responseTemplates`. No requiere una tool, step ni terminal step concreto; `allowedTools` sigue siendo solo una whitelist.
 
-S6. Escribe el array `steps` en orden de ejecución: la numeración debe ser ascendente (1, 2, 3...), porque el paso terminal es el ÚLTIMO item del array.
+S6. Escribe el array `steps` en orden de ejecución: la numeración debe ser ascendente (1, 2, 3...). El rendering de respuestas es independiente de la posición del step.
 
 S7. **Los ids de intent son LIBRES** excepto dentro de dos namespaces reservados. La clínica puede inventar `insurance_coverage_inquiry`, `parking_info`, `physio_program_followup` sin problema. Lo que está CERRADO son los prefijos `new_appointment_` y `existing_appointment_`: un id que empiece por cualquiera de ellos DEBE ser uno de los ids canónicos: `new_appointment_scheduling`, `new_appointment_inquiry`, `existing_appointment_rescheduling`, `existing_appointment_reschedule_inquiry`, `existing_appointment_confirmation`, `existing_appointment_cancellation`, `existing_appointment_cancellation_inquiry`, `existing_appointment_inquiry`, `existing_appointment_keep`, `existing_appointment_delay_notice`. Un `existing_appointment_moving` inventado PARECE reagendamiento pero no es reconocido por las reglas de seguridad ni por los guards del servidor, así que la protección se apaga en silencio.
 
@@ -284,11 +283,11 @@ S8. Un flujo cuyo intent es `existing_appointment_*` Y que usa una tool de escri
 - [ ] Un flow por cada intent que requiere acción
 - [ ] En full mode: los flows de booking deben ejecutar `resolve_patient` antes de `schedule_block`, que requiere `hasResolvedPatient`; la posición de `resolve_patient` respecto a `check_availability` es configurable por el asesor. SIN required circulares: un step nunca requiere lo que establece su propia tool.
 - [ ] En tasks-only mode: NINGUNA scheduling tool (check_availability, schedule_block, etc.)
- - [ ] responseTemplate presente en flows de acción real (schedule_block, manage_schedule_block_status, create_task, cancel_for_rescheduling)
+ - [ ] `responseTemplateKey` es opcional, denotativo y, si se usa, existe en `responseTemplates`
 - [ ] allowedTools incluye exactamente las tools del flow (si se usa)
 - [ ] Steps ordenados con dependencias correctas
 - [ ] parallel=true solo cuando steps son independientes
 - [ ] Notes explicativas para cada step
 - [ ] **GATE ciclo de vida:** confirm, cancel, running-late y keep requieren `selection.requiredCapabilities: ["hasActiveAppointment"]`; reschedule requiere esa capability o `alternativeRequiredCapabilities: ["hasCancelledRescheduleTarget"]`.
 - [ ] `existing_appointment_rescheduling` excluye "elegir hora de opciones propuestas para cita nueva" en su descripción
-- [ ] **S1-S8 FLOW SAFETY: orden destructivo correcto, intents canónicos para flows que escriben citas, terminal template en paso de acción real, steps en orden ascendente**
+ - [ ] **S1-S8 FLOW SAFETY: orden destructivo correcto, intents canónicos para flows que escriben citas y steps en orden ascendente**

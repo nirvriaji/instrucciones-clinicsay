@@ -72,11 +72,19 @@
   },
   "responseTemplates": {
     "appointment_confirmed": {
-      "text": "Perfecto, he registrado su confirmación. ¡Nos vemos pronto!",
+      "text": "Perfecto, tu cita del {fecha} a las {hora} queda confirmada. Nos vemos pronto.",
       "mode": "literal"
     },
     "appointment_cancelled": {
-      "text": "Entendido, hemos gestionado tu cita.",
+      "text": "Entendido, hemos cancelado tu cita del {fecha} a las {hora}. Si necesitas otra, avisanos.",
+      "mode": "literal"
+    },
+    "appointment_rescheduled": {
+      "text": "He movido tu cita al {fecha} a las {hora}. Te esperamos.",
+      "mode": "model"
+    },
+    "on_the_way_appointment": {
+      "text": "Gracias por avisar. Ajustamos tu cita del {fecha} a las {hora} segun el retraso.",
       "mode": "literal"
     },
     "task_created": {
@@ -212,7 +220,7 @@
       }
     ]
   },
-  "treatmentSelectionGuidance": "Si el paciente parece nuevo en la clinica y pide un tratamiento concreto, lo recomendable es una primera cita de valoracion: el profesional debe verlo antes de aplicar cualquier tratamiento. Los tratamientos de valoracion son Primera Consulta y Valoracion Estetica. Si el paciente ya viene siguiendo un tratamiento y pide continuar con el, respeta el que pida.",
+  "treatmentSelectionGuidance": "Si el paciente parece nuevo en la clinica y pide un tratamiento concreto, considera la opcion de valoracion que figure en serviceCatalog antes de aplicar el tratamiento. Si el paciente ya viene siguiendo un tratamiento y pide continuar con el, respeta el que pida. Esta guia es un hint del orquestador: ante una peticion realmente ambigua, aclara una sola vez y pasa la frase explicita como clarifiedTreatmentRequest.",
   "intents": {
     "existing_appointment_confirmation": {
       "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
@@ -381,8 +389,7 @@
             "note": "Marcar CONFIRMADA"
           }
         ],
-        "responseTemplate": "Perfecto, tu cita del {fecha} a las {hora} queda confirmada. Nos vemos pronto.",
-        "responseTemplateMode": "literal"
+        "responseTemplateKey": "appointment_confirmed"
       },
       "cancel_appointment": {
         "intent": "existing_appointment_cancellation",
@@ -405,8 +412,7 @@
         "allowedTools": [
           "manage_schedule_block_status"
         ],
-        "responseTemplate": "Entendido, hemos cancelado tu cita del {fecha} a las {hora}. Si necesitas otra, avisanos.",
-        "responseTemplateMode": "literal"
+        "responseTemplateKey": "appointment_cancelled"
       },
       "reschedule_appointment": {
         "intent": "existing_appointment_rescheduling",
@@ -470,8 +476,7 @@
           "check_availability",
           "schedule_block"
         ],
-        "responseTemplate": "He movido tu cita al {fecha} a las {hora}. Te esperamos.",
-        "responseTemplateMode": "model"
+        "responseTemplateKey": "appointment_rescheduled"
       },
       "on_the_way": {
         "intent": "existing_appointment_delay_notice",
@@ -491,8 +496,7 @@
             "note": "Marcar EN_CAMINO"
           }
         ],
-        "responseTemplate": "Gracias por avisar. Ajustamos tu cita del {fecha} a las {hora} segun el retraso.",
-        "responseTemplateMode": "literal"
+        "responseTemplateKey": "on_the_way_appointment"
       },
       "reschedule_inquiry": {
         "intent": "existing_appointment_reschedule_inquiry",
@@ -506,15 +510,13 @@
             "note": "SOLO si el paciente ya ha dado un dia o una franja. Consultar e informar qué opciones hay; NUNCA afirmar que la cita se ha movido ni prometer una busqueda futura: se consulta y se dice lo que hay."
           }
         ],
-        "responseTemplate": "reschedule_inquiry_full",
-        "responseTemplateMode": "model"
+        "responseTemplateKey": "reschedule_inquiry_full"
       },
       "cancellation_inquiry": {
         "intent": "existing_appointment_cancellation_inquiry",
         "description": "Paciente pregunta sobre cancelar una cita, sin decidir aun.",
         "steps": [],
-        "responseTemplate": "cancellation_inquiry",
-        "responseTemplateMode": "model"
+        "responseTemplateKey": "cancellation_inquiry"
       },
       "keep_appointment_flow": {
         "intent": "existing_appointment_keep",
@@ -525,8 +527,7 @@
         },
         "description": "Paciente indica que quiere mantener la cita tal como esta.",
         "steps": [],
-        "responseTemplate": "keep_appointment",
-        "responseTemplateMode": "model"
+        "responseTemplateKey": "keep_appointment"
       },
       "farewell": {
         "intent": "farewell",
@@ -538,8 +539,7 @@
             "parallel": false
           }
         ],
-        "responseTemplate": "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo más, estamos aquí.",
-        "responseTemplateMode": "model",
+        "responseTemplateKey": "farewell",
         "allowsSilence": true
       }
     }

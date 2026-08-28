@@ -40,7 +40,6 @@ import type {
   StructuredLogicChatMode,
   ToolFlow,
 } from '../../chat/structured-logic';
-import { NEVER_TEMPLATED_TOOLS } from '../../chat/tool-description-generator';
 
 /** Tool that destroys an existing appointment (action `cancel`). */
 const DESTRUCTIVE_TOOL = 'manage_schedule_block_status';
@@ -86,14 +85,6 @@ const RESCHEDULE_INQUIRY_FORBIDDEN_TOOLS = [
   BULK_DESTRUCTIVE_TOOL,
 ];
 
-/** Tools that can legitimately close a flow and receive its closing template. */
-const TERMINAL_ACTION_TOOLS = new Set([
-  CONSTRUCTIVE_TOOL,
-  DESTRUCTIVE_TOOL,
-  BULK_DESTRUCTIVE_TOOL,
-  'create_task',
-]);
-
 const APPOINTMENT_WRITING_TOOLS_TEXT = APPOINTMENT_WRITING_TOOLS.join('", "');
 
 /** Deterministic gate proving the patient really has an appointment to act on. */
@@ -132,13 +123,12 @@ export const FLOW_SAFETY_PROMPT_RULES =
   `S3. A full reschedule flow that includes "schedule_block" MUST include "cancel_for_rescheduling" in numbered steps, and all four ` +
   `tools in S2 MUST appear in that exact numbered order. Under the hasConcreteDateTime exception, "resolve_availability_query" ` +
   `is the only one of the four that may be absent.\n` +
-  `S4. "responseTemplate" is injected ONLY into the tools of the flow's TERMINAL step (the LAST element of the steps array). ` +
-  `So the terminal step must be the tool that performs the real action (schedule_block, manage_schedule_block_status, create_task). ` +
-  `A template whose terminal step only contains search/resolver tools (check_availability, resolve_*, lookup_patient, query_*) is REJECTED: ` +
-  `it makes the bot announce a result it has not produced.\n` +
-  `S5. A flow that uses tools and declares "responseTemplate" MUST declare "steps" with the closing tool in the last step. ` +
-  `"allowedTools" is an unordered whitelist and carries no closing information; optional/conditional tools belong there, not in the terminal step.\n` +
-  `S6. Write the "steps" array in execution order: its numbering must be ascending (1, 2, 3...), because the terminal step is the LAST array item.\n` +
+  `S4. "responseTemplateKey" is an optional, denotative reference to the "responseTemplates" registry; it is never patient-facing text. ` +
+  `The registry contains the patient-facing text and mode. Do not require a key for any flow, tool, step, or terminal step. ` +
+  `When the key is absent, the backend logs the absence and the response uses patientOutcome when available or the AI generates it from context.\n` +
+  `S5. Never expose responseTemplateKey values, registry names, tool names, field names, IDs, or other technical identifiers to the patient. ` +
+  `Response rendering is independent of step position; steps only describe tool execution order.\n` +
+  `S6. Write the "steps" array in execution order: its numbering must be ascending (1, 2, 3...).\n` +
   `S7. Intent ids are FREE except inside two RESERVED namespaces. The clinic owns its conversation: ids like ` +
   `"insurance_coverage_inquiry", "parking_info" or "physio_program_followup" are perfectly valid in "intents" and in ` +
   `"flow.intent", and no rule complains about them. What is CLOSED are the prefixes "new_appointment_" and ` +
@@ -156,7 +146,7 @@ export const FLOW_SAFETY_PROMPT_RULES =
   `select the flow when the patient has no appointment at all, and the bot acts on an appointment that does not exist. ` +
   `Informational flows (no tools) do not need the gate.\n` +
   `S9. Conversational response templates MUST use model mode. ` +
-  `responseTemplateMode: "literal" and responseTemplates.<key>.mode: "literal" are allowed ONLY for ` +
+  `responseTemplates.<key>.mode: "literal" is allowed ONLY for ` +
   `existing_appointment_confirmation, existing_appointment_cancellation, and existing_appointment_delay_notice ` +
   `(confirmation, definitive cancellation, or EN_ROUTE/late notices). A literal mode on an inquiry, farewell, ` +
   `booking, rescheduling, handoff, or informational flow is rejected because it forces a rigid response without ` +
@@ -356,79 +346,6 @@ function validateRescheduleCanRebook(
       `POR QUÉ ES PELIGROSO: reagendar sin poder agendar equivale a cancelar; el paciente se queda sin cita. ` +
       `CÓMO SE CORRIGE: añade "${CONSTRUCTIVE_TOOL}" al flujo (en un paso anterior a la cancelación), ` +
       `o quita "${DESTRUCTIVE_TOOL}" y trata la petición como una cancelación normal.`,
-  );
-}
-
-/**
- * The closing template is injected into the tools of the TERMINAL step. If
- * every tool of that step is a search/resolver tool, the template either never
- * reaches the model or orders it to announce a result it has not produced.
- */
-function validateTerminalTemplate(flowName: string, flow: ToolFlow, errors: string[]): void {
-  if (!flow.responseTemplate) return;
-  // Una CONSULTA de reprogramación termina de verdad en una búsqueda: su trabajo
-  // es decirle al paciente qué opciones hay, no ejecutar nada. Su plantilla es
-  // informativa y `validateInformationalTemplate` ya impide que afirme que la cita
-  // cambió, que es el peligro que esta regla persigue.
-  if (flow.intent === 'existing_appointment_reschedule_inquiry') return;
-  const steps = stepsOf(flow);
-  if (steps.length === 0) return;
-
-  const terminalTools = toolsOf(steps[steps.length - 1]);
-  if (terminalTools.length === 0) return;
-  if (!terminalTools.every((tool) => NEVER_TEMPLATED_TOOLS.has(tool))) return;
-
-  const mode = flow.responseTemplateMode ?? 'model';
-  errors.push(
-    `${header(flowName, flow)}: declara una plantilla de respuesta ("responseTemplate", modo "${mode}") pero su paso final ` +
-      `solo usa herramientas de búsqueda o de identificación (${terminalTools.join(', ')}). ` +
-      `POR QUÉ ES PELIGROSO: la plantilla se entrega justo después de buscar, así que el bot anuncia como hecho ` +
-      `algo que todavía no ha hecho (por ejemplo "he movido tu cita" nada más listar horarios), y el paciente cree ` +
-      `que su cita ya cambió. ` +
-      `CÓMO SE CORRIGE: termina el flujo con la herramienta que realiza la acción real ` +
-      `(por ejemplo "schedule_block", "manage_schedule_block_status" o "create_task") y deja la plantilla en ese paso final; ` +
-      `si el flujo solo informa, quita la plantilla y deja que el bot redacte la respuesta con los resultados.`,
-  );
-}
-
-function validateTerminalAction(flowName: string, flow: ToolFlow, errors: string[]): void {
-  if (!flow.responseTemplate) return;
-  const steps = stepsOf(flow);
-  if (steps.length === 0) return;
-
-  const terminalTools = toolsOf(steps[steps.length - 1]);
-  if (terminalTools.length > 0 && terminalTools.every((tool) => TERMINAL_ACTION_TOOLS.has(tool))) return;
-  if (terminalTools.length === 0 || terminalTools.every((tool) => NEVER_TEMPLATED_TOOLS.has(tool))) return;
-
-  errors.push(
-    `${header(flowName, flow)} declara una plantilla de cierre, pero el último paso no realiza una acción terminal ` +
-      `real (${terminalTools.join(', ')}). CÓMO SE CORRIGE: termina con schedule_block, ` +
-      `manage_schedule_block_status, manage_all_schedule_blocks_for_date o create_task.`
-  );
-}
-
-/**
- * A template on a flow that has tools but no terminal step carrying them can
- * never be delivered: the injection point does not exist.
- */
-function validateTemplateIsDeliverable(flowName: string, flow: ToolFlow, errors: string[]): void {
-  if (!flow.responseTemplate) return;
-
-  const steps = stepsOf(flow);
-  const hasToolsInSteps = steps.some((step) => toolsOf(step).length > 0);
-  const hasAllowedTools = Array.isArray(flow.allowedTools) && flow.allowedTools.length > 0;
-  if (!hasToolsInSteps && !hasAllowedTools) return; // Purely conversational flow: valid.
-
-  const terminalTools = steps.length > 0 ? toolsOf(steps[steps.length - 1]) : [];
-  if (terminalTools.length > 0) return;
-
-  errors.push(
-    `${header(flowName, flow)}: declara una plantilla de respuesta ("responseTemplate") y usa herramientas, ` +
-      `pero su paso final no declara ninguna herramienta${steps.length === 0 ? ' (no hay "steps")' : ''}, ` +
-      `así que la plantilla nunca se aplica. ` +
-      `POR QUÉ ES PELIGROSO: la respuesta que has escrito no llega nunca al paciente y el bot improvisa el cierre del flujo. ` +
-      `CÓMO SE CORRIGE: declara los pasos del flujo en "steps" y pon la herramienta que cierra el flujo en el último paso. ` +
-      `"allowedTools" es solo una lista sin orden: no sirve para saber cuál es el paso final.`,
   );
 }
 
@@ -814,10 +731,11 @@ function validateInformationalTemplate(
   templates: StructuredLogic['responseTemplates'],
   errors: string[],
 ): void {
-  if (flow.intent !== 'existing_appointment_reschedule_inquiry' || !flow.responseTemplate) return;
+  const templateKey = flow.responseTemplateKey;
+  if (flow.intent !== 'existing_appointment_reschedule_inquiry' || !templateKey) return;
 
-  const configured = templates?.[flow.responseTemplate]?.text;
-  const text = (configured ?? flow.responseTemplate).toLowerCase();
+  const configured = templates?.[templateKey]?.text;
+  const text = (configured ?? templateKey).toLowerCase();
   if (!/(he|hemos|ya|i have|we have|has been).*(mov|cambi|reprogram|agend|reserv)/i.test(text)) return;
 
   errors.push(
@@ -832,25 +750,14 @@ function validateResponseTemplateModes(sl: Partial<StructuredLogic>, errors: str
   const templates = sl.responseTemplates ?? {};
 
   for (const [flowName, flow] of Object.entries(flows)) {
-    if (!flow || flow.responseTemplateMode !== 'literal') continue;
-    if (LITERAL_APPOINTMENT_INTENTS.has(flow.intent)) continue;
+    const templateKey = flow?.responseTemplateKey;
+    if (!flow || !templateKey || LITERAL_APPOINTMENT_INTENTS.has(flow.intent)) continue;
 
-    errors.push(
-      `${header(flowName, flow)} usa responseTemplateMode "literal" para una respuesta conversacional. ` +
-        `POR QUÉ ES PELIGROSO: la IA puede repetir una frase rígida sin adaptar la respuesta al contexto. ` +
-        `CÓMO SE CORRIGE: usa responseTemplateMode "model". Literal solo está permitido para confirmación, ` +
-        `cancelación definitiva y avisos de llegada tarde/en camino.`,
-    );
-  }
-
-  for (const [flowName, flow] of Object.entries(flows)) {
-    if (!flow || !flow.responseTemplate || LITERAL_APPOINTMENT_INTENTS.has(flow.intent)) continue;
-
-    const template = templates[flow.responseTemplate];
+    const template = templates[templateKey];
     if (!template || template.mode !== 'literal') continue;
 
     errors.push(
-      `responseTemplates["${flow.responseTemplate}"] usa mode "literal" en el flow "${flowName}" ` +
+      `responseTemplates["${templateKey}"] usa mode "literal" en el flow "${flowName}" ` +
         `fuera de una operación de cita permitida. POR QUÉ ES PELIGROSO: puede forzar una respuesta rígida ` +
         `en una conversación informativa o de seguimiento. CÓMO SE CORRIGE: cambia su mode a "model". ` +
         `Literal solo está permitido para confirmación, cancelación definitiva y avisos de llegada tarde/en camino.`,
@@ -885,9 +792,6 @@ export function validateFlowSafety(
     validateStepArrayOrder(flowName, flow, errors);
     validateDestructiveOrder(flowName, flow, errors);
     validateRescheduleCanRebook(flowName, flow, mode, errors);
-    validateTerminalTemplate(flowName, flow, errors);
-    validateTemplateIsDeliverable(flowName, flow, errors);
-    validateTerminalAction(flowName, flow, errors);
     validateInformationalTemplate(flowName, flow, sl.responseTemplates, errors);
   }
 }

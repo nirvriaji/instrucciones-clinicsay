@@ -126,7 +126,7 @@ function injectFlowResponseTemplates(
   descriptions: Record<string, string>,
 ): Record<string, string> {
   for (const [flowName, flow] of Object.entries(logic.toolOrchestration.flows)) {
-    if (!flow.responseTemplate) {
+    if (!flow.responseTemplateKey) {
       continue;
     }
 
@@ -137,12 +137,10 @@ function injectFlowResponseTemplates(
       continue;
     }
 
-    // Resolve template reference: if the flow.responseTemplate matches a key
-    // in logic.responseTemplates, use the actual text; otherwise treat as literal.
-    const resolvedTemplate =
-      logic.responseTemplates?.[flow.responseTemplate]?.text ?? flow.responseTemplate;
-
-    const mode = flow.responseTemplateMode ?? 'model';
+    const template = logic.responseTemplates?.[flow.responseTemplateKey];
+    if (!template) continue;
+    const resolvedTemplate = template.text;
+    const mode = template.mode ?? 'model';
     const instruction =
       mode === 'model'
         ? `Usa este modelo como base para responder: "${resolvedTemplate}". ` +

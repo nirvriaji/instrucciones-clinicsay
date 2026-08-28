@@ -184,15 +184,8 @@ export type ToolFlow = {
    */
   selection?: ToolFlowSelection;
   steps: ToolStep[];
-  /** Optional. If defined, the bot uses this text or model-adapted basis after completing the flow. */
-  responseTemplate?: string;
-  /**
-   * Optional response mode for the template.
-   * - 'literal': respond with the exact template text. Use for existing-appointment
-   *   confirmation, definitive cancellation, and on-the-way/late notices.
-   * - 'model': use the template as a base and adapt to the patient's question.
-   */
-  responseTemplateMode?: 'literal' | 'model';
+  /** Registry key for the response template used after the flow completes. */
+  responseTemplateKey?: string;
   /** Optional explicit tool whitelist for the LLM in this flow */
   allowedTools?: string[];
   /**
@@ -567,8 +560,7 @@ export const DEFAULT_STRUCTURED_LOGIC: StructuredLogic = {
         intent: 'farewell',
         description: 'Despedirse del paciente',
         steps: [{ step: 1, tools: [], parallel: false }],
-        responseTemplate: 'farewell',
-        responseTemplateMode: 'model',
+        responseTemplateKey: 'farewell',
         allowsSilence: true,
       },
     },
@@ -668,8 +660,6 @@ export function extractStructuredLogic(
     return { type: 'corrupt', reason: 'Missing or invalid required field: serviceCatalog (must have treatments array with at least one item)' };
   }
 
-  // The persisted copy may predate a flow-gate fix; reconcile before use so an
-  // old bot config cannot leave a flow permanently unselectable.
   const logic: StructuredLogic = {
     ...effectiveLogic,
     toolOrchestration: reconcileFlowSelections(effectiveLogic.toolOrchestration),

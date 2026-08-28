@@ -199,6 +199,7 @@
       }
     ]
   },
+  "treatmentSelectionGuidance": "Si el paciente parece nuevo en la clinica y pide un tratamiento concreto, considera la opcion de valoracion que figure en serviceCatalog. Ante una peticion realmente ambigua, aclara una sola vez y pasa la frase explicita como clarifiedTreatmentRequest. La ausencia de esta guia no bloquea la respuesta.",
   "intents": {
     "existing_appointment_confirmation": {
       "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
@@ -307,8 +308,7 @@
             "note": "Crear tarea para seguimiento humano"
           }
         ],
-        "responseTemplate": "Te contactaremos por WhatsApp lo antes posible.",
-        "responseTemplateMode": "model"
+        "responseTemplateKey": "task_created"
       },
       "confirm_existing_appointment": {
         "intent": "existing_appointment_confirmation",
@@ -329,8 +329,7 @@
             "note": "Marcar CONFIRMADA"
           }
         ],
-        "responseTemplate": "appointment_confirmed",
-        "responseTemplateMode": "literal"
+        "responseTemplateKey": "appointment_confirmed"
       },
       "cancel_existing_appointment": {
         "intent": "existing_appointment_cancellation",
@@ -351,8 +350,7 @@
             "note": "Marcar CANCELADA. El campo \"reason\" es obligatorio; usar \"Solicitud del paciente\". NO preguntar motivo al paciente."
           }
         ],
-        "responseTemplate": "appointment_cancelled",
-        "responseTemplateMode": "literal"
+        "responseTemplateKey": "appointment_cancelled"
       },
       "mark_on_the_way": {
         "intent": "existing_appointment_delay_notice",
@@ -373,8 +371,7 @@
             "note": "Marcar EN_CAMINO"
           }
         ],
-        "responseTemplate": "on_the_way",
-        "responseTemplateMode": "literal"
+        "responseTemplateKey": "on_the_way"
       },
       "reschedule_existing_appointment": {
         "intent": "existing_appointment_rescheduling",
@@ -404,22 +401,19 @@
             "note": "Opcional: crear tarea para seguimiento humano solo si la politica de la clinica o la solicitud del paciente lo requiere. Ejecutar despues de cancelar, nunca en paralelo."
           }
         ],
-        "responseTemplate": "change_requested",
-        "responseTemplateMode": "model"
+        "responseTemplateKey": "change_requested"
       },
       "reschedule_inquiry": {
         "intent": "existing_appointment_reschedule_inquiry",
         "description": "Paciente pregunta sobre reagendar o cambiar una cita, sin decidir aun.",
         "steps": [],
-        "responseTemplate": "¿Quieres que confirmemos el cambio de tu cita o prefieres otra fecha?",
-        "responseTemplateMode": "model"
+        "responseTemplateKey": "reschedule_inquiry"
       },
       "cancellation_inquiry": {
         "intent": "existing_appointment_cancellation_inquiry",
         "description": "Paciente pregunta sobre cancelar una cita, sin decidir aun.",
         "steps": [],
-        "responseTemplate": "¿Quieres que cancelemos la cita o prefieres buscar otra fecha?",
-        "responseTemplateMode": "model"
+        "responseTemplateKey": "cancellation_inquiry"
       },
       "keep_appointment_flow": {
         "intent": "existing_appointment_keep",
@@ -430,8 +424,7 @@
         },
         "description": "Paciente indica que quiere mantener la cita tal como esta.",
         "steps": [],
-        "responseTemplate": "Perfecto, tu cita sigue confirmada.",
-        "responseTemplateMode": "model"
+        "responseTemplateKey": "keep_appointment"
       },
       "farewell": {
         "intent": "farewell",
@@ -443,8 +436,7 @@
             "parallel": false
           }
         ],
-        "responseTemplate": "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo más, estamos aquí.",
-        "responseTemplateMode": "model",
+        "responseTemplateKey": "farewell",
         "allowsSilence": true
       }
     }

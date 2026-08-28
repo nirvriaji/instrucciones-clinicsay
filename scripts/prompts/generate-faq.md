@@ -59,7 +59,7 @@ Usar si la respuesta aplica solo en ciertas condiciones:
   },
   {
     "question": "¿Valoración de medicina estética?",
-    "answer": "La primera cita de valoración tiene un coste de 50 €, que se deducen del posterior tratamiento en caso de realizarse. Incluye de cortesía un diagnóstico facial avanzado con Observ520X y rutina dermocosmética personalizada.",
+    "answer": "La primera cita de valoración y sus condiciones dependen de la información de la clínica. Consulta el catálogo o deriva la pregunta al equipo si no está especificada.",
     "condition": null
   }
 ]

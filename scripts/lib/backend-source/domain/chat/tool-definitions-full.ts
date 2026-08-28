@@ -385,12 +385,13 @@ export const TOOL_RESOLVE_TREATMENT: ChatToolDefinition = {
     type: 'object',
     additionalProperties: false,
     properties: {
-      patientMessage: {
+      clarifiedTreatmentRequest: {
         type: 'string',
-        description: 'The exact message from the patient describing the treatment they want.',
+        description:
+          'Resumen o frase aclarada suficiente para identificar un tratamiento. Si aplica una valoración, debe mencionar explícitamente el nombre exacto del tratamiento de valoración y el área correspondiente, tomados de la guía o del catálogo de la clínica.',
       },
     },
-    required: ['patientMessage'],
+    required: ['clarifiedTreatmentRequest'],
   },
 };
 

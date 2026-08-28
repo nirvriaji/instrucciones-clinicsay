@@ -169,14 +169,15 @@ Evoluciona `sedes/<nombre>/output/structured-logic.tasks-only.draft.json` **secc
 4. **intents** — Crear baseline (12 mínimos del template) + por servicio usando SOLO datos de los chunks.
 5. **toolOrchestration.flows** — Mapear intents a flows SIN scheduling tools. DEBE incluir flow `farewell` con `allowsSilence: true`.
 6. **rules** — Crear rules por intent. Patrón típico en tasks-only: `new_appointment_scheduling` y `existing_appointment_rescheduling` con `redirectToTask: true` (**NO obligatorio** — si la clínica prefiere respuesta informativa sin tarea, omítelo a propósito; el validador mostrará una nota advisory no bloqueante para confirmar que la desviación es intencional).
-7. **responseTemplates** — Crear templates. OBLIGATORIOS: `information_not_available`, `out_of_scope`, `farewell`. Mínimo 15 templates recomendados. Por defecto usa `mode: "model"` en respuestas conversacionales, informativas, de reserva/reprogramación, consultas, despedidas, mantener cita y tareas. Reserva `mode: "literal"` para confirmación, cancelación definitiva y avisos de llegada tarde/en camino de citas existentes, incluidos recordatorios. Es una recomendación no bloqueante; el asesor puede elegir `literal` intencionadamente.
+7. **responseTemplates** — Crear el registro de templates que la clínica quiera controlar. Las entradas base `information_not_available`, `out_of_scope` y `farewell` son recomendadas, no obligatorias. Los flows pueden referenciarlas con `responseTemplateKey`, que es opcional; si falta, se registra y se usa `patientOutcome` o la IA. Nunca expongas keys técnicas al paciente.
 8. **faq** — Extraer de #Preguntas Frecuentes de los chunks.
 9. **serviceCatalog** — OBLIGATORIO. Extraer tratamientos del input con `name`, `priceDescription`, `requiresConsultation`. Mínimo 1 tratamiento.
-10. **protocols** — Solo si hay protocolos en los chunks leídos.
-11. **errorCategories** — 2 categorías mínimas basadas en situaciones del input.
-12. **treatmentPolicyHints** — [] (vacío en tasks-only, no hay scheduling)
-13. **systemPromptInstructions** — Notas para el asesor, gaps detectados, next steps.
-14. **conversationResumption** — Instrucciones de saludo tras pausa conversacional. Usar defaults del template si no hay especificaciones en input.
+10. **treatmentSelectionGuidance** — Opcional. Hint genérico del orquestador para peticiones ambiguas de primera visita; tras aclarar, usar `clarifiedTreatmentRequest` y resolver solo contra el catálogo.
+11. **protocols** — Solo si hay protocolos en los chunks leídos.
+12. **errorCategories** — 2 categorías mínimas basadas en situaciones del input.
+13. **treatmentPolicyHints** — [] (vacío en tasks-only, no hay scheduling)
+14. **systemPromptInstructions** — Notas para el asesor, gaps detectados, next steps.
+15. **conversationResumption** — Instrucciones de saludo tras pausa conversacional. Usar defaults del template si no hay especificaciones en input.
 
 **Regla de fusión de fuentes:**
 - Si la carpeta `input/` contiene un archivo `.json` con lógica estructurada previa, úsalo como base para `intents`, `rules`, `toolOrchestration.flows`, `protocols` y `errorCategories`.
@@ -371,7 +372,7 @@ Sintaxis del draft: válida
 8. **Esperar al asesor.** Si no hay archivos en input, explicar el formato esperado y esperar a que el asesor los cree.
 9. **God Mode:** Si `isGodMode: true`, puedes saltar validación y gaps para generar configs de prueba.
 10. **REGLA DE ORO DEL PACIENTE:** El bot NUNCA asume nombre, apellido ni teléfono del contacto de Kommo (CALLER_PHONE, ASSOCIATED_PATIENTS). Siempre pregunta al interlocutor explícitamente antes de agendar. Solo si el paciente dice "para mí", "a este número" o "mi número", usar `useInterlocutorPhone=true`.
-11. **NUNCA mostrar IDs técnicos al paciente.** En `responseTemplates` y `patientOutcome`, NUNCA incluir `blockId` (ej: `01KZH...`). Usar mensajes en español natural: "Tu cita ha sido cancelada", "Tu cita ha quedado confirmada".
+11. **NUNCA mostrar identificadores técnicos al paciente.** En `responseTemplates` y `patientOutcome`, NUNCA incluir `responseTemplateKey`, nombres de keys, `blockId` (ej: `01KZH...`) ni tools. Usar mensajes en español natural: "Tu cita ha sido cancelada", "Tu cita ha quedado confirmada".
 12. **NO toques código del repo.** Solo el administrador del sistema sabe cuándo actualizar el código importado del backend, cuándo pedir actualizar el validador local y cuándo actualizar prompts. El código de este repo (`scripts/`, `_templates/`, `structured-logic-standards.md`) es la versión correcta en producción. Si encuentras una discrepancia, **confía en el validador local**. NUNCA ejecutes `scripts/sync-backend.sh`, NUNCA modifiques archivos en `scripts/lib/backend-validator/` ni en `_templates/`, y NUNCA le pidas al asesor que sincronice nada del backend.
 13. **Investigación de leads con comportamiento inesperado.** Si un lead nuevo presenta un comportamiento anómalo (ej. no crea tarea cuando debería, crea tarea cuando no debería, responde fuera de contexto, no responde a consultas), sigue estos pasos:
 
@@ -397,7 +398,7 @@ Después de generar TODAS las secciones del JSON y antes de declararlo completo,
 - [ ] Rule de `new_appointment_scheduling` tiene `redirectToTask: true` (patrón típico) — si se omite intencionadamente, la nota advisory del validador está confirmada con el asesor.
 - [ ] Rule de `existing_appointment_rescheduling` tiene `redirectToTask: true` (patrón típico) — si se omite intencionadamente, la nota advisory está confirmada con el asesor.
 - [ ] `serviceCatalog` existe con al menos 1 tratamiento con `name` no vacío.
-- [ ] `responseTemplates` incluye `information_not_available`, `out_of_scope`, `farewell`.
+- [ ] `responseTemplates` contiene las entradas que la clínica quiera controlar; las keys usadas por flows son denotativas y resolubles.
 - [ ] `conversationResumption` existe con `instructions` para continuous, short_break, same_period, recent, distant.
 - [ ] Todos los baseline intents están presentes (12 del template): existing_appointment_confirmation, existing_appointment_cancellation, existing_appointment_inquiry, new_appointment_scheduling, general_inquiry, human_follow_up, farewell, existing_appointment_rescheduling, existing_appointment_delay_notice, existing_appointment_reschedule_inquiry, existing_appointment_cancellation_inquiry, existing_appointment_keep.
 - [ ] Cada intent del catálogo tiene al menos 1 rule en `rules`.
@@ -572,30 +573,31 @@ Declara al menos estos intents. El template base incluye 12 intents canónicos. 
 - `description` define la intención de forma diferenciada de flows similares usando semántica pura en lenguaje natural.
 - Ordena los steps lógicamente (primero buscar paciente, luego gestionar cita y, si aplica, crear tarea).
 - `parallel: true` solo cuando las tools no dependen entre sí.
-- `responseTemplate` opcional, salvo en flows con `manage_schedule_block_status` (ahí es OBLIGATORIO).
+- `responseTemplateKey` es opcional en todos los flows, incluidos los que usan `manage_schedule_block_status`; su ausencia no es un error.
 
-#### responseTemplate en flows de gestión de citas
+#### responseTemplateKey y registro de templates
 
 **Cómo funcionan los templates:**
-- `responseTemplate` en un flow es un **KEY** (nombre) que referencia una entrada en `responseTemplates`.
-- Ejemplo: si el flow dice `responseTemplate: "appointment_confirmed"`, debe existir `responseTemplates.appointment_confirmed.text` con el texto real.
-- El backend renderiza el texto real, reemplazando placeholders con datos de la operación.
+- `responseTemplateKey` en un flow es una **referencia denotativa** a una entrada en `responseTemplates`.
+- Ejemplo: `responseTemplateKey: "appointment_confirmed"` referencia `responseTemplates.appointment_confirmed.text`; la key nunca se muestra al paciente.
+- La key es opcional en cualquier flow. Su ausencia no es un error: se registra en logs y la respuesta usa `patientOutcome` cuando exista o la genera la IA con el contexto.
+- No existe ninguna regla de template por step o terminal step. La respuesta es independiente del orden de ejecución de tools.
 
 **Placeholders disponibles:**
 - `{fecha}` → "sábado 10 de octubre"
 - `{hora}` → "15:00"
-- `{tratamiento}` → "Sesión de fisioterapia"
+- `{tratamiento}` → nombre del tratamiento tal como aparece en `serviceCatalog`
 - `{profesional}` → "Dra. Marta López"
 
 **Modo `literal`:** El bot usa el texto exacto (con placeholders reemplazados). Use para mensajes cortos y precisos.
 **Modo `model`:** El bot usa el texto como guía pero puede adaptar el tono. Use cuando se necesita naturalidad.
 
-Todo flow que use `manage_schedule_block_status` DEBE tener `responseTemplate`:
+Todo flow que use `manage_schedule_block_status` puede tener `responseTemplateKey`, pero no es obligatorio:
 - `confirm_existing_appointment`: "Tu cita ha quedado confirmada. Te esperamos."
 - `cancel_existing_appointment`: "Tu cita ha sido cancelada. Si deseas reprogramar, podemos ayudarte."
 - `existing_appointment_delay_notice`: "No te preocupes, si vienes con un poco de retraso te ajustamos la cita..."
 
-Si no se proporciona, el backend usa un template genérico por defecto. Se recomienda personalizarlo por clínica.
+Si no se proporciona `responseTemplateKey`, el backend registra la ausencia y usa `patientOutcome` cuando exista o deja que la IA genere una respuesta contextual. Se recomienda personalizar el registro por clínica, pero no es obligatorio.
 
 #### Tool scoping con `allowedTools` (opcional pero recomendado)
 
@@ -628,7 +630,7 @@ Marca la cita como confirmada. Es una acción directa con `manage_schedule_block
       "note": "Marcar CONFIRMADA cada cita del día (una llamada por cita). Confirmar todas las citas de ese día sin preguntar cuál; no nombrar tratamientos en la respuesta. El gate determinista de selection impide activar este flow sin cita real (nunca confirmar aire)."
     }
   ],
-  "responseTemplate": "Tu cita ha quedado confirmada. Te esperamos.",
+  "responseTemplateKey": "appointment_confirmed",
   "allowedTools": ["manage_schedule_block_status"]
 }
 ```
@@ -665,7 +667,7 @@ Marca la cita como confirmada. Es una acción directa con `manage_schedule_block
       "note": "Marcar CANCELADA. El campo 'reason' es obligatorio; usar 'Solicitud del paciente'. NO preguntar motivo al paciente."
     }
   ],
-  "responseTemplate": "appointment_cancelled",
+  "responseTemplateKey": "appointment_cancelled",
   "allowedTools": ["manage_schedule_block_status"]
 }
 ```
@@ -707,7 +709,7 @@ Este ejemplo recopila información y crea una tarea administrativa. No ejecuta s
       "note": "Recopilar nombre, apellidos, teléfono, tratamiento deseado, fechas/horarios preferidos, profesional si aplica, primera visita o paciente existente, y crear una tarea para que el equipo humano gestione el agendamiento. El bot no consulta la agenda ni muestra huecos disponibles."
     }
   ],
-  "responseTemplate": "Un miembro de nuestro equipo se pondrá en contacto a la mayor brevedad posible. O si lo prefiere, puede llamar directamente al teléfono de la clínica.",
+  "responseTemplateKey": "task_created",
   "allowedTools": ["create_task"]
 }
 ```
@@ -721,7 +723,7 @@ Este ejemplo recopila información y crea una tarea administrativa. No ejecuta s
 - `intents` presente y no vacío; cada intent referenciado por flows/rules existe en él.
 - `toolOrchestration.flows` objeto (no array); DEBE incluir flow `farewell` con `allowsSilence: true`.
 - `rules` array no vacío.
-- `responseTemplates` DEBE incluir templates: `information_not_available`, `out_of_scope`, `farewell`.
+- `responseTemplates` puede incluir templates base como `information_not_available`, `out_of_scope` y `farewell`; no son obligatorios.
 - `BusinessRule.action` es `"allow"` o `"block"`. Block rules DEBEN incluir `message` no vacío.
 - `ToolStep.tools` solo de las 6 tools disponibles: `create_task`, `manage_schedule_block_status`, `manage_all_schedule_blocks_for_date`, `lookup_patient`, `query_protocol`, `query_knowledge_base`.
 - `Protocol.responseTemplate` string no vacío si existe.
@@ -734,7 +736,7 @@ Deben existir intents y rules para: `existing_appointment_confirmation`, `existi
 #### Flows críticos
 - Flow de `existing_appointment_confirmation`: existe y usa únicamente `manage_schedule_block_status`.
 - Flow de `existing_appointment_cancellation`: existe con `manage_schedule_block_status`.
-- Flow de `existing_appointment_inquiry`: existe con `tools: []` o con `responseTemplate`.
+- Flow de `existing_appointment_inquiry`: existe con `tools: []`; la respuesta puede usar `patientOutcome` o IA, y opcionalmente `responseTemplateKey`.
 - Flow de `new_appointment_scheduling`: existe, no usa scheduling o disponibilidad y puede ser informativo o incluir `create_task`.
 - Flow de `farewell`: existe con `allowsSilence: true`.
 - Flow `general_inquiry` debe tener `query_knowledge_base` en `allowedTools` o steps.
@@ -746,11 +748,11 @@ Deben existir intents y rules para: `existing_appointment_confirmation`, `existi
 - [ ] `rules` tiene al menos 1 rule por intent (mínimo 7 rules para los intents críticos).
 - [ ] Flow de confirmación usa únicamente `manage_schedule_block_status`.
 - [ ] Flow de cancelación usa `manage_schedule_block_status` (sin `create_task` forzado en step 2).
-- [ ] Flow de `existing_appointment_inquiry` tiene `tools: []` o `responseTemplate`.
+- [ ] Flow de `existing_appointment_inquiry` tiene `tools: []`; `responseTemplateKey` es opcional.
 - [ ] Flow de `new_appointment_scheduling` no usa scheduling o disponibilidad; `create_task` no es obligatorio.
 - [ ] Flow de `farewell` tiene `allowsSilence: true`.
 - [ ] `serviceCatalog.treatments` tiene al menos 1 tratamiento con `name`.
-- [ ] `responseTemplates` incluye `information_not_available`, `out_of_scope`, `farewell`.
+- [ ] `responseTemplates` contiene las entradas que la clínica quiera controlar; las keys usadas por flows son denotativas y resolubles.
 - [ ] `conversationResumption` existe con `instructions` para los 5 hitos.
 - [ ] Todas las `description` (intents, rules, flows) son descripciones semánticas en lenguaje natural.
 - [ ] Las capabilities coinciden con `_templates/base-tasks-only.json` y no contienen propiedades inventadas.

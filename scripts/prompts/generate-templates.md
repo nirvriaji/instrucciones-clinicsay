@@ -1,14 +1,18 @@
-# Instrucciones: Generar sección `responseTemplates`
+# Instrucciones: Generar el registro `responseTemplates`
 
 ## Qué debes leer antes de empezar
 1. `todos los archivos en sedes/<nombre>/input/` — busca `# Reglas de Estilo`, `# Reglas de precio`, `# Operativa de Citas Existentes`
-2. `scripts/prompts/generate-flows.md` — para saber qué flows usan responseTemplate
+2. `scripts/prompts/generate-flows.md` — para saber qué flows pueden declarar `responseTemplateKey`
 3. `_templates/base-<mode>.json` — templates base como referencia
 
 ## Reglas Obligatorias
 
-### 1. Template por flow con responseTemplate
-Si un flow tiene `responseTemplate`, DEBE existir una entrada en `responseTemplates` con esa key.
+### 1. Registro y claves denotativas
+- `responseTemplates` es un registro opcional de textos dirigidos al paciente.
+- Un flow puede declarar `responseTemplateKey`, que referencia una entrada del registro. La key es técnica y descriptiva, nunca es el texto de la respuesta.
+- `responseTemplateKey` es opcional para todos los flows. Su ausencia no es un error: se loguea y la respuesta se resuelve con `patientOutcome` cuando exista o mediante la IA usando el contexto.
+- No generes reglas de template por tool, step, último step o terminal step. La respuesta no depende de la posición de un step.
+- Nunca escribas una key técnica en un mensaje al paciente ni la expongas en ejemplos de conversación.
 
 **Los templates también son parte de la knowledge base del bot.** El bot usa `query_knowledge_base` para buscar en los templates cuando no tiene la respuesta en contexto. Asegúrate de que los templates contengan información útil y completa, no solo placeholders genéricos.
 
@@ -18,8 +22,8 @@ Lee los adjetivos de tone de la identidad y ajusta los mensajes:
 - Si tone es "cercano, cálido" → "¡Perfecto! Tu cita está confirmada. Te esperamos con ganas."
 - Si tone es "profesional, breve" → "Cita confirmada. Te esperamos."
 
-### 3. Templates obligatorios (mínimo)
-El backend REQUIERE estos 3 templates obligatorios:
+### 3. Templates recomendados (mínimo)
+Se recomiendan estos templates base para respuestas recurrentes; su ausencia no bloquea la generación:
 
 | Template Key | Cuándo usar | Ejemplo |
 |---|---|---|
@@ -27,7 +31,7 @@ El backend REQUIERE estos 3 templates obligatorios:
 | `out_of_scope` | El paciente pregunta algo fuera de la clínica | "Soy el asistente de {{CLINIC_NAME}} y solo puedo ayudarte con nuestros servicios, tratamientos y citas. ¿En qué puedo ayudarte?" |
 | `farewell` | Despedida de la conversación | "Gracias por contactar con {{CLINIC_NAME}}. Si necesitas algo más, estamos aquí." |
 
-Además, crea templates para cada flow que use `responseTemplate`:
+Además, crea entradas para las operaciones que la clínica quiera controlar explícitamente, y referencia sus keys desde los flows con `responseTemplateKey`:
 
 | Template Key | Cuándo usar | Ejemplo Full | Ejemplo Tasks-Only |
 |---|---|---|---|
@@ -46,7 +50,7 @@ Además, crea templates para cada flow que use `responseTemplate`:
 - `"model"`: El LLM genera respuesta libre basada en el contexto
 - Usa `"model"` obligatoriamente para respuestas conversacionales, informativas, de reserva/reprogramación, consultas, despedidas, mantener cita y tareas.
 - Usa `"literal"` únicamente para respuestas operativas de una cita existente: confirmación, cancelación definitiva y aviso de llegada tarde/en camino, incluidos recordatorios.
-- Esta regla aplica tanto a `responseTemplates.<key>.mode` como a `flow.responseTemplateMode`.
+- Esta regla aplica a `responseTemplates.<key>.mode`; el flow solo contiene la referencia opcional `responseTemplateKey`.
 - Un template conversacional en `literal` es un error bloqueante: impide que la IA adapte la respuesta al contexto y puede producir respuestas rígidas o incorrectas.
 - En una consulta informativa de reagendamiento, el texto debe pedir confirmación y nunca afirmar que la cita ya cambió.
 - La cancelación por no asistencia debe confirmar solo la cancelación. La oferta de una cita nueva pertenece a la continuación posterior a la aceptación del paciente.
@@ -58,7 +62,7 @@ El backend reemplaza automáticamente estos placeholders con datos reales de la 
 - `{fecha}` → "sábado 10 de octubre"
 - `{hora}` → "15:00"
 - `{profesional}` → "Dra. Marta López"
-- `{tratamiento}` → "Sesión de fisioterapia"
+- `{tratamiento}` → nombre del tratamiento tal como aparece en `serviceCatalog`
 - `{options}` → lista de opciones (booking_options)
 - `{citaCancelada}` → "sábado 10 de octubre a las 15:00" (solo en cancelación)
 
@@ -111,8 +115,10 @@ Las sedes pueden usar estos placeholders o NO usarlos. Ambos son válidos:
 ```
 
 ## Checklist antes de entregar
-- [ ] Templates requeridos presentes: `information_not_available`, `out_of_scope`, `farewell`
-- [ ] Un template por cada `responseTemplate` usado en flows
+- [ ] Crear los templates base recomendados cuando la clínica necesite respuestas controladas
+- [ ] Cada `responseTemplateKey` usado apunta a una entrada válida del registro
+- [ ] Las keys son denotativas y no contienen texto dirigido al paciente
+- [ ] La ausencia de una key se acepta y queda registrada para usar `patientOutcome` o IA
 - [ ] Texto refleja el tono de la clínica (lee identity.tone)
 - [ ] Tasks-only NO promete agendamiento directo
 - [ ] Full mode tiene templates para booking (options, confirmed)
@@ -120,4 +126,4 @@ Las sedes pueden usar estos placeholders o NO usarlos. Ambos son válidos:
 - [ ] Variables en formato [variable]
 - [ ] Todos los templates conversacionales usan `mode: "model"`
 - [ ] Solo confirmación, cancelación definitiva y llegada tarde/en camino usan `mode: "literal"`
-- [ ] Los flows mantienen la misma política en `responseTemplateMode`
+- [ ] Ningún flow contiene templates ni `responseTemplateMode`; solo referencias opcionales `responseTemplateKey`

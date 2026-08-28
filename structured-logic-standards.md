@@ -70,7 +70,7 @@ A **Rule** (`BusinessRule`) is a **precondition check** keyed by `intent`. It de
 A **Flow** (`ToolFlow`) is the **only** place where business logic executes. It is keyed by `intent` and defines:
 - Which tools are available (`steps[].tools` or `allowedTools`)
 - The order of execution (`steps[].step`)
-- The exact response template (`responseTemplate`, optional)
+- An optional response template registry reference (`responseTemplateKey`)
 
 All side effects (canceling appointments, creating tasks, looking up patients) happen inside flows via tool calls.
 
@@ -78,12 +78,12 @@ All side effects (canceling appointments, creating tasks, looking up patients) h
 All `description` fields (in intents, rules, and flows) must describe **intent and context**, not list expected words. The classifier uses semantic understanding plus conversational context, not keyword matching.
 
 ### Response Template
-- **If `responseTemplate` exists in a flow:** the bot uses that exact text verbatim after completing the flow.
-- **If it does not exist:** the LLM generates a natural response, or the backend provides a generic clinic-agnostic fallback for common tools.
+- **If `responseTemplateKey` exists in a flow:** it references patient-facing text in the root `responseTemplates` registry.
+- **If it does not exist:** the LLM generates a natural response, or the backend provides a generic clinic-agnostic fallback for common tools. Its absence is not blocking.
 
-**CRITICAL:** flows that use `manage_schedule_block_status` (confirm / cancel / on-the-way) MUST define their own `responseTemplate`. Rules **never** define response templates.
+**CRITICAL:** flows that use `manage_schedule_block_status` may reference a registry template, but templates are never defined on flows or steps. Rules **never** define response templates.
 
-**The template is injected ONLY into the tools of the flow's TERMINAL step** — the last element of the `steps` array. It describes how to *close* the flow, so the terminal step must be the tool that performs the real action. Consequences:
+**Steps only describe tool execution order.** A configured registry template is rendered independently of step properties. Consequences:
 - A template whose terminal step only holds search/resolver tools (`check_availability`, `resolve_*`, `lookup_patient`, `query_*`) is **rejected by the validator**: it would make the bot announce a result it has not produced.
 - `allowedTools` is an unordered whitelist and is ignored for template injection. A configured follow-up `create_task` belongs in a later numbered step when it follows cancellation; `allowedTools` alone cannot establish that order.
 - Write `steps` in execution order (ascending `step` numbers): the terminal step is the **last array item**, not the highest number.
@@ -305,6 +305,8 @@ When both `manage_schedule_block_status` and `create_task` are configured in one
 
 **Migration (legacy id → canonical id):** `scheduling_request` → `new_appointment_scheduling`; `appointment_reschedule_request` → `existing_appointment_rescheduling`; `appointment_reschedule_inquiry` → `existing_appointment_reschedule_inquiry`; `appointment_confirmation` → `existing_appointment_confirmation`; `appointment_cancellation` → `existing_appointment_cancellation`; `appointment_cancellation_inquiry` → `existing_appointment_cancellation_inquiry`; `appointment_inquiry` → `existing_appointment_inquiry`; `keep_appointment` → `existing_appointment_keep`; `patient_running_late` → `existing_appointment_delay_notice`. There is **no** backward-compatibility mapping in the code: a JSON still using a legacy id is rejected. Ids such as `general_inquiry`, `payment_inquiry` or `farewell` need no migration — they are free intents.
 
+**Flow response contract:** use only optional `flow.responseTemplateKey` and the root `responseTemplates` registry. `Protocol.responseTemplate` remains the legitimate patient-facing protocol text and is not renamed or moved.
+
 ---
 
 ## Generation Rules
@@ -326,8 +328,8 @@ When both `manage_schedule_block_status` and `create_task` are configured in one
 - `description` differentiates this flow from similar ones ("NEW session" vs. "move an ALREADY BOOKED appointment" vs. "confirm attendance").
 - Order steps logically. For full booking, `resolve_patient` must precede `schedule_block`, but it may be placed before or after availability resolution and checking. For full rescheduling, use `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block`.
 - `parallel: true` only when tools have no dependencies between them — and never for a destructive tool.
-- Flows using `manage_schedule_block_status` MUST set `responseTemplate`.
-- The last step must be the one that performs the flow's real action: it is where the closing template lands.
+- Flows using `manage_schedule_block_status` may set `responseTemplateKey`.
+- The last step must be the one that performs the flow's real action; steps do not contain response templates.
 
 ### Protocols
 - `responseTemplate` is injected into the system prompt when the protocol activates.
@@ -357,8 +359,7 @@ When both `manage_schedule_block_status` and `create_task` are configured in one
 - Appointment-writing flows must use a canonical intent. Free intents are valid outside the reserved `new_appointment_` and `existing_appointment_` namespaces when their flows use only non-writing tools.
 - In a full booking flow, `resolve_patient` must be in a step before `schedule_block`; no relative ordering with availability tools is required.
 - A flow whose intent is `existing_appointment_*` and that uses `manage_schedule_block_status` or `schedule_block` must declare `selection.requiredCapabilities: ["hasActiveAppointment"]`. Informational flows (no tools) do not need it.
-- No `responseTemplate` when the terminal step holds only search/resolver tools.
-- No `responseTemplate` on a tool-using flow whose terminal step declares no tools (e.g. tools only in `allowedTools`, no `steps`).
+- `responseTemplateKey`, when present, must reference the root registry; its absence is valid.
 - The `steps` array must be written in ascending `step` order.
 
 There are **no silent fallbacks**: any of these produces an explicit, blocking error explaining what is wrong, why it is dangerous and how to fix it. A JSON that fails validation is not loaded at runtime.

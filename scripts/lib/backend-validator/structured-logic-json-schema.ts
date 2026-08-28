@@ -35,7 +35,7 @@ export const StructuredLogicJsonSchema = {
         bookingMode: {
           type: ['string', 'null'],
           enum: ['direct', 'confirm-first'],
-          description: 'Configuración de reserva de la clínica: direct = agendar al elegir slot (default recomendado); confirm-first = pedir confirmación explícita antes de schedule_block. No confundir con el modo interno de reagendamiento CARE_PLAN|STANDALONE, que decide el backend.',
+          description: 'Modo de agendamiento de la clínica: direct = agendar al elegir slot (default recomendado); confirm-first = pedir confirmación explícita antes de schedule_block.',
         },
       },
       required: ['sensitiveSituations', 'protocols'],
@@ -88,8 +88,7 @@ export const StructuredLogicJsonSchema = {
                   additionalProperties: false,
                 },
               },
-              responseTemplate: { type: ['string', 'null'] },
-              responseTemplateMode: { type: ['string', 'null'], enum: ['literal', 'model'] },
+                responseTemplateKey: { type: ['string', 'null'], description: 'Optional key into the responseTemplates registry.' },
               allowedTools: { type: ['array', 'null'], items: { type: 'string', enum: ALL_CHAT_TOOL_NAMES } },
               allowsSilence: { type: ['boolean', 'null'] },
             },
@@ -310,6 +309,16 @@ export const StructuredLogicJsonSchema = {
         required: ['id', 'description', 'suggestions'],
         additionalProperties: false,
       },
+    },
+    treatmentSelectionGuidance: {
+      type: ['string', 'null'],
+      description:
+        'Prosa libre con las indicaciones de la clínica para IDENTIFICAR el tratamiento correcto ' +
+        'que corresponde a lo que pide el paciente. Se inyecta en el prompt de resolve_treatment ' +
+        'junto al catálogo real. Usa los NOMBRES de los tratamientos tal cual están en el catálogo, ' +
+        'nunca IDs. Ejemplo: "si el paciente es nuevo y pide un tratamiento concreto, lo recomendable ' +
+        'es una cita de valoración; usa únicamente la opción de valoración que figure en serviceCatalog. ' +
+        'No confundir con treatmentPolicyHints, que trata de políticas de scheduling.',
     },
     treatmentPolicyHints: {
       type: 'array',

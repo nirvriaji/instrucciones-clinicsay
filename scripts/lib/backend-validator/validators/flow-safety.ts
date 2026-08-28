@@ -40,7 +40,6 @@ import type {
   StructuredLogicChatMode,
   ToolFlow,
 } from '../structured-logic';
-import { NEVER_TEMPLATED_TOOLS } from '../tool-description-generator';
 
 /** Tool that destroys an existing appointment (action `cancel`). */
 const DESTRUCTIVE_TOOL = 'manage_schedule_block_status';
@@ -63,10 +62,22 @@ const BULK_DESTRUCTIVE_TOOL = 'manage_all_schedule_blocks_for_date';
  */
 const APPOINTMENT_WRITING_TOOLS = [CONSTRUCTIVE_TOOL, DESTRUCTIVE_TOOL, BULK_DESTRUCTIVE_TOOL];
 
-/** Tools required in a full reschedule inquiry so the bot can consult real availability. */
+/**
+ * Herramientas que MODIFICAN la cita. Prohibidas en una consulta de
+ * reagendamiento: preguntar si es posible mover una cita no puede cancelarla,
+ * moverla ni crearla.
+ *
+ * CONSULTAR disponibilidad (`check_availability`, `resolve_availability_query`)
+ * SÍ está permitido y es deliberado: sin ello, en cuanto el paciente da una fecha
+ * el bot se queda sin herramientas y lo único que puede hacer es PROMETER que
+ * mirará la agenda — algo prohibido por el validador de respuesta, lo que produjo
+ * un bucle en producción (19-08-2026). Los huecos consultados aquí van a
+ * `inquirySlots` y no habilitan a agendar: `hasShownSlots` sigue false, así que
+ * `tool-call-policy` rechaza `schedule_block` hasta que la conversación escala al
+ * flujo operativo y los promueve.
+ */
 const RESCHEDULE_INQUIRY_REQUIRED_TOOLS = ['resolve_availability_query', 'check_availability'];
 
-/** Tools that mutate an appointment — forbidden in an inquiry that only consults. */
 const RESCHEDULE_INQUIRY_FORBIDDEN_TOOLS = [
   'cancel_for_rescheduling',
   CONSTRUCTIVE_TOOL,
@@ -74,36 +85,16 @@ const RESCHEDULE_INQUIRY_FORBIDDEN_TOOLS = [
   BULK_DESTRUCTIVE_TOOL,
 ];
 
-/** Tools that can legitimately close a flow and receive its closing template. */
-const TERMINAL_ACTION_TOOLS = new Set([
-  CONSTRUCTIVE_TOOL,
-  DESTRUCTIVE_TOOL,
-  BULK_DESTRUCTIVE_TOOL,
-  'create_task',
-]);
-
 const APPOINTMENT_WRITING_TOOLS_TEXT = APPOINTMENT_WRITING_TOOLS.join('", "');
 
 /** Deterministic gate proving the patient really has an appointment to act on. */
 const ACTIVE_APPOINTMENT_CAPABILITY = 'hasActiveAppointment';
+const CANCELLED_TARGET_CAPABILITY = 'hasCancelledRescheduleTarget';
 
-/**
- * Literal responses are reserved for deterministic appointment operations.
- * Conversational flows must remain model-adaptable; otherwise a generic
- * sentence can be emitted without considering the latest context.
- */
+/** Literal responses are reserved for deterministic appointment operations. */
 const LITERAL_APPOINTMENT_INTENTS = new Set([
   'existing_appointment_confirmation',
   'existing_appointment_cancellation',
-  'existing_appointment_delay_notice',
-]);
-
-const LITERAL_APPOINTMENT_TEMPLATE_KEYS = new Set([
-  'confirmation',
-  'appointment_confirmed',
-  'cancellation',
-  'appointment_cancelled',
-  'on_the_way',
   'existing_appointment_delay_notice',
 ]);
 
@@ -132,15 +123,12 @@ export const FLOW_SAFETY_PROMPT_RULES =
   `S3. A full reschedule flow that includes "schedule_block" MUST include "cancel_for_rescheduling" in numbered steps, and all four ` +
   `tools in S2 MUST appear in that exact numbered order. Under the hasConcreteDateTime exception, "resolve_availability_query" ` +
   `is the only one of the four that may be absent.\n` +
-  `S3b. A full reschedule flow MUST declare "selection": { "requiredCapabilities": ["hasActiveAppointment"], "alternativeRequiredCapabilities": ["hasCancelledRescheduleTarget"] }. ` +
-  `The alternative allows the flow to run when a reschedule target was already captured in a previous turn.\n` +
-  `S4. "responseTemplate" is injected ONLY into the tools of the flow's TERMINAL step (the LAST element of the steps array). ` +
-  `So the terminal step must be the tool that performs the real action (schedule_block, manage_schedule_block_status, create_task). ` +
-  `A template whose terminal step only contains search/resolver tools (check_availability, resolve_*, lookup_patient, query_*) is REJECTED: ` +
-  `it makes the bot announce a result it has not produced.\n` +
-  `S5. A flow that uses tools and declares "responseTemplate" MUST declare "steps" with the closing tool in the last step. ` +
-  `"allowedTools" is an unordered whitelist and carries no closing information; optional/conditional tools belong there, not in the terminal step.\n` +
-  `S6. Write the "steps" array in execution order: its numbering must be ascending (1, 2, 3...), because the terminal step is the LAST array item.\n` +
+  `S4. "responseTemplateKey" is an optional, denotative reference to the "responseTemplates" registry; it is never patient-facing text. ` +
+  `The registry contains the patient-facing text and mode. Do not require a key for any flow, tool, step, or terminal step. ` +
+  `When the key is absent, the backend logs the absence and the response uses patientOutcome when available or the AI generates it from context.\n` +
+  `S5. Never expose responseTemplateKey values, registry names, tool names, field names, IDs, or other technical identifiers to the patient. ` +
+  `Response rendering is independent of step position; steps only describe tool execution order.\n` +
+  `S6. Write the "steps" array in execution order: its numbering must be ascending (1, 2, 3...).\n` +
   `S7. Intent ids are FREE except inside two RESERVED namespaces. The clinic owns its conversation: ids like ` +
   `"insurance_coverage_inquiry", "parking_info" or "physio_program_followup" are perfectly valid in "intents" and in ` +
   `"flow.intent", and no rule complains about them. What is CLOSED are the prefixes "new_appointment_" and ` +
@@ -154,12 +142,18 @@ export const FLOW_SAFETY_PROMPT_RULES =
   `semantics and the guards need to classify it. A flow with a free intent and no appointment-writing tools (only ` +
   `"query_knowledge_base", "create_task", "lookup_patient", "check_availability", resolvers...) is valid.\n` +
   `S8. A flow whose intent is "existing_appointment_*" AND that uses an appointment-writing tool MUST ` +
-  `declare "selection": { "requiredCapabilities": ["${ACTIVE_APPOINTMENT_CAPABILITY}"] }. Without that deterministic gate a bare "sí" can ` +
+  `declare "selection": { "requiredCapabilities": ["hasActiveAppointment"] }. Without that deterministic gate a bare "sí" can ` +
   `select the flow when the patient has no appointment at all, and the bot acts on an appointment that does not exist. ` +
   `Informational flows (no tools) do not need the gate.\n` +
+  `S9. Conversational response templates MUST use model mode. ` +
+  `responseTemplates.<key>.mode: "literal" is allowed ONLY for ` +
+  `existing_appointment_confirmation, existing_appointment_cancellation, and existing_appointment_delay_notice ` +
+  `(confirmation, definitive cancellation, or EN_ROUTE/late notices). A literal mode on an inquiry, farewell, ` +
+  `booking, rescheduling, handoff, or informational flow is rejected because it forces a rigid response without ` +
+  `adapting to the conversation.\n` +
   `S10. In full mode, a flow whose intent is "existing_appointment_reschedule_inquiry" MUST declare a step with ` +
-  `"tools": ["resolve_availability_query", "check_availability"]. Without them the flow has NO tools at all, so the moment ` +
-  `the patient gives a day or a time the bot can only PROMISE to look at the schedule — which is rejected and replaced by a canonical ` +
+  `"tools": ["${RESCHEDULE_INQUIRY_REQUIRED_TOOLS.join('", "')}"]. Without them the flow has NO tools at all, so the moment the ` +
+  `patient gives a day or a time the bot can only PROMISE to look at the schedule — which is rejected and replaced by a canonical ` +
   `message, advancing nothing, so the patient insists and the bot repeats itself forever. This is CONSULTING, not modifying: the ` +
   `slots it shows are informational and do not authorize booking, and the tools that modify the appointment stay forbidden here. ` +
   `In tasks-only mode this flow declares no tools and the rule does not apply.\n`;
@@ -356,79 +350,6 @@ function validateRescheduleCanRebook(
 }
 
 /**
- * The closing template is injected into the tools of the TERMINAL step. If
- * every tool of that step is a search/resolver tool, the template either never
- * reaches the model or orders it to announce a result it has not produced.
- */
-function validateTerminalTemplate(flowName: string, flow: ToolFlow, errors: string[]): void {
-  if (!flow.responseTemplate) return;
-  // Una CONSULTA de reprogramación termina de verdad en una búsqueda: su trabajo
-  // es decirle al paciente qué opciones hay, no ejecutar nada. Su plantilla es
-  // informativa y `validateInformationalTemplate` ya impide que afirme que la cita
-  // cambió, que es el peligro que esta regla persigue.
-  if (flow.intent === 'existing_appointment_reschedule_inquiry') return;
-  const steps = stepsOf(flow);
-  if (steps.length === 0) return;
-
-  const terminalTools = toolsOf(steps[steps.length - 1]);
-  if (terminalTools.length === 0) return;
-  if (!terminalTools.every((tool) => NEVER_TEMPLATED_TOOLS.has(tool))) return;
-
-  const mode = flow.responseTemplateMode ?? 'model';
-  errors.push(
-    `${header(flowName, flow)}: declara una plantilla de respuesta ("responseTemplate", modo "${mode}") pero su paso final ` +
-      `solo usa herramientas de búsqueda o de identificación (${terminalTools.join(', ')}). ` +
-      `POR QUÉ ES PELIGROSO: la plantilla se entrega justo después de buscar, así que el bot anuncia como hecho ` +
-      `algo que todavía no ha hecho (por ejemplo "he movido tu cita" nada más listar horarios), y el paciente cree ` +
-      `que su cita ya cambió. ` +
-      `CÓMO SE CORRIGE: termina el flujo con la herramienta que realiza la acción real ` +
-      `(por ejemplo "schedule_block", "manage_schedule_block_status" o "create_task") y deja la plantilla en ese paso final; ` +
-      `si el flujo solo informa, quita la plantilla y deja que el bot redacte la respuesta con los resultados.`,
-  );
-}
-
-function validateTerminalAction(flowName: string, flow: ToolFlow, errors: string[]): void {
-  if (!flow.responseTemplate) return;
-  const steps = stepsOf(flow);
-  if (steps.length === 0) return;
-
-  const terminalTools = toolsOf(steps[steps.length - 1]);
-  if (terminalTools.length > 0 && terminalTools.every((tool) => TERMINAL_ACTION_TOOLS.has(tool))) return;
-  if (terminalTools.length === 0 || terminalTools.every((tool) => NEVER_TEMPLATED_TOOLS.has(tool))) return;
-
-  errors.push(
-    `${header(flowName, flow)} declara una plantilla de cierre, pero el último paso no realiza una acción terminal ` +
-      `real (${terminalTools.join(', ')}). CÓMO SE CORRIGE: termina con schedule_block, ` +
-      `manage_schedule_block_status, manage_all_schedule_blocks_for_date o create_task.`
-  );
-}
-
-/**
- * A template on a flow that has tools but no terminal step carrying them can
- * never be delivered: the injection point does not exist.
- */
-function validateTemplateIsDeliverable(flowName: string, flow: ToolFlow, errors: string[]): void {
-  if (!flow.responseTemplate) return;
-
-  const steps = stepsOf(flow);
-  const hasToolsInSteps = steps.some((step) => toolsOf(step).length > 0);
-  const hasAllowedTools = Array.isArray(flow.allowedTools) && flow.allowedTools.length > 0;
-  if (!hasToolsInSteps && !hasAllowedTools) return; // Purely conversational flow: valid.
-
-  const terminalTools = steps.length > 0 ? toolsOf(steps[steps.length - 1]) : [];
-  if (terminalTools.length > 0) return;
-
-  errors.push(
-    `${header(flowName, flow)}: declara una plantilla de respuesta ("responseTemplate") y usa herramientas, ` +
-      `pero su paso final no declara ninguna herramienta${steps.length === 0 ? ' (no hay "steps")' : ''}, ` +
-      `así que la plantilla nunca se aplica. ` +
-      `POR QUÉ ES PELIGROSO: la respuesta que has escrito no llega nunca al paciente y el bot improvisa el cierre del flujo. ` +
-      `CÓMO SE CORRIGE: declara los pasos del flujo en "steps" y pon la herramienta que cierra el flujo en el último paso. ` +
-      `"allowedTools" es solo una lista sin orden: no sirve para saber cuál es el paso final.`,
-  );
-}
-
-/**
  * The terminal step is the LAST element of the array, so the array order must
  * match the declared execution order.
  */
@@ -610,17 +531,11 @@ function validateActiveAppointmentGate(flowName: string, flow: ToolFlow, errors:
   if (mutatingTools.length === 0) return;
 
   const required = flow.selection?.requiredCapabilities;
-  const alternatives = flow.selection?.alternativeRequiredCapabilities;
-  const hasActiveAppointmentGate = Array.isArray(required) && required.includes(ACTIVE_APPOINTMENT_CAPABILITY);
-  const hasRescheduleTargetGate =
-    flow.intent === 'existing_appointment_rescheduling' &&
-    Array.isArray(alternatives) &&
-    alternatives.includes('hasCancelledRescheduleTarget');
-  if (hasActiveAppointmentGate || hasRescheduleTargetGate) return;
+  if (Array.isArray(required) && required.includes(ACTIVE_APPOINTMENT_CAPABILITY)) return;
 
   errors.push(
     `${header(flowName, flow)}: actúa sobre una cita que el paciente YA tiene y la modifica ` +
-      `(${mutatingTools.join(', ')}), pero no declara una capacidad de selección válida. ` +
+      `(${mutatingTools.join(', ')}), pero no declara "selection": { "requiredCapabilities": ["${ACTIVE_APPOINTMENT_CAPABILITY}"] }. ` +
       `POR QUÉ ES PELIGROSO: sin esa puerta determinista el flujo puede seleccionarse cuando el paciente NO tiene ninguna cita activa ` +
       `(por ejemplo con un "sí" suelto), y el bot intenta confirmar, mover o cancelar una cita inexistente o la equivocada. ` +
       `CÓMO SE CORRIGE: añade "selection": { "requiredCapabilities": ["${ACTIVE_APPOINTMENT_CAPABILITY}"] } al flujo; ` +
@@ -628,42 +543,101 @@ function validateActiveAppointmentGate(flowName: string, flow: ToolFlow, errors:
   );
 }
 
-function validateRescheduleInquiry(
+/**
+ * En modo full la consulta de reagendamiento DEBE poder mirar la agenda.
+ *
+ * Sin el par de consulta el flujo declara cero herramientas, y `ResolveActiveFlow`
+ * devuelve entonces `availableTools: []` sin fallback: en cuanto el paciente da una
+ * fecha, lo unico que el modelo puede hacer es PROMETER que mirara la agenda — algo
+ * que el validador de respuesta bloquea siempre. El texto se sustituye por el
+ * canonico, ninguna capability avanza y el hilo de OpenAI sigue apuntando a la
+ * respuesta original, asi que el modelo repite lo mismo indefinidamente. Ocurrio en
+ * produccion el 19-08-2026 (Sede Palma, 6 turnos, 0 llamadas a herramientas).
+ *
+ * Por eso falla en runtime en vez de avisar: un bot sin este paso arranca pero
+ * reproduce el bucle, y el bucle es invisible en los logs de arranque.
+ *
+ * En tasks-only NO se exige: ese modo no consulta agenda en ningun flujo y la
+ * conversacion acaba en una tarea humana.
+ */
+function validateRescheduleInquiryCanConsultAvailability(
   flowName: string,
   flow: ToolFlow,
   mode: StructuredLogicChatMode,
   errors: string[],
 ): void {
+  if (mode !== 'full') return;
   if (flow.intent !== 'existing_appointment_reschedule_inquiry') return;
 
-  // In full mode the inquiry MUST be able to check availability so the bot can
-  // tell the patient what options actually exist. Without them the flow has no
-  // tools at all and the bot can only promise to look at the schedule — which is
-  // rejected and loops (production incident 19-08-2026).
-  if (mode === 'full') {
-    const missing = RESCHEDULE_INQUIRY_REQUIRED_TOOLS.filter((tool) => !flowUsesTool(flow, tool));
-    if (missing.length > 0) {
-      errors.push(
-        `${header(flowName, flow)} en modo full debe declarar "${RESCHEDULE_INQUIRY_REQUIRED_TOOLS.join('" y "')}" ` +
-          `en "steps" o "allowedTools". Sin ellas el flujo no tiene herramientas: en cuanto el paciente da un día o una franja ` +
-          `el bot solo puede PROMETER que mirará la agenda, lo cual es rechazado y avanza nada, así que el paciente insiste ` +
-          `y el bot repite el mismo mensaje para siempre. ` +
-          `CÓMO SE CORRIGE: añade un paso con "tools": ["resolve_availability_query", "check_availability"]. ` +
-          `Las opciones mostradas aquí son informativas y no habilitan agendar; ` +
-          `las herramientas que modifican la cita siguen prohibidas en este flujo.`
-      );
-    }
-  }
+  const missing = RESCHEDULE_INQUIRY_REQUIRED_TOOLS.filter((tool) => !flowUsesTool(flow, tool));
+  if (missing.length === 0) return;
+
+  errors.push(
+    `${header(flowName, flow)}: es una consulta de reagendamiento en modo full pero no puede consultar ` +
+      `la agenda (falta ${missing.join(', ')}). ` +
+      `POR QUÉ ES PELIGROSO: sin esas herramientas el flujo se queda sin ninguna, así que en cuanto el ` +
+      `paciente da un día o una hora el bot solo puede PROMETER que mirará la agenda — algo prohibido, ` +
+      `cuya respuesta se sustituye por el mensaje canónico sin avanzar nada. El paciente insiste y el bot ` +
+      `repite lo mismo: bucle infinito, como el del 19-08-2026. ` +
+      `CÓMO SE CORRIGE: añade un paso con "tools": ["${RESCHEDULE_INQUIRY_REQUIRED_TOOLS.join('", "')}"]. ` +
+      `Es CONSULTA informativa: los huecos que salgan de ahí no autorizan a agendar, así que sigue ` +
+      `prohibido cancelar, mover o crear la cita desde este flujo.`,
+  );
+}
+
+function validateRescheduleInquiry(flowName: string, flow: ToolFlow, errors: string[]): void {
+  if (flow.intent !== 'existing_appointment_reschedule_inquiry') return;
 
   const forbidden = RESCHEDULE_INQUIRY_FORBIDDEN_TOOLS.filter((tool) => flowUsesTool(flow, tool));
   if (forbidden.length === 0) return;
 
   errors.push(
     `${header(flowName, flow)}: es una consulta informativa de reagendamiento, pero usa herramientas ` +
-      `que modifican la cita (${forbidden.join(', ')}). ` +
-      `POR QUÉ ES PELIGROSO: la consulta no confirma ningún cambio y no debe iniciar ni preparar una reprogramación. ` +
-      `CÓMO SE CORRIGE: reserva las herramientas de reagendamiento para "existing_appointment_rescheduling"; ` +
-      `en modo full, añade "resolve_availability_query" y "check_availability" para consultar disponibilidad real.`
+      `que MODIFICAN la cita (${forbidden.join(', ')}). ` +
+      `POR QUÉ ES PELIGROSO: la consulta no confirma ningún cambio, así que no puede cancelar, mover ni crear citas. ` +
+      `CÓMO SE CORRIGE: quita esas herramientas y déjale solo las de CONSULTA ("resolve_availability_query", ` +
+      `"check_availability"), que sí puede usar para informar al paciente de qué opciones hay; ` +
+      `reserva las que modifican para "existing_appointment_rescheduling".`
+  );
+}
+
+/**
+ * Un flujo de reprogramación que CANCELA en uno de sus pasos se apaga a sí mismo
+ * si su única puerta es `hasActiveAppointment`: en cuanto ejecuta esa
+ * cancelación deja de haber cita activa, así que en el turno siguiente ningún
+ * flujo casa y el modelo se queda con TODAS las herramientas sueltas, sin pasos
+ * ni guardas. Ocurrió en producción el 19-08-2026: el paciente cancelaba, el bot
+ * perdía el hilo y acababa inventando fechas.
+ *
+ * La alternativa `hasCancelledRescheduleTarget` mantiene el flujo vivo mientras
+ * haya una reprogramación pendiente en el estado conversacional.
+ */
+function validateReschedulingSurvivesItsOwnCancellation(
+  flowName: string,
+  flow: ToolFlow,
+  errors: string[],
+): void {
+  if (flow.intent !== 'existing_appointment_rescheduling') return;
+  // Sin cancelación no hay nada que sobrevivir (p. ej. un flujo que solo crea
+  // una tarea de seguimiento).
+  if (!flowUsesTool(flow, 'cancel_for_rescheduling')) return;
+
+  const required = flow.selection?.requiredCapabilities;
+  const gatedOnActiveAppointment =
+    Array.isArray(required) && required.includes(ACTIVE_APPOINTMENT_CAPABILITY);
+  if (!gatedOnActiveAppointment) return;
+
+  const alternatives = flow.selection?.alternativeRequiredCapabilities;
+  if (Array.isArray(alternatives) && alternatives.includes(CANCELLED_TARGET_CAPABILITY)) return;
+
+  errors.push(
+    `${header(flowName, flow)}: cancela la cita en uno de sus pasos pero su única puerta es ` +
+      `"${ACTIVE_APPOINTMENT_CAPABILITY}". POR QUÉ ES PELIGROSO: al cancelar deja de haber cita activa, ` +
+      `así que el propio flujo deja de seleccionarse en el turno siguiente; el bot pierde sus pasos y ` +
+      `responde con todas las herramientas disponibles, sin guardas. ` +
+      `CÓMO SE CORRIGE: añade "selection": { "requiredCapabilities": ["${ACTIVE_APPOINTMENT_CAPABILITY}"], ` +
+      `"alternativeRequiredCapabilities": ["${CANCELLED_TARGET_CAPABILITY}"] } para que el flujo siga vivo ` +
+      `mientras haya una reprogramación pendiente.`,
   );
 }
 
@@ -676,18 +650,10 @@ function validateFullReschedulingContract(
   if (mode !== 'full' || flow.intent !== 'existing_appointment_rescheduling') return;
 
   const requiredCapabilities = flow.selection?.requiredCapabilities;
-  const alternativeRequiredCapabilities = flow.selection?.alternativeRequiredCapabilities;
-  const hasActiveAppointmentGate =
-    Array.isArray(requiredCapabilities) && requiredCapabilities.includes(ACTIVE_APPOINTMENT_CAPABILITY);
-  const hasRescheduleTargetGate =
-    Array.isArray(alternativeRequiredCapabilities) &&
-    alternativeRequiredCapabilities.includes('hasCancelledRescheduleTarget');
-  if (!hasActiveAppointmentGate && !hasRescheduleTargetGate) {
+  if (!Array.isArray(requiredCapabilities) || !requiredCapabilities.includes(ACTIVE_APPOINTMENT_CAPABILITY)) {
     errors.push(
       `${header(flowName, flow)} en modo full debe declarar "selection.requiredCapabilities" con ` +
-        `"${ACTIVE_APPOINTMENT_CAPABILITY}" o "alternativeRequiredCapabilities" con ` +
-        `"hasCancelledRescheduleTarget". La reprogramación debe tener una cita activa ` +
-        `o un target backend-owned pendiente.`
+        `"${ACTIVE_APPOINTMENT_CAPABILITY}". La reprogramación solo puede actuar sobre una cita activa.`
     );
   }
 
@@ -765,10 +731,11 @@ function validateInformationalTemplate(
   templates: StructuredLogic['responseTemplates'],
   errors: string[],
 ): void {
-  if (flow.intent !== 'existing_appointment_reschedule_inquiry' || !flow.responseTemplate) return;
+  const templateKey = flow.responseTemplateKey;
+  if (flow.intent !== 'existing_appointment_reschedule_inquiry' || !templateKey) return;
 
-  const configured = templates?.[flow.responseTemplate]?.text;
-  const text = (configured ?? flow.responseTemplate).toLowerCase();
+  const configured = templates?.[templateKey]?.text;
+  const text = (configured ?? templateKey).toLowerCase();
   if (!/(he|hemos|ya|i have|we have|has been).*(mov|cambi|reprogram|agend|reserv)/i.test(text)) return;
 
   errors.push(
@@ -783,31 +750,17 @@ function validateResponseTemplateModes(sl: Partial<StructuredLogic>, errors: str
   const templates = sl.responseTemplates ?? {};
 
   for (const [flowName, flow] of Object.entries(flows)) {
-    if (!flow || typeof flow !== 'object' || flow.responseTemplateMode !== 'literal') continue;
-    if (LITERAL_APPOINTMENT_INTENTS.has(flow.intent)) continue;
+    const templateKey = flow?.responseTemplateKey;
+    if (!flow || !templateKey || LITERAL_APPOINTMENT_INTENTS.has(flow.intent)) continue;
+
+    const template = templates[templateKey];
+    if (!template || template.mode !== 'literal') continue;
 
     errors.push(
-      `${header(flowName, flow)} usa responseTemplateMode "literal" para una respuesta conversacional. ` +
-        `POR QUÉ ES PELIGROSO: la IA puede repetir una frase rígida sin adaptar la respuesta al contexto. ` +
-        `CÓMO SE CORRIGE: usa responseTemplateMode "model". Literal solo está permitido para confirmación, ` +
-        `cancelación definitiva y avisos de llegada tarde/en camino.`,
-    );
-  }
-
-  for (const [templateKey, template] of Object.entries(templates)) {
-    if (!template || typeof template !== 'object' || template.mode !== 'literal') continue;
-    if (LITERAL_APPOINTMENT_TEMPLATE_KEYS.has(templateKey)) continue;
-
-    const referencingFlows = Object.values(flows).filter(
-      (flow) => flow && typeof flow === 'object' && flow.responseTemplate === templateKey,
-    );
-    if (referencingFlows.length > 0 && referencingFlows.every((flow) => LITERAL_APPOINTMENT_INTENTS.has(flow.intent))) continue;
-
-    errors.push(
-      `responseTemplates["${templateKey}"] usa mode "literal" fuera de una operación de cita permitida. ` +
-        `POR QUÉ ES PELIGROSO: puede forzar una respuesta rígida en una conversación informativa o de seguimiento. ` +
-        `CÓMO SE CORRIGE: cambia su mode a "model". Literal solo está permitido para confirmación, ` +
-        `cancelación definitiva y avisos de llegada tarde/en camino.`,
+      `responseTemplates["${templateKey}"] usa mode "literal" en el flow "${flowName}" ` +
+        `fuera de una operación de cita permitida. POR QUÉ ES PELIGROSO: puede forzar una respuesta rígida ` +
+        `en una conversación informativa o de seguimiento. CÓMO SE CORRIGE: cambia su mode a "model". ` +
+        `Literal solo está permitido para confirmación, cancelación definitiva y avisos de llegada tarde/en camino.`,
     );
   }
 }
@@ -831,15 +784,14 @@ export function validateFlowSafety(
 
     validateFlowIntentIsClassifiable(flowName, flow, errors);
     validateActiveAppointmentGate(flowName, flow, errors);
-    validateRescheduleInquiry(flowName, flow, mode, errors);
+    validateRescheduleInquiry(flowName, flow, errors);
+    validateRescheduleInquiryCanConsultAvailability(flowName, flow, mode, errors);
+    validateReschedulingSurvivesItsOwnCancellation(flowName, flow, errors);
     validateFullReschedulingContract(flowName, flow, mode, errors);
     validateNonAttendanceCancellation(flowName, flow, errors);
     validateStepArrayOrder(flowName, flow, errors);
     validateDestructiveOrder(flowName, flow, errors);
     validateRescheduleCanRebook(flowName, flow, mode, errors);
-    validateTerminalTemplate(flowName, flow, errors);
-    validateTemplateIsDeliverable(flowName, flow, errors);
-    validateTerminalAction(flowName, flow, errors);
     validateInformationalTemplate(flowName, flow, sl.responseTemplates, errors);
   }
 }

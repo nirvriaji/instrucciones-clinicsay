@@ -8,7 +8,7 @@
  * They are canonical notes about what each mode typically enables.
  */
 
-import type { StructuredLogic, StructuredLogicChatMode } from '../structured-logic';
+import type { StructuredLogic, StructuredLogicChatMode } from '../../chat/structured-logic';
 import type { LogicGap } from '../validator';
 
 export function detectModeAdvisoryGaps(

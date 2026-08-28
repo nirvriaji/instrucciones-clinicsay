@@ -17,7 +17,7 @@
  * Duplicates: last-wins (deterministic, matches Object.assign behavior).
  */
 
-import type { StructuredLogic, IntentDefinition, ToolFlow, Protocol, ResponseTemplate } from './structured-logic';
+import type { StructuredLogic, IntentDefinition, ToolFlow, Protocol, ResponseTemplate } from '../chat/structured-logic';
 import { StructuredLogicWireJsonSchema } from './structured-logic-wire-schema';
 import { extractAllowedKeys } from './schema-key-extractor';
 
@@ -159,7 +159,9 @@ export function toWireFormat(logic: StructuredLogic): WireStructuredLogic {
       : [],
     errorCategories: logic.errorCategories,
     treatmentPolicyHints: logic.treatmentPolicyHints,
-    treatmentSelectionGuidance: logic.treatmentSelectionGuidance,
+    ...(logic.treatmentSelectionGuidance !== undefined
+      ? { treatmentSelectionGuidance: logic.treatmentSelectionGuidance }
+      : {}),
     systemPromptInstructions: logic.systemPromptInstructions,
     conversationResumption: logic.conversationResumption,
   };

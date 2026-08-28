@@ -16,7 +16,7 @@
  * controls the language the LLM uses when interacting with patients.
  */
 
-import type { ChatToolDefinition } from './ports/secondary/chat/openai-conversation.port';
+import type { ChatToolDefinition } from '../../ports/secondary/chat/openai-conversation.port';
 
 // ========== Tool: manage_schedule_block_status ========== //
 
@@ -80,9 +80,9 @@ export const TOOL_MANAGE_ALL_SCHEDULE_BLOCKS_FOR_DATE: ChatToolDefinition = {
 export const TOOL_CREATE_TASK: ChatToolDefinition = {
   name: 'create_task',
   description:
-    'Create an administrative task for human follow-up. ' +
-    'Use when the patient requests something the bot cannot resolve ' +
-    'directly (e.g. update personal data, request an invoice, ask about special pricing).',
+    'Crear una tarea administrativa para seguimiento humano. ' +
+    'En agendamiento nuevo, REQUIERE que resolve_patient haya confirmado nombre, apellido y telefono. ' +
+    'USAR cuando NO se pueda agendar directamente o cuando el paciente confirma un horario en modo seguimiento.',
   parameters: {
     type: 'object',
     properties: {
@@ -125,6 +125,45 @@ export const TOOL_CREATE_TASK: ChatToolDefinition = {
       },
     },
     required: ['title', 'type'],
+  },
+};
+
+// ========== Tool: resolve_patient ========== //
+
+export const TOOL_RESOLVE_PATIENT: ChatToolDefinition = {
+  name: 'resolve_patient',
+  strict: true,
+  description:
+    'Identificar o crear un paciente antes de crear una tarea de agendamiento. ' +
+    'USAR ANTES de create_task de agendamiento si no hay paciente resuelto. ' +
+    'El telefono debe ser proporcionado explicitamente por el interlocutor; no sustituyas phone con datos del contacto. ' +
+    'NUNCA uses CALLER_PHONE, ASSOCIATED_PATIENTS ni datos del contacto de Kommo como datos confirmados sin autorizacion del interlocutor.',
+  parameters: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      firstName: {
+        type: 'string',
+        description: 'Patient first name. Leave empty if the patient has not provided it.',
+      },
+      lastName: {
+        type: 'string',
+        description: 'Patient last name. Leave empty if the patient has not provided it.',
+      },
+      phone: {
+        type: 'string',
+        description: 'Patient phone number. Leave empty if the patient has not provided it.',
+      },
+      useInterlocutorPhone: {
+        type: 'boolean',
+        description: 'Set to true only when the patient explicitly says "a este numero", "mi numero" or "para mi".',
+      },
+      isForInterlocutor: {
+        type: 'boolean',
+        description: 'Set to true only when the patient explicitly says the appointment is for themselves ("para mi").',
+      },
+    },
+    required: ['firstName', 'lastName', 'phone', 'isForInterlocutor', 'useInterlocutorPhone'],
   },
 };
 
@@ -213,6 +252,7 @@ export const ALL_CHAT_TOOLS_TASKS_ONLY: ChatToolDefinition[] = [
   TOOL_MANAGE_SCHEDULE_BLOCK_STATUS,
   TOOL_MANAGE_ALL_SCHEDULE_BLOCKS_FOR_DATE,
   TOOL_CREATE_TASK,
+  TOOL_RESOLVE_PATIENT,
   TOOL_LOOKUP_PATIENT,
   TOOL_QUERY_PROTOCOL,
   TOOL_QUERY_KNOWLEDGE_BASE,

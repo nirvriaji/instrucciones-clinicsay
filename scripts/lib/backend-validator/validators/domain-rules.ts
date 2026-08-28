@@ -79,21 +79,6 @@ export function validateDomainRules(
     ALL_CHAT_TOOL_NAMES.filter((name) => !tasksOnlyToolNames.has(name)),
   );
 
-  // 2d. Flows using manage_schedule_block_status should have responseTemplate
-  const flows = sl.toolOrchestration?.flows ?? {};
-  Object.entries(flows).forEach(([flowName, flow]) => {
-    const usesStatusTool = flow.steps.some((step) =>
-      step.tools.includes('manage_schedule_block_status')
-    );
-    if (usesStatusTool && !flow.responseTemplate) {
-      errors.push(
-        `Flow '${flowName}' uses 'manage_schedule_block_status' but has no 'responseTemplate'. ` +
-        `The backend will use a generic fallback. ` +
-        `Consider adding a custom responseTemplate for better patient experience.`
-      );
-    }
-  });
-
   // 2f. errorCategories must have suggestions
   (sl.errorCategories ?? []).forEach((cat, index) => {
     rejectUnknownKeys(

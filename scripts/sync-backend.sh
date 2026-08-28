@@ -102,33 +102,56 @@ SOURCE_DIR="$REPO_ROOT/scripts/lib/backend-source"
 VALIDATOR_DIR="$REPO_ROOT/scripts/lib/backend-validator"
 
 mkdir -p "$SOURCE_DIR"
-mkdir -p "$SOURCE_DIR/validators"
-mkdir -p "$SOURCE_DIR/advisory"
+mkdir -p "$VALIDATOR_DIR"
 
-# ── 3. Lista de archivos a importar ──
-declare -a BACKEND_FILES=(
-  "src/domain/chatbot-instruction-builder/validator.ts"
-  "src/domain/chatbot-instruction-builder/constants.ts"
-  "src/domain/chatbot-instruction-builder/structured-logic-json-schema.ts"
-  "src/domain/chatbot-instruction-builder/schema-key-extractor.ts"
-  "src/domain/chat/structured-logic.ts"
-  "src/domain/chat/structured-logic-minimum.ts"
-  "src/domain/chatbot-instruction-builder/canonicalize-structured-logic.ts"
-  "src/domain/chatbot-instruction-builder/gaps.ts"
-  "src/domain/chatbot-instruction-builder/placeholders.ts"
-  "src/domain/chatbot-instruction-builder/types.ts"
-  "src/domain/chat/canonical-intents.ts"
-  "src/domain/chat/structured-logic.ts"
-  "src/domain/chat/tool-definitions-full.ts"
-  "src/domain/chat/tool-definitions-tasks-only.ts"
-  "src/domain/chat/tool-description-generator.ts"
-  "src/domain/chatbot-instruction-builder/validators/basic-schema.ts"
-  "src/domain/chatbot-instruction-builder/validators/cross-reference.ts"
-  "src/domain/chatbot-instruction-builder/validators/domain-rules.ts"
-  "src/domain/chatbot-instruction-builder/validators/flow-safety.ts"
-  "src/domain/chatbot-instruction-builder/validators/flow-validation.ts"
-  "src/domain/chatbot-instruction-builder/validators/structural.ts"
-  "src/application/chat/use-cases/RunToolCycle/tool-call-policy.ts"
+# ── 3. Lista de archivos a importar y su réplica local ──
+# Formato: "ruta/en/el/backend|ruta/en/backend-validator"
+# La ruta de backend siempre empieza en src/ y se espeja tal cual en backend-source/.
+# La ruta de réplica es relativa a backend-validator/; "-" significa "solo mirror"
+# (context codebase sin réplica funcional, p. ej. tool-call-policy.ts).
+# Mantener esta lista al día cuando el backend toque el módulo del chatbot:
+# incluye el validador (chatbot-instruction-builder), los tipos/tools de domain/chat
+# que consume (structured-logic, response-template, canonical-flow-selection, ...)
+# y los ports que tipan las tool definitions.
+declare -a FILE_MAP=(
+  "src/domain/chatbot-instruction-builder/validator.ts|validator.ts"
+  "src/domain/chatbot-instruction-builder/constants.ts|constants.ts"
+  "src/domain/chatbot-instruction-builder/structured-logic-json-schema.ts|structured-logic-json-schema.ts"
+  "src/domain/chatbot-instruction-builder/schema-key-extractor.ts|schema-key-extractor.ts"
+  "src/domain/chatbot-instruction-builder/canonicalize-structured-logic.ts|canonicalize-structured-logic.ts"
+  "src/domain/chatbot-instruction-builder/gaps.ts|gaps.ts"
+  "src/domain/chatbot-instruction-builder/placeholders.ts|placeholders.ts"
+  "src/domain/chatbot-instruction-builder/types.ts|types.ts"
+  "src/domain/chatbot-instruction-builder/fix-commands.ts|fix-commands.ts"
+  "src/domain/chatbot-instruction-builder/diff.ts|diff.ts"
+  "src/domain/chatbot-instruction-builder/text-chunker.ts|text-chunker.ts"
+  "src/domain/chatbot-instruction-builder/text-cleaner.ts|text-cleaner.ts"
+  "src/domain/chatbot-instruction-builder/agent-tools.ts|agent-tools.ts"
+  "src/domain/chatbot-instruction-builder/builder-tool-definitions.ts|builder-tool-definitions.ts"
+  "src/domain/chatbot-instruction-builder/builder-tools.ts|builder-tools.ts"
+  "src/domain/chatbot-instruction-builder/structured-logic-wire-format.ts|structured-logic-wire-format.ts"
+  "src/domain/chatbot-instruction-builder/structured-logic-wire-schema.ts|structured-logic-wire-schema.ts"
+  "src/domain/chatbot-instruction-builder/advisory/mode-advisory.ts|advisory/mode-advisory.ts"
+  "src/domain/chatbot-instruction-builder/validators/basic-schema.ts|validators/basic-schema.ts"
+  "src/domain/chatbot-instruction-builder/validators/cross-reference.ts|validators/cross-reference.ts"
+  "src/domain/chatbot-instruction-builder/validators/domain-rules.ts|validators/domain-rules.ts"
+  "src/domain/chatbot-instruction-builder/validators/flow-safety.ts|validators/flow-safety.ts"
+  "src/domain/chatbot-instruction-builder/validators/flow-validation.ts|validators/flow-validation.ts"
+  "src/domain/chatbot-instruction-builder/validators/structural.ts|validators/structural.ts"
+  "src/domain/chat/canonical-intents.ts|canonical-intents.ts"
+  "src/domain/chat/structured-logic.ts|structured-logic.ts"
+  "src/domain/chat/structured-logic-minimum.ts|structured-logic-minimum.ts"
+  "src/domain/chat/structured-logic-skeleton.ts|structured-logic-skeleton.ts"
+  "src/domain/chat/default-structured-logic.ts|default-structured-logic.ts"
+  "src/domain/chat/conversation-resumption.ts|conversation-resumption.ts"
+  "src/domain/chat/response-template.ts|response-template.ts"
+  "src/domain/chat/canonical-flow-selection.ts|canonical-flow-selection.ts"
+  "src/domain/chat/system-tool-descriptions.ts|system-tool-descriptions.ts"
+  "src/domain/chat/tool-definitions-full.ts|tool-definitions-full.ts"
+  "src/domain/chat/tool-definitions-tasks-only.ts|tool-definitions-tasks-only.ts"
+  "src/domain/chat/tool-description-generator.ts|tool-description-generator.ts"
+  "src/ports/secondary/chat/openai-conversation.port.ts|ports/secondary/chat/openai-conversation.port.ts"
+  "src/application/chat/use-cases/RunToolCycle/tool-call-policy.ts|-"
 )
 
 # ── 4. Copiar archivos del backend ──
@@ -138,7 +161,8 @@ echo "🔄 Importando archivos del backend..."
 IMPORTED=0
 MISSING=0
 
-for file in "${BACKEND_FILES[@]}"; do
+for entry in "${FILE_MAP[@]}"; do
+  file="${entry%%|*}"
   src="$BACKEND_DIR/$file"
   # Replicar estructura de carpetas bajo backend-source/
   rel_path="${file#src/}"  # quitar prefijo src/
@@ -205,42 +229,20 @@ compare_file() {
   fi
 }
 
-# Mapeo de archivos fuente → réplica local
-compare_file "validators/basic-schema.ts" \
-  "$SOURCE_DIR/domain/chatbot-instruction-builder/validators/basic-schema.ts" \
-  "$VALIDATOR_DIR/validators/basic-schema.ts"
-
-compare_file "validators/cross-reference.ts" \
-  "$SOURCE_DIR/domain/chatbot-instruction-builder/validators/cross-reference.ts" \
-  "$VALIDATOR_DIR/validators/cross-reference.ts"
-
-compare_file "validators/domain-rules.ts" \
-  "$SOURCE_DIR/domain/chatbot-instruction-builder/validators/domain-rules.ts" \
-  "$VALIDATOR_DIR/validators/domain-rules.ts"
-
-compare_file "validators/flow-safety.ts" \
-  "$SOURCE_DIR/domain/chatbot-instruction-builder/validators/flow-safety.ts" \
-  "$VALIDATOR_DIR/validators/flow-safety.ts"
-
-compare_file "validators/flow-validation.ts" \
-  "$SOURCE_DIR/domain/chatbot-instruction-builder/validators/flow-validation.ts" \
-  "$VALIDATOR_DIR/validators/flow-validation.ts"
-
-compare_file "validators/structural.ts" \
-  "$SOURCE_DIR/domain/chatbot-instruction-builder/validators/structural.ts" \
-  "$VALIDATOR_DIR/validators/structural.ts"
-
-compare_file "validator.ts (orquestador)" \
-  "$SOURCE_DIR/domain/chatbot-instruction-builder/validator.ts" \
-  "$VALIDATOR_DIR/validator.ts"
-
-compare_file "canonical-intents.ts" \
-  "$SOURCE_DIR/domain/chat/canonical-intents.ts" \
-  "$VALIDATOR_DIR/canonical-intents.ts"
-
-compare_file "tool-call-policy.ts" \
-  "$SOURCE_DIR/application/chat/use-cases/RunToolCycle/tool-call-policy.ts" \
-  "$REPO_ROOT/scripts/lib/backend-validator/tool-call-policy.ts"
+# Comparar cada entrada del FILE_MAP (excepto las marcadas como solo-mirror con "-").
+# OJO: la réplica local lleva los imports reescritos a su estructura plana, así que
+# los archivos con imports relativos al backend aparecerán como DIFERENTES aunque
+# estén alineados; revisa el diff para distinguir reescritura de desfase real.
+for entry in "${FILE_MAP[@]}"; do
+  file="${entry%%|*}"
+  replica="${entry#*|}"
+  if [ "$replica" = "-" ]; then
+    continue
+  fi
+  compare_file "$replica" \
+    "$SOURCE_DIR/${file#src/}" \
+    "$VALIDATOR_DIR/$replica"
+done
 
 echo ""
 echo "📊 RESUMEN DE COMPARACIÓN:"

@@ -58,9 +58,9 @@ NO inventes protocolos que no existan.
 {
   "first_visit_protocol": {
     "name": "Primera visita de valoración",
-    "description": "Protocolo para pacientes nuevos que solicitan valoración médica estética. Incluye diagnóstico facial con Observ520X y rutina dermocosmética personalizada.",
-    "responseTemplate": "En su primera visita realizaremos un diagnóstico facial avanzado con Observ520X y le entregaremos una rutina dermocosmética personalizada. El coste de la valoración es de 50€, que se deducen del tratamiento si lo realiza.",
-    "sections": ["Recepción y anamnesis", "Diagnóstico con Observ520X", "Propuesta de tratamiento personalizado", "Rutina dermocosmética"]
+    "description": "Protocolo para pacientes nuevos que solicitan una valoración. Incluye anamnesis, evaluación y explicación de las opciones disponibles.",
+    "responseTemplate": "En la primera visita realizaremos una valoración inicial y te explicaremos las opciones adecuadas según tus necesidades.",
+    "sections": ["Recepción y anamnesis", "Evaluación inicial", "Explicación de opciones"]
   }
 }
 ```

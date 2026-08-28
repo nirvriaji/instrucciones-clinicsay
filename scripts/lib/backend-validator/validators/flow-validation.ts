@@ -170,12 +170,11 @@ export function validateFlowsAndTools(
       errors,
     );
     if (
-      flow.responseTemplateMode !== undefined &&
-      flow.responseTemplateMode !== null &&
-      flow.responseTemplateMode !== 'literal' &&
-      flow.responseTemplateMode !== 'model'
+      flow.responseTemplateKey !== undefined &&
+      flow.responseTemplateKey !== null &&
+      typeof flow.responseTemplateKey !== 'string'
     ) {
-      errors.push(`Flow '${flowName}' responseTemplateMode must be 'literal' or 'model'.`);
+      errors.push(`Flow '${flowName}' responseTemplateKey must be a string or null.`);
     }
 
     if (flow.selection !== undefined && flow.selection !== null) {
@@ -291,10 +290,10 @@ export function validateFlowsAndTools(
     // 4.3 Validate that flows without tools have response mechanism
     const hasTools = flow.steps.some((step) => step.tools.length > 0);
     const hasAllowedTools = (flow.allowedTools || []).length > 0;
-    const hasResponse = !!flow.responseTemplate || flow.allowsSilence === true;
+    const hasResponse = !!flow.responseTemplateKey || flow.allowsSilence === true;
     if (!hasTools && !hasAllowedTools && !hasResponse) {
       errors.push(
-        `Flow '${flowName}' has no tools and no response mechanism (responseTemplate or allowsSilence). The bot will not know how to respond.`,
+        `Flow '${flowName}' has no tools and no response mechanism (responseTemplateKey or allowsSilence). The bot will not know how to respond.`,
       );
     }
   });
@@ -455,13 +454,9 @@ export function validateFlowsAndTools(
     }
   }
 
-  // NOTE: create_task is NOT mandatory in tasks-only reschedule flows.
-  // The advisor decides whether reschedule requests redirect to human tasks.
-  // Previously enforced as blocking; now advisory only via detectModeAdvisoryGaps.
-
-  // 6d5b. A tasks-only flow may cancel, create a task, do both, or answer
-  // without tools. When it does both, cancellation must be an earlier,
-  // separately numbered step so the configured sequence is deterministic.
+  // 6d5b. Tasks-only permits cancellation-only, task-only, and informational
+  // flows. If both tools are configured, their ordered steps must make the
+  // successful cancellation happen before task creation.
   if (mode === 'tasks-only') {
     for (const [flowName, flow] of Object.entries(flows)) {
       const cancellationIndex = flow.steps.findIndex((step) =>
@@ -470,7 +465,9 @@ export function validateFlowsAndTools(
       const taskIndex = flow.steps.findIndex((step) =>
         (step.tools || []).includes('create_task'),
       );
-      const cancellationAllowed = (flow.allowedTools || []).includes('manage_schedule_block_status');
+      const cancellationAllowed = (flow.allowedTools || []).includes(
+        'manage_schedule_block_status',
+      );
       const taskAllowed = (flow.allowedTools || []).includes('create_task');
       const usesCancellation = cancellationIndex >= 0 || cancellationAllowed;
       const usesTask = taskIndex >= 0 || taskAllowed;
@@ -518,19 +515,6 @@ export function validateFlowsAndTools(
           `Flow '${flowName}' intent 'new_appointment_scheduling' allows schedule_block in allowedTools but does not have resolve_patient in any step. Add resolve_patient before the bot can use schedule_block to avoid booking with an unresolved patient.`,
         );
       }
-    }
-  }
-
-  // 6d7. cancellation flows must have responseTemplate
-  const cancellationFlows = Object.entries(flows).filter(
-    ([, flow]) => flow.intent === 'existing_appointment_cancellation',
-  );
-  for (const [flowName, flow] of cancellationFlows) {
-    if (!flow.responseTemplate) {
-      errors.push(
-        `Flow "${flowName}" (intent: existing_appointment_cancellation) must have a "responseTemplate". ` +
-          `The patient needs confirmation that the cancellation was processed.`,
-      );
     }
   }
 

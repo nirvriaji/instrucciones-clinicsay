@@ -88,8 +88,7 @@ export const StructuredLogicJsonSchema = {
                   additionalProperties: false,
                 },
               },
-              responseTemplate: { type: ['string', 'null'] },
-              responseTemplateMode: { type: ['string', 'null'], enum: ['literal', 'model'] },
+                responseTemplateKey: { type: ['string', 'null'], description: 'Optional key into the responseTemplates registry.' },
               allowedTools: { type: ['array', 'null'], items: { type: 'string', enum: ALL_CHAT_TOOL_NAMES } },
               allowsSilence: { type: ['boolean', 'null'] },
             },
@@ -318,8 +317,8 @@ export const StructuredLogicJsonSchema = {
         'que corresponde a lo que pide el paciente. Se inyecta en el prompt de resolve_treatment ' +
         'junto al catálogo real. Usa los NOMBRES de los tratamientos tal cual están en el catálogo, ' +
         'nunca IDs. Ejemplo: "si el paciente es nuevo y pide un tratamiento concreto, lo recomendable ' +
-        'es una cita de valoración; los tratamientos de valoración son Primera Consulta y Valoración ' +
-        'Estética". No confundir con treatmentPolicyHints, que trata de políticas de scheduling.',
+        'es una cita de valoración; usa únicamente la opción de valoración que figure en serviceCatalog. ' +
+        'No confundir con treatmentPolicyHints, que trata de políticas de scheduling.',
     },
     treatmentPolicyHints: {
       type: 'array',

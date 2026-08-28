@@ -7,7 +7,7 @@
  * controls the language the LLM uses when interacting with patients.
  */
 
-import type { ChatToolDefinition } from './ports/secondary/chat/openai-conversation.port';
+import type { ChatToolDefinition } from '../../ports/secondary/chat/openai-conversation.port';
 
 // ========== Tool: check_availability ========== //
 
@@ -18,7 +18,8 @@ export const TOOL_CHECK_AVAILABILITY: ChatToolDefinition = {
     'Requires concrete dates from resolve_availability_query. ' +
     'Returns available continuous windows with doctor_id (professionalId) and sala_id (roomId) ' +
     'for each option. Use these IDs when calling schedule_block. ' +
-    'Scheduling policies are applied automatically by the system.',
+    'Scheduling policies are applied automatically by the system. ' +
+    'When the patient requests a specific time or professional that was NOT shown in the previously displayed slots (see HORARIOS_MOSTRADOS in context), use this tool to verify if that specific option exists. If it exists, it will be returned as a valid slot. If it does not exist, nearby alternatives will be returned with a clear message.',
   parameters: {
     type: 'object',
     properties: {
@@ -124,9 +125,10 @@ export const TOOL_RESOLVE_AVAILABILITY_QUERY: ChatToolDefinition = {
 export const TOOL_SCHEDULE_BLOCK: ChatToolDefinition = {
   name: 'schedule_block',
   description:
-    'Create a real appointment for a patient. Automatically creates a CarePlan, PlannedSessions, and ScheduleBlock. ' +
-    'Availability is re-checked before booking. ' +
-    'Patient identity MUST be resolved first using resolve_patient.',
+    'Crear una cita real para un paciente. ' +
+    'REQUIERE que resolve_patient haya devuelto un patientId antes de llamar. ' +
+    'USAR SOLO cuando el paciente confirma una fecha y hora de los HORARIOS_MOSTRADOS. ' +
+    'NUNCA llames schedule_block sin haber resuelto al paciente.',
   parameters: {
     type: 'object',
     properties: {
@@ -175,7 +177,7 @@ export const TOOL_CANCEL_FOR_RESCHEDULING: ChatToolDefinition = {
   description:
     'Cancel and release one existing appointment as preparation for rescheduling. ' +
     'Use only in a configured rescheduling flow, before asking for or checking the new date. ' +
-    'The backend validates the unique eligible appointment and returns the persisted target; never provide internal plan or session identifiers.',
+    'The backend validates the unique eligible appointment and returns the persisted target; never provide carePlanId or plannedSessionIds.',
   parameters: {
     type: 'object',
     additionalProperties: false,
@@ -255,9 +257,9 @@ export const TOOL_MANAGE_ALL_SCHEDULE_BLOCKS_FOR_DATE: ChatToolDefinition = {
 export const TOOL_CREATE_TASK: ChatToolDefinition = {
   name: 'create_task',
   description:
-    'Create an administrative task for human follow-up. ' +
-    'Use when the patient requests something the bot cannot resolve ' +
-    'directly (e.g. update personal data, request an invoice, ask about special pricing).',
+    'Crear una tarea administrativa para seguimiento humano. ' +
+    'En agendamiento nuevo, REQUIERE que resolve_patient haya confirmado nombre, apellido y telefono. ' +
+    'USAR cuando NO se pueda agendar directamente o cuando el paciente confirma un horario en modo seguimiento.',
   parameters: {
     type: 'object',
     properties: {
@@ -309,13 +311,14 @@ export const TOOL_RESOLVE_PATIENT: ChatToolDefinition = {
   name: 'resolve_patient',
   strict: true,
   description:
-    'Identify or create a patient before booking. ' +
-    'Use BEFORE schedule_block when patient identity is not confirmed. ' +
-    'The bot must ask the user for first name, last name, and phone during the conversation, and use ONLY the data provided by the user. ' +
-    'If the patient is not found, the system automatically creates them with the provided data. ' +
-    'If first name, last name, or phone is missing, the system returns status "needs_info" and lists the missing fields. ' +
-    'Set useInterlocutorPhone to true ONLY when the user explicitly asks to use their own contact number from Kommo (e.g., "a este número", "mi número"). ' +
-    'Returns the resolved patient ID, name, and phone.',
+    'Identificar o crear un paciente antes de agendar o crear una tarea de agendamiento. ' +
+    'USAR ANTES de schedule_block o create_task de agendamiento si no hay paciente resuelto. ' +
+    'Solo puedes pasar firstName, lastName o phone si el INTERLOCUTOR los dijo EXPLICITAMENTE en su mensaje actual o en mensajes anteriores de ESTA conversacion. ' +
+    'NUNCA uses CALLER_PHONE, ASSOCIATED_PATIENTS ni datos del contacto de Kommo como datos confirmados sin autorizacion del interlocutor. ' +
+    'El telefono debe ser el que el interlocutor haya proporcionado explicitamente; useInterlocutorPhone se conserva solo por compatibilidad y no sustituye phone. ' +
+    'Si falta alguno de estos datos, el sistema retorna status "needs_info" y pide los datos faltantes. ' +
+    'El sistema busca por telefono + nombre + apellido; si no encuentra ningun paciente, lo crea automaticamente con los datos proporcionados. ' +
+    'El campo isForInterlocutor solo sirve para auditoria/logging; NO altera la busqueda ni la creacion.',
   parameters: {
     type: 'object',
     additionalProperties: false,
@@ -330,7 +333,7 @@ export const TOOL_RESOLVE_PATIENT: ChatToolDefinition = {
       },
       phone: {
         type: 'string',
-        description: 'Patient phone number (with or without country code). Required unless useInterlocutorPhone is true, in which case the system uses the contact\'s phone number from Kommo.',
+        description: 'Patient phone number (with or without country code). Required and never substituted from the Kommo contact.',
       },
       isForInterlocutor: {
         type: 'boolean',
@@ -338,7 +341,7 @@ export const TOOL_RESOLVE_PATIENT: ChatToolDefinition = {
       },
       useInterlocutorPhone: {
         type: 'boolean',
-        description: 'Set to true ONLY when the user explicitly asks to use their own contact phone number from Kommo (e.g., "a este número", "mi número"). When true, the phone is taken from the contact context instead of the phone argument.',
+        description: 'Legacy compatibility flag. It is ignored for patient identity resolution; provide the explicit phone value instead.',
       },
     },
     required: ['firstName', 'lastName', 'phone', 'isForInterlocutor', 'useInterlocutorPhone'],
@@ -382,12 +385,13 @@ export const TOOL_RESOLVE_TREATMENT: ChatToolDefinition = {
     type: 'object',
     additionalProperties: false,
     properties: {
-      patientMessage: {
+      clarifiedTreatmentRequest: {
         type: 'string',
-        description: 'The exact message from the patient describing the treatment they want.',
+        description:
+          'Resumen o frase aclarada suficiente para identificar un tratamiento. Si aplica una valoración, debe mencionar explícitamente el nombre exacto del tratamiento de valoración y el área correspondiente, tomados de la guía o del catálogo de la clínica.',
       },
     },
-    required: ['patientMessage'],
+    required: ['clarifiedTreatmentRequest'],
   },
 };
 
