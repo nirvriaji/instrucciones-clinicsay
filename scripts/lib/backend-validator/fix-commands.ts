@@ -4,7 +4,7 @@
  * Extracted from validator.ts to separate fix application from blocking validation.
  */
 
-import type { StructuredLogic, StructuredLogicChatMode } from '../chat/structured-logic';
+import type { StructuredLogic, StructuredLogicChatMode } from './structured-logic';
 import { detectGaps } from './gaps';
 
 export type FixCommandType =

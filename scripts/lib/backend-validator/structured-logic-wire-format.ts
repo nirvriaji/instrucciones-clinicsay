@@ -17,7 +17,7 @@
  * Duplicates: last-wins (deterministic, matches Object.assign behavior).
  */
 
-import type { StructuredLogic, IntentDefinition, ToolFlow, Protocol, ResponseTemplate, GlobalSchedulingPolicy } from '../chat/structured-logic';
+import type { StructuredLogic, IntentDefinition, ToolFlow, Protocol, ResponseTemplate, GlobalSchedulingPolicy } from './structured-logic';
 import { StructuredLogicWireJsonSchema } from './structured-logic-wire-schema';
 import { extractAllowedKeys } from './schema-key-extractor';
 
@@ -187,7 +187,7 @@ export function fromWireFormat(wire: WireStructuredLogic): StructuredLogic {
       intent: entry.intent,
       description: entry.description,
       steps: entry.steps.map((s) => {
-        const step: import('../chat/structured-logic').ToolStep = {
+        const step: import('./structured-logic').ToolStep = {
           step: s.step,
           tools: s.tools,
           parallel: s.parallel,
@@ -237,9 +237,9 @@ export function fromWireFormat(wire: WireStructuredLogic): StructuredLogic {
     }
   }
 
-  const serviceCatalog: import('../chat/structured-logic').ServiceCatalog = {
+  const serviceCatalog: import('./structured-logic').ServiceCatalog = {
     treatments: wire.serviceCatalog.treatments.map((t) => {
-      const treatment: import('../chat/structured-logic').ChatService = { name: t.name };
+      const treatment: import('./structured-logic').ChatService = { name: t.name };
       if (t.description != null) treatment.description = t.description;
       if (t.priceDescription != null) treatment.priceDescription = t.priceDescription;
       if (t.requiresConsultation != null) treatment.requiresConsultation = t.requiresConsultation;
@@ -249,7 +249,7 @@ export function fromWireFormat(wire: WireStructuredLogic): StructuredLogic {
   };
   if (wire.serviceCatalog.packs != null) {
     serviceCatalog.packs = wire.serviceCatalog.packs.map((p) => {
-      const pack: import('../chat/structured-logic').ChatService = { name: p.name };
+      const pack: import('./structured-logic').ChatService = { name: p.name };
       if (p.description != null) pack.description = p.description;
       if (p.priceDescription != null) pack.priceDescription = p.priceDescription;
       if (p.requiresConsultation != null) pack.requiresConsultation = p.requiresConsultation;

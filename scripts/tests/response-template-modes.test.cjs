@@ -14,6 +14,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const RUN_VALIDATION = path.join(ROOT, 'scripts/lib/backend-validator/run-validation.ts');
+const DEMO_FULL = path.join(ROOT, 'sedes/demo/output/structured-logic.full.json');
 
 function runValidator(logic) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'response-template-modes-'));
@@ -37,6 +38,39 @@ function baseLogic() {
 }
 
 describe('response template modes', () => {
+  it('accepts the demo flow responseTemplateKey contract', () => {
+    const logic = JSON.parse(fs.readFileSync(DEMO_FULL, 'utf8'));
+
+    const result = runValidator(logic);
+
+    assert.strictEqual(result.valid, true, result.errors.join(' | '));
+    assert.ok(
+      Object.values(logic.toolOrchestration.flows).some((flow) => flow.responseTemplateKey),
+      'demo flows must use responseTemplateKey',
+    );
+    assert.ok(logic.protocols.cancellation.responseTemplate, 'protocol responseTemplate remains valid');
+  });
+
+  it('rejects legacy response fields in flows', () => {
+    const logic = baseLogic();
+    const flow = logic.toolOrchestration.flows.farewell;
+    delete flow.responseTemplateKey;
+    flow.responseTemplate = 'legacy response';
+    flow.responseTemplateMode = 'literal';
+
+    const result = runValidator(logic);
+
+    assert.strictEqual(result.valid, false, 'legacy flow response fields must block validation');
+    assert.ok(
+      result.errors.some((message) => message.includes('flows.farewell.responseTemplate')),
+      `expected legacy responseTemplate to be rejected, got: ${result.errors.join(' | ')}`,
+    );
+    assert.ok(
+      result.errors.some((message) => message.includes('flows.farewell.responseTemplateMode')),
+      `expected responseTemplateMode to be rejected, got: ${result.errors.join(' | ')}`,
+    );
+  });
+
   it('rejects literal mode for reschedule inquiries', () => {
     const logic = baseLogic();
     logic.responseTemplates.reschedule_inquiry_full.mode = 'literal';

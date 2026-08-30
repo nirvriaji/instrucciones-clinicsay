@@ -5,7 +5,7 @@
  * to import only the constants they need instead of the full validator.
  */
 
-import type { StructuredLogicChatMode } from '../chat/structured-logic';
+import type { StructuredLogicChatMode } from './structured-logic';
 
 /**
  * Critical intent categories every clinic must have a business rule for.

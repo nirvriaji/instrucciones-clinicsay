@@ -5,7 +5,7 @@
  * from basic schema and structural validations.
  */
 
-import type { BusinessRule, StructuredLogic } from '../../chat/structured-logic';
+import type { BusinessRule, StructuredLogic } from '../structured-logic';
 import { StructuredLogicJsonSchema } from '../structured-logic-json-schema';
 import { extractAllowedKeys } from '../schema-key-extractor';
 

@@ -160,8 +160,8 @@ function checkContent(data) {
       errors.push({ section: 'toolOrchestration.flows', issue: 'incomplete', message: `Flow "${name}" no tiene descripción` });
     }
     if (!Array.isArray(flow.steps) || flow.steps.length === 0) {
-      if (!flow.responseTemplate && !flow.allowsSilence) {
-        errors.push({ section: 'toolOrchestration.flows', issue: 'incomplete', message: `Flow "${name}" no tiene steps ni responseTemplate/allowsSilence` });
+      if (!flow.responseTemplateKey && !flow.allowsSilence) {
+        errors.push({ section: 'toolOrchestration.flows', issue: 'incomplete', message: `Flow "${name}" no tiene steps ni responseTemplateKey/allowsSilence` });
       }
     }
   }

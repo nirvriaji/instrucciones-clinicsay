@@ -7,7 +7,7 @@
  * controls the language the LLM uses when interacting with patients.
  */
 
-import type { ChatToolDefinition } from '../../ports/secondary/chat/openai-conversation.port';
+import type { ChatToolDefinition } from './ports/secondary/chat/openai-conversation.port';
 
 // ========== Tool: check_availability ========== //
 

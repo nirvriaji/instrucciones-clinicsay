@@ -281,19 +281,16 @@ function validateSchema(data, errors) {
               }
             }
           }
-          // Backend requires a patient-facing responseTemplate when a flow mutates schedule blocks
+          // Flows reference patient-facing responses through the responseTemplates registry.
           const usesScheduleBlockTool = (flow.steps || []).some(s => Array.isArray(s.tools) && s.tools.some(t => ['manage_schedule_block_status', 'manage_all_schedule_blocks_for_date'].includes(t)));
-          if (usesScheduleBlockTool && (!flow.responseTemplate || String(flow.responseTemplate).trim() === '')) {
-            errors.push({ category: 'business', message: `Flow '${name}' uses 'manage_schedule_block_status' but has no 'responseTemplate'. The backend will use a generic fallback. Consider adding a custom responseTemplate for better patient experience.` });
+          if (usesScheduleBlockTool && !flow.responseTemplateKey) {
+            errors.push({ category: 'business', message: `Flow '${name}' uses 'manage_schedule_block_status' but has no 'responseTemplateKey'. Add a key from responseTemplates for the patient-facing response.` });
           }
 
-          // Search tools must NOT have literal responseTemplates — they need freedom to synthesise retrieved results
-          const searchTools = ['query_knowledge_base', 'query_protocol'];
-          const usesSearchTool = (flow.steps || []).some(s => Array.isArray(s.tools) && s.tools.some(t => searchTools.includes(t)));
-          if (usesSearchTool && flow.responseTemplate) {
-            const templateMode = flow.responseTemplateMode ?? 'literal';
-            if (templateMode === 'literal') {
-              errors.push({ category: 'business', message: `Flow '${name}' uses search tools (${searchTools.join('/')}) but has a literal 'responseTemplate'. Search tools must synthesise retrieved results into an answer, so a forced literal template makes them useless. Remove responseTemplate or set responseTemplateMode to 'model'.` });
+          if (flow.responseTemplateKey !== undefined && flow.responseTemplateKey !== null) {
+            validateType(flow.responseTemplateKey, 'string', `flows.${name}.responseTemplateKey`, errors);
+            if (typeof flow.responseTemplateKey === 'string' && !availableTemplates.has(flow.responseTemplateKey)) {
+              errors.push({ category: 'cross-ref', message: `Flow "${name}" references unknown response template key: "${flow.responseTemplateKey}"` });
             }
           }
         }
@@ -848,23 +845,23 @@ function validateFlowSafety(data, mode, errors) {
     }
   }
 
-  // 7. existing_appointment_cancellation flows must have responseTemplate
+  // 7. existing_appointment_cancellation flows must have responseTemplateKey
   for (const [flowName, flow] of Object.entries(flows)) {
-    if (flow.intent === 'existing_appointment_cancellation' && !flow.responseTemplate) {
+    if (flow.intent === 'existing_appointment_cancellation' && !flow.responseTemplateKey) {
       errors.push({
         category: 'business',
-        message: `Flow "${flowName}" (intent: existing_appointment_cancellation) must have a "responseTemplate". The patient needs confirmation that the cancellation was processed.`,
+        message: `Flow "${flowName}" (intent: existing_appointment_cancellation) must have a "responseTemplateKey". The patient needs confirmation that the cancellation was processed.`,
       });
     }
   }
 
-  // 8. Flows using manage_schedule_block_status should have responseTemplate
+  // 8. Flows using manage_schedule_block_status should have responseTemplateKey
   for (const [flowName, flow] of Object.entries(flows)) {
     const usesStatusTool = Array.isArray(flow.steps) && flow.steps.some((step) => (step.tools || []).includes('manage_schedule_block_status'));
-    if (usesStatusTool && !flow.responseTemplate) {
+    if (usesStatusTool && !flow.responseTemplateKey) {
       errors.push({
         category: 'business',
-        message: `Flow '${flowName}' uses 'manage_schedule_block_status' but has no 'responseTemplate'. The backend will use a generic fallback. Consider adding a custom responseTemplate for better patient experience.`,
+        message: `Flow '${flowName}' uses 'manage_schedule_block_status' but has no 'responseTemplateKey'. Add a key from responseTemplates for the patient-facing response.`,
       });
     }
   }
@@ -918,18 +915,6 @@ function validateCrossReferences(data, errors) {
 
   // Check for duplicate flow names
   // (Object keys are inherently unique, so no check needed)
-
-  // Check responseTemplates referenced by flows exist
-  const templateKeys = new Set(Object.keys(data.responseTemplates || {}));
-  for (const [name, flow] of Object.entries(flows)) {
-    if (flow.responseTemplate && !templateKeys.has(flow.responseTemplate)) {
-      // responseTemplate can be a literal string, not just a key
-      // So we only flag if it looks like a key reference (short, no spaces)
-      if (flow.responseTemplate.length < 50 && !flow.responseTemplate.includes(' ')) {
-        errors.push({ category: 'cross-ref', message: `Flow "${name}" references unknown template key: "${flow.responseTemplate}"` });
-      }
-    }
-  }
 
   // Anti-circular + known-capability checks on step requirements
   validateStepRequirements(data, errors);

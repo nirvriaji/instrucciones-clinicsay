@@ -5,10 +5,10 @@
  * from structural and cross-reference validations.
  */
 
-import type { StructuredLogic, StructuredLogicChatMode } from '../../chat/structured-logic';
+import type { StructuredLogic, StructuredLogicChatMode } from '../structured-logic';
 import { CRITICAL_INTENTS } from '../constants';
 import { ALL_CHAT_TOOL_NAMES, StructuredLogicJsonSchema } from '../structured-logic-json-schema';
-import { ALL_CHAT_TOOLS_TASKS_ONLY } from '../../chat/tool-definitions-tasks-only';
+import { ALL_CHAT_TOOLS_TASKS_ONLY } from '../tool-definitions-tasks-only';
 import { extractAllowedKeys } from '../schema-key-extractor';
 
 const ALLOWED_CAPABILITY_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.capabilities.properties');

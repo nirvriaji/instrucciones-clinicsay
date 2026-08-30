@@ -5,7 +5,7 @@
  * from domain-specific and cross-reference validations.
  */
 
-import type { StructuredLogic, ToolFlow } from '../../chat/structured-logic';
+import type { StructuredLogic, ToolFlow } from '../structured-logic';
 import { StructuredLogicJsonSchema } from '../structured-logic-json-schema';
 import { extractAllowedKeys } from '../schema-key-extractor';
 

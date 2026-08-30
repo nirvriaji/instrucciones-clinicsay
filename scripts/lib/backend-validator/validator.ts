@@ -5,10 +5,10 @@
  * All validation logic lives in ./validators/ modules.
  */
 
-import type { StructuredLogicChatMode } from '../chat/structured-logic';
-import { validateStructuredLogicMinimum } from '../chat/structured-logic-minimum';
+import type { StructuredLogicChatMode } from './structured-logic';
+import { validateStructuredLogicMinimum } from './structured-logic-minimum';
 
-export { validateStructuredLogicMinimum } from '../chat/structured-logic-minimum';
+export { validateStructuredLogicMinimum } from './structured-logic-minimum';
 import { detectModeAdvisoryGaps } from './advisory/mode-advisory';
 import { detectGaps } from './gaps';
 import { applyFix, detectFixCommand } from './fix-commands';
@@ -81,7 +81,7 @@ export function validateStructuredLogic(
     return { valid: false, errors: ['structuredLogic must be an object'] };
   }
 
-  const sl = logic as Partial<import('../chat/structured-logic').StructuredLogic>;
+  const sl = logic as Partial<import('./structured-logic').StructuredLogic>;
 
   // 1. Basic schema validation
   validateBasicSchema(sl, errors);

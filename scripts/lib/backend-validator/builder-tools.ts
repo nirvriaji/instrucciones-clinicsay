@@ -1,5 +1,5 @@
-import type { StructuredLogic, StructuredLogicChatMode } from '../chat/structured-logic';
-import { buildDefaultStructuredLogicForMode } from '../chat/default-structured-logic';
+import type { StructuredLogic, StructuredLogicChatMode } from './structured-logic';
+import { buildDefaultStructuredLogicForMode } from './default-structured-logic';
 
 /**
  * Tools for the chatbot instruction builder agent.

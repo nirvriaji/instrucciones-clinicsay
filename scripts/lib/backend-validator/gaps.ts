@@ -4,7 +4,7 @@
  * Extracted from validator.ts to separate gap analysis from blocking validation.
  */
 
-import type { StructuredLogic, StructuredLogicChatMode } from '../chat/structured-logic';
+import type { StructuredLogic, StructuredLogicChatMode } from './structured-logic';
 import type { LogicGap } from './validator';
 import { CRITICAL_INTENTS } from './constants';
 import { detectModeAdvisoryGaps } from './advisory/mode-advisory';
