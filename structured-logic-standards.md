@@ -127,7 +127,12 @@ The person sending the message (interlocutor) may be the patient, a partner, a f
   toolOrchestration: ToolOrchestration; // Required
   rules: BusinessRule[];              // Required. MUST contain at least one rule. Never empty.
   protocols?: Record<string, Protocol>;  // Optional
-  treatmentSelectionGuidance?: string; // Optional. Prose guidance for resolve_treatment when the patient seems new.
+  treatmentSelectionGuidance?: string; // Optional. Prose guidance injected into the ORCHESTRATOR prompt to decide valuation vs. treatment for new/returning patients. Not part of the internal resolve_treatment call.
+  maxVisibleSlots?: number;        // Optional. Integer 1-50 (default 9). Max availability slots shown to the patient.
+  globalSchedulingPolicies?: Array<{  // Optional. Allowed start minutes for bookings via chat.
+    treatmentId: string | null;    // null = clinic-wide policy; a real ID = that treatment only (wins over the global one).
+    allowedStartMinutes: number[]; // Non-empty unique integers 0-59. Absent entirely = platform default (multiples of 5).
+  }>;
   errorCategories?: ErrorCategory[];  // Optional
 }
 ```
@@ -149,14 +154,12 @@ type IntentDefinition = {
 
 ```typescript
 {
-  scheduling: boolean;        // Can schedule real appointments?
-  products: boolean;          // Sells physical products?
-  shipping: boolean;          // Offers shipping?
   sensitiveSituations: boolean;  // Handles delicate situations?
-  protocols: boolean;         // Has specific protocols?
-  reminders: boolean;         // Sends reminders?
+  protocols: boolean;            // Has specific protocols?
 }
 ```
+
+The current schema requires only these two. Do NOT add `scheduling`, `reminders` or other keys: unknown properties are rejected. The chat mode (full vs tasks-only) decides scheduling capability — it is not a `capabilities` flag.
 
 ### `ToolOrchestration` and `ToolFlow`
 
@@ -174,10 +177,12 @@ type ToolFlow = {
     excludedCapabilities?: string[];
   };
   steps: ToolStep[];          // Ordered flow steps.
-  responseTemplate?: string;   // Optional. Exact text the bot MUST use after completing this flow.
+  responseTemplateKey?: string; // Optional. Key into the responseTemplates registry. Never shown to the patient.
   allowedTools?: string[];    // Optional. Explicit tool whitelist for the LLM in this flow.
 };
 ```
+
+Flows reference registry entries by key; the text lives in `responseTemplates` (`{ text, mode: "literal" | "model" }`). The legacy per-flow `responseTemplate`/`responseTemplateMode` fields are rejected by the validator.
 
 ### `ToolStep`
 
@@ -411,7 +416,7 @@ The **last bot message** determines the meaning of short replies.
 **Symptom:** a reschedule flow uses `manage_schedule_block_status` as its preparatory cancellation, often in parallel with `resolve_availability_query`. **Why wrong:** definitive status management is not the rescheduling contract, and the flow can lose the backend-owned target or cancel before a valid replacement path. **Fix:** use `cancel_for_rescheduling` → `resolve_availability_query` → `check_availability` → `schedule_block` in full mode. Use `manage_schedule_block_status` for definitive cancellation, including non-attendance; offer a new appointment only after the patient accepts it.
 
 ### "Closing Template on a Search"
-**Symptom:** a flow whose terminal step is `check_availability` / `resolve_*` while declaring `responseTemplate: "He movido tu cita"`. **Why wrong:** the template is the flow's closing line, so the bot claims the change is done right after merely listing slots. **Fix:** end the flow with the acting tool and keep the template there; or drop the template and let the model synthesise the search results.
+**Symptom:** a flow whose terminal step is `check_availability` / `resolve_*` while declaring `responseTemplateKey` that points to a closing template like "He movido tu cita". **Why wrong:** the template is the flow's closing line, so the bot claims the change is done right after merely listing slots. **Fix:** end the flow with the acting tool (`schedule_block`) and reference the closing template there; or omit `responseTemplateKey` and let the model synthesise the search results.
 
 ### "Flow Without Differentiator"
 **Symptom:** two flows have semantically overlapping descriptions. **Why wrong:** the classifier cannot distinguish them. **Fix:** add clear differentiators ("NEW" vs. "ALREADY BOOKED", "reserve" vs. "move").

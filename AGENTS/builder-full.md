@@ -586,6 +586,17 @@ Reutiliza estos ids exactos para que flows, rules y classifier estén alineados.
 **Modo `literal`:** El bot usa el texto exacto (con placeholders reemplazados). Use para mensajes cortos y precisos.
 **Modo `model`:** El bot usa el texto como guía pero puede adaptar el tono. Use cuando se necesita naturalidad.
 
+#### Claims operativos: los deriva el servidor, no el modelo
+
+Los resultados operativos (`appointment_created`, `appointment_cancelled`, `appointment_rescheduled`, `reschedule_target_released`, `availability_presented`) **no son configurables en este JSON ni los declara el modelo**: el backend los deriva únicamente de ejecuciones reales de tools en el turno actual. Esto significa:
+
+- El bot no puede afirmar una cita creada sin un `schedule_block` exitoso en ese turno.
+- `appointment_rescheduled` solo existe si hubo liberación del target (`cancel_for_rescheduling`) **y** creación de la nueva cita (`schedule_block`) en el mismo turno.
+- `availability_presented` solo existe si `check_availability` devolvió al menos un hueco real.
+- Si el modelo declara un claim operativo sin evidencia, el backend lo ignora y registra el descarte; la respuesta se sustituye por una salida segura.
+
+**Implicación para el asesor:** no hay nada que configurar — pero tampoco nada que pueda falsearse. Si quieres que el bot "confirme" algo, el flow debe ejecutar la tool que lo prueba.
+
 **Ejemplos:**
 - confirmación: "Tu cita ha quedado confirmada. Te esperamos." (genérico, válido)
 - confirmación con placeholders: "Tu cita del {fecha} a las {hora} ha quedado confirmada." (más informativo, también válido)
@@ -749,7 +760,7 @@ Deben existir intents y rules para: `existing_appointment_confirmation`, `existi
 - [ ] Las capabilities coinciden con `_templates/base-full.json` y no contienen propiedades inventadas.
 - [ ] Flow `existing_appointment_rescheduling` declara `alternativeRequiredCapabilities: ["hasCancelledRescheduleTarget"]` en `selection`.
 - [ ] Flow `existing_appointment_reschedule_inquiry` en full mode tiene `resolve_availability_query` + `check_availability` en steps o allowedTools.
-- [ ] `treatmentSelectionGuidance` existe en la raíz del JSON si el asesor quiere guiar `resolve_treatment` para pacientes nuevos.
+- [ ] `treatmentSelectionGuidance` existe en la raíz del JSON si el asesor quiere guiar al orquestador (paciente nuevo/existente, valoración vs. tratamiento) — se inyecta en el prompt del orquestador, no en la llamada interna de `resolve_treatment`.
 - [x] Todos los archivos de input han sido leídos por bloques de ~100 líneas.
 - [x] La información se extrajo incrementalmente, bloque por bloque.
 - [x] El JSON se generó sección por sección, no de una sola vez.

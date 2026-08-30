@@ -602,6 +602,16 @@ Todo flow que use `manage_schedule_block_status` puede tener `responseTemplateKe
 
 Si no se proporciona `responseTemplateKey`, el backend registra la ausencia y usa `patientOutcome` cuando exista o deja que la IA genere una respuesta contextual. Se recomienda personalizar el registro por clínica, pero no es obligatorio.
 
+#### Claims operativos: los deriva el servidor, no el modelo
+
+Los resultados operativos (`appointment_created`, `appointment_cancelled`, `appointment_rescheduled`, `reschedule_target_released`, `availability_presented`) **no son configurables en este JSON ni los declara el modelo**: el backend los deriva únicamente de ejecuciones reales de tools en el turno actual. En tasks-only, los relevantes son:
+
+- `manage_schedule_block_status` exitoso (confirmar/cancelar/marcar en camino) → claim de la operación correspondiente.
+- `create_task` no es un claim de cita: una tarea creada no prueba que exista una cita.
+- Si el modelo declara un claim operativo sin evidencia, el backend lo ignora y registra el descarte.
+
+**Implicación para el asesor:** nada que configurar; la garantía es estructural.
+
 #### Tool scoping con `allowedTools` (opcional pero recomendado)
 
 `allowedTools` es una lista explícita de tool names que el LLM puede usar dentro de un flow. Si está presente, el backend restringe las tools disponibles a esa lista. Si no está, el backend usa la unión de tools de todos los `steps`.
@@ -731,7 +741,7 @@ Este ejemplo recopila información y crea una tarea administrativa. No ejecuta s
 - `ToolStep.tools` solo de las 6 tools disponibles: `create_task`, `manage_schedule_block_status`, `manage_all_schedule_blocks_for_date`, `lookup_patient`, `query_protocol`, `query_knowledge_base`.
 - `Protocol.responseTemplate` string no vacío si existe.
 - Prohibido intent `price_inquiry` (usar `general_inquiry` + `serviceCatalog`).
-- Flows con `query_knowledge_base` o `query_protocol` NO deben tener `responseTemplate` con modo `literal`.
+- Flows con `query_knowledge_base` o `query_protocol` NO deben usar `responseTemplateKey` cuya entrada de registro tenga `mode: "literal"`.
 
 #### Intents/rules mínimos
 Deben existir intents y rules para: `existing_appointment_confirmation`, `existing_appointment_cancellation`, `existing_appointment_inquiry`, `new_appointment_scheduling`, `general_inquiry`, `human_follow_up`, `farewell`.
