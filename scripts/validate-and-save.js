@@ -28,6 +28,7 @@ const logger = require('./lib/logger.cjs');
 const SCHEMA_PATH = getSchemaPath();
 const JSON_SCHEMA = JSON.parse(fs.readFileSync(SCHEMA_PATH, 'utf8'));
 
+const ALLOWED_SCHEDULING_POLICY_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.globalSchedulingPolicies.items.properties');
 const ALLOWED_CAPABILITY_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.capabilities.properties');
 const ALLOWED_TOOL_ORCHESTRATION_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.toolOrchestration.properties');
 const ALLOWED_FLOW_KEYS = extractAllowedKeys(JSON_SCHEMA, 'properties.toolOrchestration.properties.flows.additionalProperties.properties');
@@ -87,7 +88,8 @@ function rejectUnknownKeys(obj, allowedKeys, path, errors) {
 function validateSchema(data, errors) {
   // 0. Top-level strict schema (reject unknown properties)
   const allowedTopLevelKeys = new Set([
-    'version', 'capabilities', 'identity', 'styleRules', 'responseTemplates',
+    'version', 'maxVisibleSlots', 'globalSchedulingPolicies', 'capabilities',
+    'identity', 'styleRules', 'responseTemplates',
     'faq', 'serviceCatalog', 'intents', 'toolOrchestration', 'rules', 'protocols',
     'errorCategories', 'treatmentPolicyHints', 'treatmentSelectionGuidance',
     'systemPromptInstructions', 'conversationResumption',
@@ -99,6 +101,47 @@ function validateSchema(data, errors) {
 
   // version
   validateType(data.version, 'string', 'version', errors);
+
+  // maxVisibleSlots + globalSchedulingPolicies (mirrors backend validateBasicSchema)
+  if (data.maxVisibleSlots !== undefined) {
+    if (!Number.isInteger(data.maxVisibleSlots) || data.maxVisibleSlots < 1 || data.maxVisibleSlots > 50) {
+      errors.push({ category: 'schema', message: 'maxVisibleSlots must be an integer between 1 and 50' });
+    }
+  }
+  if (data.globalSchedulingPolicies !== undefined) {
+    if (!Array.isArray(data.globalSchedulingPolicies)) {
+      errors.push({ category: 'schema', message: 'globalSchedulingPolicies must be an array' });
+    } else {
+      const seenPolicyTreatmentIds = new Set();
+      data.globalSchedulingPolicies.forEach((policy, index) => {
+        if (!policy || typeof policy !== 'object' || Array.isArray(policy)) {
+          errors.push({ category: 'schema', message: `globalSchedulingPolicies[${index}] must be an object` });
+          return;
+        }
+        rejectUnknownKeys(policy, ALLOWED_SCHEDULING_POLICY_KEYS, `globalSchedulingPolicies[${index}]`, errors);
+        if (policy.treatmentId !== null && typeof policy.treatmentId !== 'string') {
+          errors.push({ category: 'schema', message: `globalSchedulingPolicies[${index}].treatmentId must be a string or null` });
+        } else if (seenPolicyTreatmentIds.has(policy.treatmentId)) {
+          errors.push({ category: 'schema', message: `globalSchedulingPolicies[${index}].treatmentId is duplicated: each treatmentId may appear only once (null identifies the single clinic-wide policy)` });
+        } else {
+          seenPolicyTreatmentIds.add(policy.treatmentId);
+        }
+        const minutes = policy.allowedStartMinutes;
+        if (!Array.isArray(minutes) || minutes.length === 0) {
+          errors.push({ category: 'schema', message: `globalSchedulingPolicies[${index}].allowedStartMinutes must be a non-empty array` });
+        } else {
+          const seen = new Set();
+          for (const minute of minutes) {
+            if (!Number.isInteger(minute) || minute < 0 || minute > 59 || seen.has(minute)) {
+              errors.push({ category: 'schema', message: `globalSchedulingPolicies[${index}].allowedStartMinutes must contain unique integers between 0 and 59` });
+              break;
+            }
+            seen.add(minute);
+          }
+        }
+      });
+    }
+  }
 
   // capabilities
   if (data.capabilities) {

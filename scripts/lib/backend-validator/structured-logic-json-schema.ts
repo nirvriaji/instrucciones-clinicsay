@@ -16,8 +16,8 @@
  * @see StructuredLogicWireJsonSchema — wire format used by the LLM.
  */
 
-import { ALL_CHAT_TOOLS } from './tool-definitions-full';
-import { ALL_CHAT_TOOLS_TASKS_ONLY } from './tool-definitions-tasks-only';
+import { ALL_CHAT_TOOLS } from '../chat/tool-definitions-full';
+import { ALL_CHAT_TOOLS_TASKS_ONLY } from '../chat/tool-definitions-tasks-only';
 
 export const ALL_CHAT_TOOL_NAMES = [
   ...new Set([...ALL_CHAT_TOOLS.map((t) => t.name), ...ALL_CHAT_TOOLS_TASKS_ONLY.map((t) => t.name)]),
@@ -27,6 +27,24 @@ export const StructuredLogicJsonSchema = {
   type: 'object',
   properties: {
     version: { type: 'string' },
+    maxVisibleSlots: { type: 'integer', minimum: 1, maximum: 50 },
+    globalSchedulingPolicies: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          treatmentId: { type: ['string', 'null'] },
+          allowedStartMinutes: {
+            type: 'array',
+            minItems: 1,
+            uniqueItems: true,
+            items: { type: 'integer', minimum: 0, maximum: 59 },
+          },
+        },
+        required: ['treatmentId', 'allowedStartMinutes'],
+        additionalProperties: false,
+      },
+    },
     capabilities: {
       type: 'object',
       properties: {

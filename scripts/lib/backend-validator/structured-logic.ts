@@ -311,6 +311,13 @@ export type TreatmentPolicyHint = {
   }>;
 };
 
+export type GlobalSchedulingPolicy = {
+  /** Treatment identifier, or null for the clinic-wide policy. */
+  treatmentId: string | null;
+  /** Allowed appointment start minutes within an hour. */
+  allowedStartMinutes: number[];
+};
+
 export type SystemPromptInstructions = {
   /** Notes for the advisor/instruction builder (not shown to the LLM) */
   notesForAdvisor: string[];
@@ -363,6 +370,10 @@ export type ServiceCatalog = {
 export type StructuredLogic = {
   /** Schema version */
   version: string;
+  /** Maximum number of availability slots shown to the patient. */
+  maxVisibleSlots?: number;
+  /** Optional chat scheduling start-minute policies, applied in a later runtime phase. */
+  globalSchedulingPolicies?: GlobalSchedulingPolicy[];
   /** What capabilities this clinic has */
   capabilities: ClinicCapabilities;
   /** Bot identity and clinic contact information */
@@ -436,7 +447,7 @@ export const BASELINE_INTENTS: IntentCatalog = {
   },
   existing_appointment_cancellation: {
     description:
-      'El paciente cancela una cita existente o indica que no podrá asistir. ' +
+      'El paciente cancela una cita existente o indica que no podrá asistir sin pedir reagendarla. ' +
       'NO preguntar el motivo al paciente. El campo "reason" es obligatorio en la tool; usar "Solicitud del paciente". ' +
       'Si el paciente cancela y luego pide "restablecer" en el mismo turno, tratar como new_appointment_scheduling (reagendar).',
     examples: ['cancela mi cita', 'no puedo ir mañana', 'anula la sesion'],
@@ -447,7 +458,7 @@ export const BASELINE_INTENTS: IntentCatalog = {
   },
   new_appointment_scheduling: {
     description:
-      'El paciente quiere reservar una NUEVA cita o consultar disponibilidad. ' +
+      'El paciente quiere reservar una NUEVA cita, sin referirse a mover una cita ya reservada, o consultar disponibilidad. ' +
       'También incluye "restablecer" una cita que acaba de cancelar en este mismo turno de conversacion, ' +
       'usando los datos disponibles en el historial de tool outputs del turno actual.',
     examples: ['quiero pedir cita', '¿tenéis hueco el viernes?', 'restablecer la cita que acabo de anular'],
@@ -467,6 +478,7 @@ export const BASELINE_INTENTS: IntentCatalog = {
   existing_appointment_rescheduling: {
     description:
       'El paciente quiere MOVER una cita ya agendada a otra fecha u hora. ' +
+      'Tambien incluye que no podra asistir y pide explicitamente rebook, reagendar, mover o cambiar la cita, incluso si la cita es para un familiar o tercero y el mensaje esta en ingles. ' +
       'Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, ' +
       '(c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), ' +
       '(d) "restablecer" una cita tras cancelarla en el mismo turno de conversacion. ' +
@@ -479,6 +491,8 @@ export const BASELINE_INTENTS: IntentCatalog = {
       'hasta que el paciente ha visto opciones reales y ha escogido una.',
     examples: [
       '¿podemos cambiar mi cita al jueves?',
+      "Barnaby won't be able to attend, please rebook us",
+      'La cita de mi hijo es el viernes, ¿podemos cambiarla?',
       'muevela a la tarde',
       'adelantala a las 10h',
       'la cita es para mi pareja, no para mi',
@@ -530,6 +544,8 @@ export const BASELINE_INTENTS: IntentCatalog = {
  */
 export const DEFAULT_STRUCTURED_LOGIC: StructuredLogic = {
   version: '1.0',
+  maxVisibleSlots: 9,
+  globalSchedulingPolicies: [],
   capabilities: {
     sensitiveSituations: false,
     protocols: false,

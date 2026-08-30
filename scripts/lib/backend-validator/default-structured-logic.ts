@@ -71,6 +71,7 @@ function buildDefaultStyleRules(mode: 'full' | 'tasks-only'): NonNullable<Struct
       'Si el paciente ya menciono un tratamiento o sintoma, NO pedirle manualmente "que tratamiento necesitas". Usar lo que ya dijo.',
       'Si el paciente ya propuso un horario (ej. "a las 4"), NO pedirle manualmente "que horario prefieres". Usar la fecha/hora que propuso.',
       'REGLA DE ORO (resolve_patient): Solo puedes pasar nombre, apellido o telefono a resolve_patient si el INTERLOCUTOR los dijo EXPLICITAMENTE en esta conversacion. NUNCA uses CALLER_PHONE, ASSOCIATED_PATIENTS ni los datos del contacto de Kommo como si fueran confirmados por el paciente. Si el paciente dice "quiero una cita" sin datos, deja los campos vacios y el sistema te pedira que los preguntes.',
+      'TITULAR DE LA CITA: Si el bot pidio los datos de una persona y el interlocutor proporciona datos que parecen corresponder a otra, no continues silenciosamente ni resuelvas/agendes todavia. Pide una confirmacion explicita de quien sera el titular de la cita y usa solo los datos confirmados. No deduzcas la discrepancia mediante reglas de texto; usa el contexto de la conversacion y la respuesta del interlocutor.',
     ],
     mustOfferHumanHandoff: true,
     timeGreetingRanges: [
@@ -959,6 +960,8 @@ function buildDefaultTreatmentSelectionGuidance(): string {
 export function buildDefaultStructuredLogicForMode(mode: 'full' | 'tasks-only'): StructuredLogic {
   const base: StructuredLogic = {
     version: '1.0',
+    maxVisibleSlots: 9,
+    globalSchedulingPolicies: [],
     capabilities: buildDefaultCapabilities(mode),
     identity: buildDefaultIdentity(mode),
     styleRules: buildDefaultStyleRules(mode),

@@ -27,6 +27,24 @@ export const StructuredLogicJsonSchema = {
   type: 'object',
   properties: {
     version: { type: 'string' },
+    maxVisibleSlots: { type: 'integer', minimum: 1, maximum: 50 },
+    globalSchedulingPolicies: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          treatmentId: { type: ['string', 'null'] },
+          allowedStartMinutes: {
+            type: 'array',
+            minItems: 1,
+            uniqueItems: true,
+            items: { type: 'integer', minimum: 0, maximum: 59 },
+          },
+        },
+        required: ['treatmentId', 'allowedStartMinutes'],
+        additionalProperties: false,
+      },
+    },
     capabilities: {
       type: 'object',
       properties: {

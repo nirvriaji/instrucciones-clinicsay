@@ -12,6 +12,7 @@ import { extractAllowedKeys } from '../schema-key-extractor';
 const ALLOWED_TOOL_ORCHESTRATION_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.toolOrchestration.properties');
 const ALLOWED_SERVICE_CATALOG_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.serviceCatalog.properties');
 const ALLOWED_CHAT_SERVICE_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.serviceCatalog.properties.treatments.items.properties');
+const ALLOWED_SCHEDULING_POLICY_KEYS = extractAllowedKeys(StructuredLogicJsonSchema, 'properties.globalSchedulingPolicies.items.properties');
 
 function rejectUnknownKeys(
   obj: Record<string, unknown> | null | undefined,
@@ -33,6 +34,58 @@ export function validateBasicSchema(
 ): void {
   // 1. Basic schema validation
   if (!sl.version) errors.push('version is required. Use "1.0" for the current schema version.');
+  if (
+    sl.maxVisibleSlots !== undefined &&
+    (!Number.isInteger(sl.maxVisibleSlots) || sl.maxVisibleSlots < 1 || sl.maxVisibleSlots > 50)
+  ) {
+    errors.push('maxVisibleSlots must be an integer between 1 and 50');
+  }
+  if (sl.globalSchedulingPolicies !== undefined) {
+    if (!Array.isArray(sl.globalSchedulingPolicies)) {
+      errors.push('globalSchedulingPolicies must be an array');
+    } else {
+      const seenPolicyTreatmentIds = new Set<string | null>();
+      sl.globalSchedulingPolicies.forEach((policy, index) => {
+        if (!policy || typeof policy !== 'object' || Array.isArray(policy)) {
+          errors.push(`globalSchedulingPolicies[${index}] must be an object`);
+          return;
+        }
+        rejectUnknownKeys(
+          policy as unknown as Record<string, unknown>,
+          ALLOWED_SCHEDULING_POLICY_KEYS,
+          `globalSchedulingPolicies[${index}]`,
+          errors,
+        );
+        if (policy.treatmentId !== null && typeof policy.treatmentId !== 'string') {
+          errors.push(`globalSchedulingPolicies[${index}].treatmentId must be a string or null`);
+        } else if (seenPolicyTreatmentIds.has(policy.treatmentId)) {
+          errors.push(
+            `globalSchedulingPolicies[${index}].treatmentId is duplicated: each treatmentId may appear only once ` +
+              `(null identifies the single clinic-wide policy)`,
+          );
+        } else {
+          seenPolicyTreatmentIds.add(policy.treatmentId);
+        }
+        const minutes = policy.allowedStartMinutes;
+        if (!Array.isArray(minutes) || minutes.length === 0) {
+          errors.push(`globalSchedulingPolicies[${index}].allowedStartMinutes must be a non-empty array`);
+        } else {
+          const seen = new Set<number>();
+          for (const minute of minutes) {
+            if (!Number.isInteger(minute) || minute < 0 || minute > 59) {
+              errors.push(`globalSchedulingPolicies[${index}].allowedStartMinutes must contain unique integers between 0 and 59`);
+              break;
+            }
+            if (seen.has(minute)) {
+              errors.push(`globalSchedulingPolicies[${index}].allowedStartMinutes must contain unique integers between 0 and 59`);
+              break;
+            }
+            seen.add(minute);
+          }
+        }
+      });
+    }
+  }
   if (!sl.capabilities || typeof sl.capabilities !== 'object') {
     errors.push(
       'capabilities is required and must be an object. ' +
@@ -64,6 +117,8 @@ export function validateBasicSchema(
   // Reject unknown top-level properties (strict schema)
   const allowedTopLevelKeys = new Set([
     'version',
+    'maxVisibleSlots',
+    'globalSchedulingPolicies',
     'capabilities',
     'identity',
     'styleRules',

@@ -178,10 +178,13 @@ Evoluciona `sedes/<nombre>/output/structured-logic.tasks-only.draft.json` **secc
 13. **treatmentPolicyHints** — [] (vacío en tasks-only, no hay scheduling)
 14. **systemPromptInstructions** — Notas para el asesor, gaps detectados, next steps.
 15. **conversationResumption** — Instrucciones de saludo tras pausa conversacional. Usar defaults del template si no hay especificaciones en input.
+16. **maxVisibleSlots** — Opcional. Entero entre 1 y 50 (default del backend: 9). En tasks-only el bot no consulta ni muestra disponibilidad, así que lo normal es omitirlo; si un JSON previo lo trae, consérvalo tal cual.
+17. **globalSchedulingPolicies** — Opcional y sin efecto en tasks-only (el backend nunca aplica políticas de scheduling en este modo). Array de `{ treatmentId: string | null, allowedStartMinutes: number[] }` (`null` = política global; `allowedStartMinutes`: enteros únicos entre 0 y 59, no vacío). No inventar; solo preservar si viene en un JSON previo.
 
 **Regla de fusión de fuentes:**
 - Si la carpeta `input/` contiene un archivo `.json` con lógica estructurada previa, úsalo como base para `intents`, `rules`, `toolOrchestration.flows`, `protocols` y `errorCategories`.
 - Si contiene archivos `.md`, extrae de ellos `identity`, `styleRules`, `faq`, `responseTemplates`, `treatmentPolicyHints` y `systemPromptInstructions`.
+- Si el JSON previo contiene `maxVisibleSlots` o `globalSchedulingPolicies`, consérvalos tal cual al regenerar (son configuración global que no se extrae de los `.md`); no los elimines ni los reescribas salvo que el asesor lo pida.
 - Si un dato aparece en varios archivos con valores diferentes, **pregunta al asesor** cuál es el correcto. No asumas.
 - **NUNCA** rellenar huecos con inventiva. Si falta un dato, usar `null` o documentar como gap.
 

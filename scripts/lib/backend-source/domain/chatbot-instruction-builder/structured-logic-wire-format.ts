@@ -17,7 +17,7 @@
  * Duplicates: last-wins (deterministic, matches Object.assign behavior).
  */
 
-import type { StructuredLogic, IntentDefinition, ToolFlow, Protocol, ResponseTemplate } from '../chat/structured-logic';
+import type { StructuredLogic, IntentDefinition, ToolFlow, Protocol, ResponseTemplate, GlobalSchedulingPolicy } from '../chat/structured-logic';
 import { StructuredLogicWireJsonSchema } from './structured-logic-wire-schema';
 import { extractAllowedKeys } from './schema-key-extractor';
 
@@ -68,6 +68,8 @@ export type WireToolOrchestration = {
 
 export type WireStructuredLogic = {
   version: string;
+  maxVisibleSlots: number | null;
+  globalSchedulingPolicies: GlobalSchedulingPolicy[] | null;
   capabilities: { sensitiveSituations: boolean; protocols: boolean };
   intents: WireIntent[];
   toolOrchestration: WireToolOrchestration;
@@ -80,7 +82,7 @@ export type WireStructuredLogic = {
   protocols?: WireProtocol[];
   errorCategories?: StructuredLogic['errorCategories'];
   treatmentPolicyHints?: StructuredLogic['treatmentPolicyHints'];
-  treatmentSelectionGuidance?: StructuredLogic['treatmentSelectionGuidance'];
+  treatmentSelectionGuidance: NonNullable<StructuredLogic['treatmentSelectionGuidance']> | null;
   systemPromptInstructions?: StructuredLogic['systemPromptInstructions'];
   conversationResumption?: StructuredLogic['conversationResumption'];
 };
@@ -91,6 +93,8 @@ export type WireStructuredLogic = {
 export function toWireFormat(logic: StructuredLogic): WireStructuredLogic {
   return {
     version: logic.version,
+    maxVisibleSlots: logic.maxVisibleSlots ?? null,
+    globalSchedulingPolicies: logic.globalSchedulingPolicies ?? null,
     capabilities: logic.capabilities,
     intents: logic.intents
       ? Object.entries(logic.intents).map(([intentId, def]) => ({
@@ -159,9 +163,7 @@ export function toWireFormat(logic: StructuredLogic): WireStructuredLogic {
       : [],
     errorCategories: logic.errorCategories,
     treatmentPolicyHints: logic.treatmentPolicyHints,
-    ...(logic.treatmentSelectionGuidance !== undefined
-      ? { treatmentSelectionGuidance: logic.treatmentSelectionGuidance }
-      : {}),
+    treatmentSelectionGuidance: logic.treatmentSelectionGuidance ?? null,
     systemPromptInstructions: logic.systemPromptInstructions,
     conversationResumption: logic.conversationResumption,
   };
@@ -264,6 +266,15 @@ export function fromWireFormat(wire: WireStructuredLogic): StructuredLogic {
     rules: wire.rules,
     serviceCatalog,
   };
+
+  if (wire.maxVisibleSlots != null) result.maxVisibleSlots = wire.maxVisibleSlots;
+  if (wire.globalSchedulingPolicies != null) {
+    result.globalSchedulingPolicies = wire.globalSchedulingPolicies.map((policy) => ({
+      // `canonicalizeNullValues` may turn this required semantic null into undefined.
+      treatmentId: policy.treatmentId ?? null,
+      allowedStartMinutes: policy.allowedStartMinutes,
+    }));
+  }
 
   if (wire.identity) result.identity = wire.identity;
   if (wire.styleRules) result.styleRules = wire.styleRules;

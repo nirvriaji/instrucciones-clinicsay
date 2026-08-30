@@ -191,10 +191,13 @@ Evoluciona `sedes/<nombre>/output/structured-logic.full.draft.json` **sección p
 13. **treatmentPolicyHints** — Extraer señales, precios, restricciones de agendamiento de los chunks.
 14. **systemPromptInstructions** — Notas para el asesor, gaps detectados, next steps.
 15. **conversationResumption** — Instrucciones de saludo tras pausa conversacional. Usar defaults del template si no hay especificaciones en input.
+16. **maxVisibleSlots** — Opcional. Entero entre 1 y 50 (default del backend: 9). Número máximo de huecos de disponibilidad que el bot muestra al paciente. Solo incluir si el input lo pide; si no, omitir y el backend aplicará 9.
+17. **globalSchedulingPolicies** — Opcional. Políticas de minutos de inicio permitidos: array de `{ treatmentId: string | null, allowedStartMinutes: number[] }`. `treatmentId: null` = política global de la clínica; con un ID = política particular de ese tratamiento. `allowedStartMinutes`: enteros únicos entre 0 y 59, array no vacío. Solo incluir si el input lo pide explícitamente; NUNCA inventar minutos ni asumir múltiplos de 5 (ese es el default de plataforma cuando no hay política).
 
 **Regla de fusión de fuentes:**
 - Si la carpeta `input/` contiene un archivo `.json` con lógica estructurada previa, úsalo como base para `intents`, `rules`, `toolOrchestration.flows`, `protocols` y `errorCategories`.
 - Si contiene archivos `.md`, extrae de ellos `identity`, `styleRules`, `faq`, `responseTemplates`, `treatmentPolicyHints` y `systemPromptInstructions`.
+- Si el JSON previo contiene `maxVisibleSlots` o `globalSchedulingPolicies`, consérvalos tal cual al regenerar (son configuración global que no se extrae de los `.md`); no los elimines ni los reescribas salvo que el asesor lo pida.
 - Si un dato aparece en varios archivos con valores diferentes, **pregunta al asesor** cuál es el correcto. No asumas.
 - **NUNCA** rellenar huecos con inventiva. Si falta un dato, usar `null` o documentar como gap.
 

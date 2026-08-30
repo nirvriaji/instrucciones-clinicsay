@@ -5,13 +5,13 @@
  * from basic schema and structural validations.
  */
 
-import { isReschedulingIntent } from '../canonical-intents';
+import { isReschedulingIntent } from '../../chat/canonical-intents';
 import type {
   BusinessRule,
   StructuredLogic,
   StructuredLogicChatMode,
   ToolFlow,
-} from '../structured-logic';
+} from '../../chat/structured-logic';
 import { StructuredLogicJsonSchema } from '../structured-logic-json-schema';
 import { extractAllowedKeys } from '../schema-key-extractor';
 import { ALL_CHAT_TOOL_NAMES } from '../structured-logic-json-schema';
@@ -21,7 +21,7 @@ import {
   VALID_CAPABILITIES,
   CAPABILITY_ESTABLISHERS,
 } from '../constants';
-import { ALL_CHAT_TOOLS_TASKS_ONLY } from '../tool-definitions-tasks-only';
+import { ALL_CHAT_TOOLS_TASKS_ONLY } from '../../chat/tool-definitions-tasks-only';
 
 const ALLOWED_FLOW_KEYS = extractAllowedKeys(
   StructuredLogicJsonSchema,

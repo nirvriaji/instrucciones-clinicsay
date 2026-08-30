@@ -8,7 +8,8 @@
  * They are canonical notes about what each mode typically enables.
  */
 
-import type { StructuredLogic, StructuredLogicChatMode } from '../structured-logic';
+import type { StructuredLogic, StructuredLogicChatMode } from '../../chat/structured-logic';
+import { DEFAULT_MAX_VISIBLE_SLOTS } from '../../chat/availability/chat-bot-defaults';
 import type { LogicGap } from '../validator';
 
 export function detectModeAdvisoryGaps(
@@ -165,6 +166,25 @@ export function detectModeAdvisoryGaps(
             'Si tu regla no tiene redirectToTask, el bot responderá sin crear tarea humana. Está bien si prefieres una respuesta informativa — solo asegúrate de que el paciente tenga claro cuál es su siguiente paso y que no quede esperando una acción del bot.',
         });
       }
+    }
+  }
+
+  // ── Caso H: tasks-only + maxVisibleSlots/globalSchedulingPolicies configurados ──
+  // En tasks-only el bot no agenda (no hay check_availability ni schedule_block),
+  // así que estas preferencias nunca se aplican. Solo avisar cuando se desvían del
+  // default (9 / []): el default no es una decisión consciente de la sede.
+  if (mode === 'tasks-only') {
+    const hasCustomMaxVisibleSlots =
+      logic.maxVisibleSlots !== undefined && logic.maxVisibleSlots !== DEFAULT_MAX_VISIBLE_SLOTS;
+    const hasSchedulingPolicies = (logic.globalSchedulingPolicies ?? []).length > 0;
+    if (hasCustomMaxVisibleSlots || hasSchedulingPolicies) {
+      gaps.push({
+        severity: 'advisory',
+        type: 'mode_note',
+        description:
+          'Para tu información: en modo TASKS-ONLY el bot no agenda citas, así que maxVisibleSlots y globalSchedulingPolicies no se aplican en la conversación. ' +
+          'Se conservan en el JSON por si la sede cambia a modo full en el futuro, pero mientras el modo sea tasks-only no tienen efecto.',
+      });
     }
   }
 

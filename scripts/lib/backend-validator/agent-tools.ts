@@ -6,8 +6,8 @@
  * logic. They are pure and side-effect free.
  */
 
-import { buildEmptyStructuredLogicForMode } from './structured-logic-skeleton';
-import type { StructuredLogic, StructuredLogicChatMode } from './structured-logic';
+import { buildEmptyStructuredLogicForMode } from '../chat/structured-logic-skeleton';
+import type { StructuredLogic, StructuredLogicChatMode } from '../chat/structured-logic';
 import { StructuredLogicWireJsonSchema } from './structured-logic-wire-schema';
 import { validateStructuredLogic, detectGaps } from './validator';
 

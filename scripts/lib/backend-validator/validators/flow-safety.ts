@@ -34,12 +34,12 @@ import {
   isCanonicalIntent,
   isReschedulingIntent,
   usesReservedIntentNamespace,
-} from '../canonical-intents';
+} from '../../chat/canonical-intents';
 import type {
   StructuredLogic,
   StructuredLogicChatMode,
   ToolFlow,
-} from '../structured-logic';
+} from '../../chat/structured-logic';
 
 /** Tool that destroys an existing appointment (action `cancel`). */
 const DESTRUCTIVE_TOOL = 'manage_schedule_block_status';

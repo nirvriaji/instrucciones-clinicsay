@@ -1,9 +1,10 @@
 {
   "version": "1.0",
+  "maxVisibleSlots": 9,
+  "globalSchedulingPolicies": [],
   "capabilities": {
     "sensitiveSituations": false,
-    "protocols": false,
-    "bookingMode": "direct"
+    "protocols": false
   },
   "identity": {
     "botName": "{{NOMBRE_BOT}}",
@@ -72,19 +73,11 @@
   },
   "responseTemplates": {
     "appointment_confirmed": {
-      "text": "Perfecto, tu cita del {fecha} a las {hora} queda confirmada. Nos vemos pronto.",
+      "text": "Perfecto, he registrado su confirmación. ¡Nos vemos pronto!",
       "mode": "literal"
     },
     "appointment_cancelled": {
-      "text": "Entendido, hemos cancelado tu cita del {fecha} a las {hora}. Si necesitas otra, avisanos.",
-      "mode": "literal"
-    },
-    "appointment_rescheduled": {
-      "text": "He movido tu cita al {fecha} a las {hora}. Te esperamos.",
-      "mode": "model"
-    },
-    "on_the_way_appointment": {
-      "text": "Gracias por avisar. Ajustamos tu cita del {fecha} a las {hora} segun el retraso.",
+      "text": "Entendido, hemos cancelado tu cita. Si necesitas otra, avisanos.",
       "mode": "literal"
     },
     "task_created": {
@@ -163,12 +156,16 @@
       "text": "He agendado su cita. ¿Necesita algo mas?",
       "mode": "model"
     },
+    "appointment_rescheduled": {
+      "text": "He movido tu cita al {fecha} a las {hora}. Te esperamos.",
+      "mode": "model"
+    },
     "appointment_multiple": {
       "text": "He agendado tus citas. Si necesitas cambiar alguna, dimelo.",
       "mode": "model"
     },
     "reschedule_inquiry_full": {
-      "text": "Claro, sí podemos buscar otro horario para tu cita. ¿Quieres que la reprogramemos?",
+      "text": "Sí, podemos gestionar el cambio de tu cita. ¿Quieres que confirmemos el reagendamiento?",
       "mode": "model"
     }
   },
@@ -220,7 +217,6 @@
       }
     ]
   },
-  "treatmentSelectionGuidance": "Si el paciente parece nuevo en la clinica y pide un tratamiento concreto, considera la opcion de valoracion que figure en serviceCatalog antes de aplicar el tratamiento. Si el paciente ya viene siguiendo un tratamiento y pide continuar con el, respeta el que pida. Esta guia es un hint del orquestador: ante una peticion realmente ambigua, aclara una sola vez y pasa la frase explicita como clarifiedTreatmentRequest.",
   "intents": {
     "existing_appointment_confirmation": {
       "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
@@ -275,7 +271,7 @@
       ]
     },
     "existing_appointment_rescheduling": {
-      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. TAMBIEN es este intent cuando ELIGE uno de los huecos que se le acaban de enseñar. NO lo es proponer un dia sin haber visto huecos todavia.",
+      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, (c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), (d) \"restablecer\" una cita tras cancelarla en el mismo turno de conversacion. Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs). TAMBIEN es este intent cuando el paciente ELIGE uno de los huecos que se le acaban de enseñar durante una consulta de cambio: elegir ES la confirmacion de que quiere moverla. NO lo es proponer un dia o una franja sin haber visto huecos todavia (\"el viernes por la tarde\"): eso sigue siendo la consulta, porque reprogramar cancela la cita actual y no se cancela nada hasta que el paciente ha visto opciones reales y ha escogido una.",
       "examples": [
         "¿podemos cambiar mi cita al jueves?",
         "muevela a la tarde",
@@ -284,7 +280,9 @@
         "restablecer la cita que acabo de cancelar",
         "me quedo con la de las 16:00",
         "la primera opcion me sirve",
-        "esa misma, el jueves a las 10"
+        "esa misma, el jueves a las 10",
+        "perfecto, la de las 09:05",
+        "si, esa"
       ]
     },
     "existing_appointment_delay_notice": {
@@ -294,12 +292,14 @@
       ]
     },
     "existing_appointment_reschedule_inquiry": {
-      "description": "El paciente pregunta si puede cambiar una cita existente, o dice CUANDO le vendria bien sin haber visto todavia ningun hueco concreto. Proponer un dia o una franja es parte de la consulta: dice donde mirar, no que se confirme el cambio. El intent pasa a existing_appointment_rescheduling cuando el paciente ELIGE uno de los huecos que ya se le enseñaron.",
+      "description": "El paciente pregunta si puede cambiar una cita existente, o dice CUANDO le vendria bien sin haber visto todavia ningun hueco concreto. Proponer un dia o una franja (\"el viernes por la tarde\", \"el lunes 7 a partir de las 12:30\") es parte de la consulta: dice donde mirar, no que se confirme el cambio. El bot consulta la agenda y le enseña opciones sin tocar su cita. El intent pasa a \"existing_appointment_rescheduling\" cuando el paciente ELIGE uno de los huecos que ya se le enseñaron.",
       "examples": [
         "¿Se puede cambiar mi cita?",
         "¿Podria moverla a otro dia?",
+        "¿es posible reprogramar?",
         "el viernes por la tarde o el sabado",
         "el lunes 7 a partir de las 12:30",
+        "podria ser el jueves por la mañana?",
         "si, el jueves"
       ]
     },
@@ -337,7 +337,7 @@
               "resolve_availability_query"
             ],
             "parallel": true,
-            "note": "Identificar tratamiento y traducir fechas. NO pedir datos del paciente todavia."
+            "note": "Identificar tratamiento y traducir fechas. Preguntar solo ante ambiguedad real sobre primera visita y politica de la guia; si esta claro, resolver directamente. Construir clarifiedTreatmentRequest con el tratamiento explicito; si es valoracion, usar nombre exacto y area de la guia o serviceCatalog de esta sede. NO pedir datos del paciente todavia."
           },
           {
             "step": 2,
@@ -345,7 +345,7 @@
               "resolve_patient"
             ],
             "parallel": false,
-            "note": "Pedir y usar SIEMPRE nombre, apellido y telefono de la conversacion. NO asumir datos de Kommo. Buscar paciente; si no existe, crear automaticamente."
+            "note": "Pedir y usar SIEMPRE nombre, apellido y telefono de la conversacion. NO asumir datos de Kommo. Buscar paciente; si no existe, crear automaticamente. Usar isNew/source de la salida para confirmar si es paciente nuevo o existente."
           },
           {
             "step": 3,
@@ -432,7 +432,7 @@
               "cancel_for_rescheduling"
             ],
             "parallel": false,
-            "note": "Cancelar y liberar preparatoriamente la cita elegible. El backend conserva el target; no proporcionar ni inventar datos internos del plan o de sus sesiones."
+            "note": "Cancelar y liberar preparatoriamente la cita elegible. El backend conserva el target y sus sesiones; no inventar carePlanId ni plannedSessionIds."
           },
           {
             "step": 2,
@@ -455,7 +455,7 @@
               "hasCancelledRescheduleTarget",
               "hasResolvedAvailabilityQuery"
             ],
-            "note": "Buscar nuevos horarios (condicion: dates_resolved). Mantener el profesional original como preferencia; si no hay disponibilidad, aplicar la política de la sede. Para mismo dia: filtrar slots del dia actual."
+            "note": "Buscar nuevos horarios (condicion: dates_resolved). Mantener mismo professionalId de la cita original como preferencia. Para mismo dia: filtrar slots del dia actual."
           },
           {
             "step": 4,
@@ -467,7 +467,7 @@
               "hasCancelledRescheduleTarget",
               "hasShownSlots"
             ],
-            "note": "Agendar la NUEVA cita solo con disponibilidad comprobada en el turno actual (condicion: slot_selected). Si el horario elegido ya no esta libre, informar que no esta disponible y ofrecer alternativas reales. El backend reconcilia el target y decide CARE_PLAN con sesiones ACTIVE + PENDING o el fallback STANDALONE autorizado; no seleccionar ni enviar el modo."
+            "note": "Agendar la NUEVA cita solo con disponibilidad comprobada en el turno actual (condicion: slot_selected). Si el horario elegido ya no esta libre, informar que no esta disponible y ofrecer alternativas reales. El backend toma carePlanId y plannedSessionIds del target cancelado."
           }
         ],
         "allowedTools": [
@@ -496,18 +496,21 @@
             "note": "Marcar EN_CAMINO"
           }
         ],
-        "responseTemplateKey": "on_the_way_appointment"
+        "responseTemplateKey": "on_the_way"
       },
       "reschedule_inquiry": {
         "intent": "existing_appointment_reschedule_inquiry",
-        "description": "Paciente pregunta si es posible reagendar, o propone un dia o franja sin haber visto huecos todavia. Puede CONSULTAR disponibilidad para enseñarle opciones, nunca modificar la cita.",
+        "description": "Paciente pregunta si es posible reagendar, o propone un dia o franja sin haber visto huecos todavia. Puede CONSULTAR disponibilidad para enseñarle opciones, nunca modificar la cita: no se cancela nada hasta que elige uno de los huecos mostrados.",
         "steps": [
           {
             "step": 1,
-            "tools": ["resolve_availability_query", "check_availability"],
+            "tools": [
+              "resolve_availability_query",
+              "check_availability"
+            ],
             "parallel": false,
             "required": [],
-            "note": "SOLO si el paciente ya ha dado un dia o una franja. Consultar e informar qué opciones hay; NUNCA afirmar que la cita se ha movido ni prometer una busqueda futura: se consulta y se dice lo que hay."
+            "note": "SOLO si el paciente ya ha dado un dia o una franja. Consultar e informar que opciones hay; NUNCA afirmar que la cita se ha movido ni prometer una busqueda futura: se consulta y se dice lo que hay."
           }
         ],
         "responseTemplateKey": "reschedule_inquiry_full"
@@ -724,6 +727,7 @@
     }
   },
   "treatmentPolicyHints": [],
+  "treatmentSelectionGuidance": "Si el paciente parece nuevo en la clínica y pide un tratamiento concreto, lo recomendable es una primera cita de valoración: el profesional debe verlo antes de aplicar cualquier tratamiento. Elige el tratamiento de valoración o primera consulta que exista en el catálogo. Si el paciente ya viene siguiendo un tratamiento y pide continuar con él, respeta el que pida. Si el mensaje no permite decidir con confianza, pide aclaración en vez de adivinar.",
   "systemPromptInstructions": {
     "notesForAdvisor": [],
     "knownGaps": [],

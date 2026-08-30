@@ -27,6 +27,24 @@ export const StructuredLogicWireJsonSchema = {
   type: 'object',
   properties: {
     version: { type: 'string' },
+    maxVisibleSlots: { type: ['integer', 'null'], minimum: 1, maximum: 50 },
+    globalSchedulingPolicies: {
+      type: ['array', 'null'],
+      items: {
+        type: 'object',
+        properties: {
+          treatmentId: { type: ['string', 'null'] },
+          allowedStartMinutes: {
+            type: 'array',
+            minItems: 1,
+            uniqueItems: true,
+            items: { type: 'integer', minimum: 0, maximum: 59 },
+          },
+        },
+        required: ['treatmentId', 'allowedStartMinutes'],
+        additionalProperties: false,
+      },
+    },
     capabilities: {
       type: 'object',
       properties: {
@@ -391,6 +409,6 @@ export const StructuredLogicWireJsonSchema = {
       additionalProperties: false,
     },
   },
-  required: ['version', 'capabilities', 'intents', 'toolOrchestration', 'rules', 'identity', 'styleRules', 'responseTemplates', 'faq', 'serviceCatalog', 'protocols', 'errorCategories', 'treatmentPolicyHints', 'systemPromptInstructions', 'conversationResumption'],
+  required: ['version', 'maxVisibleSlots', 'globalSchedulingPolicies', 'capabilities', 'intents', 'toolOrchestration', 'rules', 'identity', 'styleRules', 'responseTemplates', 'faq', 'serviceCatalog', 'protocols', 'errorCategories', 'treatmentSelectionGuidance', 'treatmentPolicyHints', 'systemPromptInstructions', 'conversationResumption'],
   additionalProperties: false,
 } as const;

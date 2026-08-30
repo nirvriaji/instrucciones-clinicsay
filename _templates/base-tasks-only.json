@@ -1,5 +1,7 @@
 {
   "version": "1.0",
+  "maxVisibleSlots": 9,
+  "globalSchedulingPolicies": [],
   "capabilities": {
     "sensitiveSituations": false,
     "protocols": false
@@ -75,7 +77,7 @@
       "mode": "literal"
     },
     "appointment_cancelled": {
-      "text": "Entendido, hemos gestionado tu cita.",
+      "text": "Entendido, hemos cancelado tu cita. Si necesitas otra, avisanos.",
       "mode": "literal"
     },
     "task_created": {
@@ -199,7 +201,6 @@
       }
     ]
   },
-  "treatmentSelectionGuidance": "Si el paciente parece nuevo en la clinica y pide un tratamiento concreto, considera la opcion de valoracion que figure en serviceCatalog. Ante una peticion realmente ambigua, aclara una sola vez y pasa la frase explicita como clarifiedTreatmentRequest. La ausencia de esta guia no bloquea la respuesta.",
   "intents": {
     "existing_appointment_confirmation": {
       "description": "El paciente confirma asistencia a una cita ya reservada, normalmente respondiendo a un recordatorio.",
@@ -254,13 +255,18 @@
       ]
     },
     "existing_appointment_rescheduling": {
-      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, (c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), (d) \"restablecer\" una cita tras cancelarla en el mismo turno de conversacion. Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs).",
+      "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye: (a) cambiar a OTRO dia, (b) adelantar o atrasar el MISMO dia, (c) corregir el TITULAR de la cita manteniendo el mismo tratamiento (mismo treatmentId), (d) \"restablecer\" una cita tras cancelarla en el mismo turno de conversacion. Para (b): filtrar slots del mismo dia. Para (c): cancelar cita actual + crear nueva con mismo treatmentId y paciente correcto. Para (d): solo funciona si la cancelacion ocurrio en este mismo turno (datos en historial de tool outputs). TAMBIEN es este intent cuando el paciente ELIGE uno de los huecos que se le acaban de enseñar durante una consulta de cambio: elegir ES la confirmacion de que quiere moverla. NO lo es proponer un dia o una franja sin haber visto huecos todavia (\"el viernes por la tarde\"): eso sigue siendo la consulta, porque reprogramar cancela la cita actual y no se cancela nada hasta que el paciente ha visto opciones reales y ha escogido una.",
       "examples": [
         "¿podemos cambiar mi cita al jueves?",
         "muevela a la tarde",
         "adelantala a las 10h",
         "la cita es para mi pareja, no para mi",
-        "restablecer la cita que acabo de cancelar"
+        "restablecer la cita que acabo de cancelar",
+        "me quedo con la de las 16:00",
+        "la primera opcion me sirve",
+        "esa misma, el jueves a las 10",
+        "perfecto, la de las 09:05",
+        "si, esa"
       ]
     },
     "existing_appointment_delay_notice": {
@@ -270,10 +276,15 @@
       ]
     },
     "existing_appointment_reschedule_inquiry": {
-      "description": "El paciente consulta sobre la posibilidad de reprogramar una cita existente, sin confirmar el cambio todavia.",
+      "description": "El paciente pregunta si puede cambiar una cita existente, o dice CUANDO le vendria bien sin haber visto todavia ningun hueco concreto. Proponer un dia o una franja (\"el viernes por la tarde\", \"el lunes 7 a partir de las 12:30\") es parte de la consulta: dice donde mirar, no que se confirme el cambio. El bot consulta la agenda y le enseña opciones sin tocar su cita. El intent pasa a \"existing_appointment_rescheduling\" cuando el paciente ELIGE uno de los huecos que ya se le enseñaron.",
       "examples": [
         "¿Se puede cambiar mi cita?",
-        "¿Podria moverla a otro dia?"
+        "¿Podria moverla a otro dia?",
+        "¿es posible reprogramar?",
+        "el viernes por la tarde o el sabado",
+        "el lunes 7 a partir de las 12:30",
+        "podria ser el jueves por la mañana?",
+        "si, el jueves"
       ]
     },
     "existing_appointment_cancellation_inquiry": {
@@ -301,11 +312,22 @@
           {
             "step": 1,
             "tools": [
-              "create_task"
+              "resolve_patient"
             ],
             "parallel": false,
             "required": [],
-            "note": "Crear tarea para seguimiento humano"
+            "note": "Confirmar nombre, apellido y telefono del paciente usando resolve_patient. El telefono debe ser proporcionado explicitamente por el interlocutor; no sustituyas phone con datos del contacto. Usar isNew/source de la salida para confirmar si es paciente nuevo o existente."
+          },
+          {
+            "step": 2,
+            "tools": [
+              "create_task"
+            ],
+            "parallel": false,
+            "required": [
+              "hasResolvedPatient"
+            ],
+            "note": "Crear tarea para seguimiento humano. Antes de llamar create_task, el bot debe confirmar nombre, apellido y telefono del paciente y marcar el contexto como hasResolvedPatient."
           }
         ],
         "responseTemplateKey": "task_created"
@@ -373,7 +395,7 @@
         ],
         "responseTemplateKey": "on_the_way"
       },
-      "reschedule_existing_appointment": {
+      "reschedule_appointment": {
         "intent": "existing_appointment_rescheduling",
         "selection": {
           "requiredCapabilities": [
@@ -497,7 +519,7 @@
       "intent": "existing_appointment_rescheduling",
       "description": "El paciente quiere MOVER una cita ya agendada a otra fecha u hora. Incluye adelantar/atrasar mismo dia, correccion de titular y restablecer tras cancelacion en este turno.",
       "action": "allow",
-      "note": "En modo tasks-only, el asesor decide si el flow cancela la cita, crea una tarea de seguimiento, hace ambas cosas o responde informativamente. Si se cancela, no preguntar motivo; usar reason=\"Solicitud del paciente\".",
+      "note": "En modo tasks-only, el asesor decide si cancela la cita, crea una tarea, hace ambas cosas en orden o responde informativamente. NO preguntar motivo al paciente; usar reason=\"Solicitud del paciente\".",
       "redirectToTask": true
     },
     {
@@ -568,6 +590,7 @@
     }
   },
   "treatmentPolicyHints": [],
+  "treatmentSelectionGuidance": "Si el paciente parece nuevo en la clínica y pide un tratamiento concreto, lo recomendable es una primera cita de valoración: el profesional debe verlo antes de aplicar cualquier tratamiento. Elige el tratamiento de valoración o primera consulta que exista en el catálogo. Si el paciente ya viene siguiendo un tratamiento y pide continuar con él, respeta el que pida. Si el mensaje no permite decidir con confianza, pide aclaración en vez de adivinar.",
   "systemPromptInstructions": {
     "notesForAdvisor": [],
     "knownGaps": [],

@@ -5,7 +5,7 @@
  * from basic schema and cross-reference validations.
  */
 
-import type { StructuredLogic } from '../structured-logic';
+import type { StructuredLogic } from '../../chat/structured-logic';
 import { StructuredLogicJsonSchema } from '../structured-logic-json-schema';
 import { extractAllowedKeys } from '../schema-key-extractor';
 

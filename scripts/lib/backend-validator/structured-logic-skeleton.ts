@@ -29,6 +29,8 @@ function buildEmptyCapabilities(mode: StructuredLogicMode): ClinicCapabilities {
 export function buildEmptyStructuredLogicForMode(mode: StructuredLogicMode): StructuredLogic {
   return {
     version: '1.0',
+    maxVisibleSlots: 9,
+    globalSchedulingPolicies: [],
     capabilities: buildEmptyCapabilities(mode),
     identity: {},
     styleRules: {
@@ -59,5 +61,3 @@ export function buildEmptyStructuredLogicForMode(mode: StructuredLogicMode): Str
     },
   };
 }
-
-
