@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "maxVisibleSlots": 4,
+  "maxVisibleSlots": 9,
   "globalSchedulingPolicies": [
     {
       "treatmentId": null,
-      "allowedStartMinutes": [0, 30]
+      "allowedStartMinutes": [0, 10, 20, 30, 40, 50]
     }
   ],
   "capabilities": {
