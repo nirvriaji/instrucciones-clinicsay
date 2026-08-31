@@ -2,12 +2,12 @@
   "meta": {
     "sede": "demo",
     "mode": "full",
-    "timestamp": "2026-08-13T19:22:51.061Z",
+    "timestamp": "2026-08-31T03:12:54.213Z",
     "inputFiles": [
       "README.md"
     ],
     "inputFilesCount": 1,
-    "combinedTextLength": 2080
+    "combinedTextLength": 2131
   },
   "summary": {
     "total": 0,
@@ -17,7 +17,7 @@
   },
   "entities": {
     "servicesFound": 3,
-    "professionalsFound": 2,
+    "professionalsFound": 0,
     "signalsFound": 0,
     "faqFound": 4
   },
