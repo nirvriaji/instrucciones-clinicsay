@@ -200,7 +200,23 @@ export type ToolStep = {
   tools: string[];
   parallel: boolean;
   required?: string[];
+  customState?: CustomStateField[];
+  when?: StepCondition[];
   note?: string;
+};
+
+export type CustomStateField = {
+  key: string;
+  description: string;
+  enum?: string[];
+};
+
+export type StepCondition = {
+  key: string;
+  equals?: string;
+  in?: string[];
+  notIn?: string[];
+  exists?: boolean;
 };
 
 export type BusinessRuleCondition = {
@@ -345,6 +361,7 @@ export type IntentCatalog = {
 };
 
 export type ChatService = {
+  id?: string;
   /** Name of the treatment or pack (e.g., "Limpieza dental", "Bono 5 sesiones") */
   name: string;
   /** Brief description for the patient */

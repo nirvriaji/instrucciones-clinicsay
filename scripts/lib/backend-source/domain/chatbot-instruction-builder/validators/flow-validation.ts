@@ -48,6 +48,13 @@ const ALLOWED_CONDITION_KEYS = extractAllowedKeys(
   'properties.rules.items.properties.conditions.items.properties',
 );
 
+const STEP_CONDITION_OPERATORS = ['equals', 'in', 'notIn', 'exists'] as const;
+const TYPED_FACT_PRODUCERS: Record<string, string[]> = {
+  treatmentId: ['resolve_treatment'],
+  treatmentName: ['resolve_treatment'],
+  patientIsNew: ['resolve_patient'],
+};
+
 function rejectUnknownKeys(
   obj: Record<string, unknown> | null | undefined,
   allowedKeys: Set<string>,
@@ -62,6 +69,118 @@ function rejectUnknownKeys(
   }
 }
 
+function validateStepContract(
+  flowName: string,
+  flow: ToolFlow,
+  treatmentIds: Set<string>,
+  errors: string[],
+): void {
+  const customKeyIndexes = new Map<string, number[]>();
+  const producerIndexes = new Map<string, number[]>();
+
+  flow.steps.forEach((step, index) => {
+    if (Array.isArray(step.customState)) {
+      step.customState.forEach((field, fieldIndex) => {
+        const path = `Flow '${flowName}' step ${index + 1} customState[${fieldIndex}]`;
+        if (!field || typeof field !== 'object' || Array.isArray(field)) {
+          errors.push(`${path} must be an object`);
+          return;
+        }
+        const raw = field as unknown as Record<string, unknown>;
+        if (typeof raw.key !== 'string' || raw.key.trim().length === 0) {
+          errors.push(`${path}.key must be a non-empty string in snake_case`);
+        } else if (!/^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(raw.key)) {
+          errors.push(`${path}.key must use snake_case`);
+        } else {
+          customKeyIndexes.set(raw.key, [...(customKeyIndexes.get(raw.key) ?? []), index]);
+        }
+        if (typeof raw.description !== 'string' || raw.description.trim().length === 0) {
+          errors.push(`${path}.description must be a non-empty string`);
+        }
+        if ('required' in raw) {
+          errors.push(`${path} must not contain 'required'; declared customState fields are required`);
+        }
+        if (raw.enum !== undefined) {
+          if (!Array.isArray(raw.enum) || raw.enum.length === 0 || raw.enum.some((value) => typeof value !== 'string')) {
+            errors.push(`${path}.enum must be a non-empty array of strings`);
+          }
+        }
+      });
+    }
+    for (const [fact, producers] of Object.entries(TYPED_FACT_PRODUCERS)) {
+      if (step.tools.some((tool) => producers.includes(tool))) {
+        producerIndexes.set(fact, [...(producerIndexes.get(fact) ?? []), index]);
+      }
+    }
+  });
+
+  flow.steps.forEach((step, index) => {
+    if (!Array.isArray(step.when)) return;
+    const availableCustomKeys = new Set(
+      [...customKeyIndexes.entries()]
+        .filter(([, indexes]) => indexes.some((declaredAt) => declaredAt < index))
+        .map(([key]) => key),
+    );
+    for (const [conditionIndex, condition] of step.when.entries()) {
+      const path = `Flow '${flowName}' step ${index + 1} when[${conditionIndex}]`;
+      if (!condition || typeof condition !== 'object' || Array.isArray(condition)) {
+        errors.push(`${path} must be an object`);
+        continue;
+      }
+      const raw = condition as unknown as Record<string, unknown>;
+      if (typeof raw.key !== 'string' || raw.key.trim().length === 0) {
+        errors.push(`${path}.key must be a non-empty string`);
+      }
+      const operators = STEP_CONDITION_OPERATORS.filter((operator) => raw[operator] !== undefined);
+      if (operators.length !== 1) {
+        errors.push(`${path} must use exactly one operator: ${STEP_CONDITION_OPERATORS.join(', ')}`);
+      }
+      if (operators.length === 1) {
+        const operator = operators[0];
+        const value = raw[operator];
+        const validValue = operator === 'exists'
+          ? typeof value === 'boolean'
+          : operator === 'equals'
+            ? typeof value === 'string'
+            : Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'string');
+        if (!validValue) errors.push(`${path}.${operator} has an invalid value`);
+      }
+
+      const key = typeof raw.key === 'string' ? raw.key : '';
+      const typedIndexes = producerIndexes.get(key) ?? [];
+      const producedEarlier = typedIndexes.some((producerAt) => producerAt < index);
+      const declaredEarlier = availableCustomKeys.has(key);
+      if (!producedEarlier && !declaredEarlier) {
+        const producedLater = typedIndexes.some((producerAt) => producerAt > index);
+        const declaredLater = (customKeyIndexes.get(key) ?? []).some((declaredAt) => declaredAt > index);
+        errors.push(
+          `${path} references '${key}', which must be produced by an earlier step in the same flow` +
+            (producedLater || declaredLater ? ' (future references are not allowed)' : ' and is unknown'),
+        );
+      }
+
+      if (key === 'treatmentId' && treatmentIds.size > 0) {
+        const values = raw.equals !== undefined
+          ? [raw.equals]
+          : Array.isArray(raw.in) ? raw.in
+            : Array.isArray(raw.notIn) ? raw.notIn
+              : [];
+        for (const value of values) {
+          if (typeof value === 'string' && !treatmentIds.has(value)) {
+            errors.push(`${path} references treatment ID '${value}' not present in serviceCatalog.treatments[].id`);
+          }
+        }
+      }
+    }
+  });
+
+  for (const [key, indexes] of customKeyIndexes) {
+    if (indexes.length > 1) {
+      errors.push(`Flow '${flowName}' customState key '${key}' is duplicated within the flow`);
+    }
+  }
+}
+
 export function validateFlowsAndTools(
   sl: Partial<StructuredLogic>,
   mode: StructuredLogicChatMode,
@@ -72,6 +191,12 @@ export function validateFlowsAndTools(
   const tasksOnlyToolNames = new Set(ALL_CHAT_TOOLS_TASKS_ONLY.map((t) => t.name));
   const schedulingTools = new Set(
     ALL_CHAT_TOOL_NAMES.filter((name) => !tasksOnlyToolNames.has(name)),
+  );
+  const catalogTreatments = sl.serviceCatalog?.treatments;
+  const treatmentIds = new Set(
+    Array.isArray(catalogTreatments)
+      ? catalogTreatments.flatMap((treatment) => typeof treatment.id === 'string' ? [treatment.id] : [])
+      : [],
   );
 
   // 6a. Flow steps must have unique, sequential step numbers
@@ -286,6 +411,7 @@ export function validateFlowsAndTools(
         }
       }
     });
+    validateStepContract(flowName, flow, treatmentIds, errors);
 
     // 4.3 Validate that flows without tools have response mechanism
     const hasTools = flow.steps.some((step) => step.tools.length > 0);

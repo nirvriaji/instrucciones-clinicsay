@@ -1,6 +1,9 @@
 import type { ConversationCapabilities } from '../../../../domain/chat/conversation-state';
 import type { ToolFlow } from '../../../../domain/chat/structured-logic';
+import { getFlowToolNames } from '../../../../domain/chat/flow-terminal-tools';
 import { ALL_TOOL_NAMES } from '../../../../domain/chat/tool-names';
+import { getActiveSteps } from '../../../../domain/chat/step-conditions';
+import type { StepConditionFacts } from '../../../../domain/chat/step-conditions';
 
 export function checkStepRequirements(
   toolName: string,
@@ -8,6 +11,8 @@ export function checkStepRequirements(
   activeFlow: ToolFlow | null,
   capabilities: ConversationCapabilities,
   chatMode: 'full' | 'tasks-only',
+  customStateValues: Record<string, string> = {},
+  conditionFacts: StepConditionFacts = { customStateValues },
 ): { allowed: boolean; reason?: string } {
   if (
     chatMode === 'full' &&
@@ -49,6 +54,17 @@ export function checkStepRequirements(
 
   if (!activeFlow) {
     return { allowed: true };
+  }
+
+  const activeStepsWithTool = getActiveSteps(activeFlow, conditionFacts)
+    .filter((step) => step.tools.includes(toolName));
+  const terminalStep = TERMINAL_TOOL_NAMES.has(toolName) && activeStepsWithTool.some((step) => (step.customState?.length ?? 0) > 0);
+  if (terminalStep) {
+    const missing = Array.from(new Set(activeStepsWithTool.flatMap((step) => (step.customState ?? []).map((field) => field.key))))
+      .filter((key) => !customStateValues[key]);
+    if (missing.length > 0) {
+      return { allowed: false, reason: `No se puede ejecutar '${toolName}': faltan campos custom del step activo: ${missing.join(', ')}.` };
+    }
   }
 
   if (
@@ -99,17 +115,7 @@ export function checkStepRequirements(
   }
 
   // Derive the allowed set of tools for this flow
-  const flowTools = new Set<string>();
-  if (activeFlow.allowedTools && activeFlow.allowedTools.length > 0) {
-    for (const tool of activeFlow.allowedTools) flowTools.add(tool);
-  } else {
-    for (const step of activeFlow.steps ?? []) {
-      for (const tool of step.tools) flowTools.add(tool);
-    }
-  }
-
-
-
+  const flowTools = new Set(getFlowToolNames(activeFlow));
   // If the tool is not in the flow's allowed set, deny it
   if (!flowTools.has(toolName)) {
     const available = Array.from(flowTools).join(', ') || 'none';
@@ -164,3 +170,5 @@ export function checkStepRequirements(
   }
   return { allowed: false, reason };
 }
+
+const TERMINAL_TOOL_NAMES = new Set(['create_task', 'schedule_block', 'manage_schedule_block_status', 'cancel_for_rescheduling']);

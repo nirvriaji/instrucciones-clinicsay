@@ -76,9 +76,9 @@
   ],
   "serviceCatalog": {
     "treatments": [
-      { "name": "Fisioterapia general", "description": "Sesión de fisioterapia general", "priceDescription": "40 €/sesión", "requiresConsultation": false },
-      { "name": "Osteopatía", "description": "Sesión de osteopatía", "priceDescription": "50 €/sesión", "requiresConsultation": false },
-      { "name": "Indiba", "description": "Sesión de Indiba", "priceDescription": "45 €/sesión", "requiresConsultation": false }
+      { "id": "fisioterapia-general", "name": "Fisioterapia general", "description": "Sesión de fisioterapia general", "priceDescription": "40 €/sesión", "requiresConsultation": false },
+      { "id": "osteopatia", "name": "Osteopatía", "description": "Sesión de osteopatía", "priceDescription": "50 €/sesión", "requiresConsultation": false },
+      { "id": "indiba", "name": "Indiba", "description": "Sesión de Indiba", "priceDescription": "45 €/sesión", "requiresConsultation": false }
     ],
     "packs": [
       { "name": "Bono 3 sesiones de fisioterapia", "description": "Bono de 3 sesiones", "priceDescription": "110 €", "requiresConsultation": false }

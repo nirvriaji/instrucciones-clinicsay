@@ -192,10 +192,21 @@ Flows reference registry entries by key; the text lives in `responseTemplates` (
   tools: string[];            // Tool names to execute in this step
   parallel: boolean;          // Execute in parallel?
   required?: string[];         // Required vs optional tools
+  customState?: { key: string; description: string; enum?: string[] }[];
+  when?: { key: string; equals?: string; in?: string[]; notIn?: string[]; exists?: boolean }[];
   note?: string;              // Explanatory note for the LLM
-  condition?: string;         // Condition to execute this step
 }
 ```
+
+`customState` and `when` are allowed only on steps. Custom fields require a
+non-empty `snake_case` `key` and `description`; they are implicitly required,
+so `required` is not valid inside a custom field. Each `when` condition uses
+exactly one v1 operator: `equals`, `in`, `notIn`, or `exists`. References must
+point to custom fields or typed facts produced by earlier steps in the same
+flow (`treatmentId`, `treatmentName`, `patientIsNew`). Treatment IDs must be
+present in `serviceCatalog.treatments[].id` when the catalog uses IDs; catalogs
+without IDs remain compatible with legacy JSON. The internal
+`personalized_user_conversation_state` tool is never valid in clinic tools.
 
 ### `BusinessRule`
 

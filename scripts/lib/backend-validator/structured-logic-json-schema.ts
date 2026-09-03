@@ -100,6 +100,34 @@ export const StructuredLogicJsonSchema = {
                     tools: { type: 'array', items: { type: 'string', enum: ALL_CHAT_TOOL_NAMES } },
                     parallel: { type: 'boolean' },
                     required: { type: 'array', items: { type: 'string' } },
+                    customState: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          key: { type: 'string', pattern: '^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$' },
+                          description: { type: 'string' },
+                          enum: { type: 'array', minItems: 1, items: { type: 'string' } },
+                        },
+                        required: ['key', 'description'],
+                        additionalProperties: false,
+                      },
+                    },
+                    when: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          key: { type: 'string' },
+                          equals: { type: 'string' },
+                          in: { type: 'array', minItems: 1, items: { type: 'string' } },
+                          notIn: { type: 'array', minItems: 1, items: { type: 'string' } },
+                          exists: { type: 'boolean' },
+                        },
+                        required: ['key'],
+                        additionalProperties: false,
+                      },
+                    },
                     note: { type: ['string', 'null'] },
                   },
                   required: ['step', 'tools', 'parallel'],
@@ -271,6 +299,7 @@ export const StructuredLogicJsonSchema = {
           items: {
             type: 'object',
             properties: {
+              id: { type: 'string' },
               name: { type: 'string' },
               description: { type: ['string', 'null'] },
               priceDescription: { type: ['string', 'null'] },

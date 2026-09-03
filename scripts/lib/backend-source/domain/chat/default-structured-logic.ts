@@ -205,6 +205,32 @@ function buildDefaultCapabilities(mode: 'full' | 'tasks-only'): ClinicCapabiliti
 function buildDefaultIntents(mode: 'full' | 'tasks-only'): IntentCatalog {
   return {
     ...BASELINE_INTENTS,
+    new_appointment_scheduling: {
+      ...BASELINE_INTENTS.new_appointment_scheduling,
+      examples: [
+        'Quiero pedir una cita nueva',
+        '¿Tenéis disponibilidad el viernes?',
+        'Quiero reservar para mi hijo',
+        'Llamo para pedir cita para mi pareja',
+      ],
+    },
+    general_inquiry: {
+      ...BASELINE_INTENTS.general_inquiry,
+      examples: [
+        '¿Qué tratamientos ofrecéis?',
+        '¿Cuál es vuestro horario?',
+        'Tengo un dolor y necesito orientación',
+        '¿Qué debería hacer con esta molestia?',
+      ],
+    },
+    human_follow_up: {
+      ...BASELINE_INTENTS.human_follow_up,
+      examples: [
+        'Quiero hablar con una persona',
+        'Tengo un caso clínico que debe revisar el equipo',
+        'Necesito contaros algo sobre mi evolución',
+      ],
+    },
   };
 }
 
@@ -267,6 +293,7 @@ function buildDefaultFlows(mode: 'full' | 'tasks-only'): Record<string, ToolFlow
               'NUNCA usar patientId: "NEW_PATIENT".',
           },
         ],
+        responseTemplateKey: 'appointment_booked',
       },
       confirm_appointment: {
         intent: 'existing_appointment_confirmation',
@@ -855,18 +882,15 @@ function buildDefaultErrorCategories(mode: 'full' | 'tasks-only'): ErrorCategory
 function buildDefaultProtocols(mode: 'full' | 'tasks-only'): Record<string, Protocol> {
   if (mode === 'full') {
     return {
-      signature_implants: {
-        name: 'Protocolo de Implantologia Avanzada',
-        description: 'Protocolo integral de implantologia avanzada',
+      treatment_protocol: {
+        name: 'Protocolo de tratamiento',
+        description: 'Ejemplo generico de protocolo para orientar un tratamiento',
         responseTemplate:
-          'Este es nuestro protocolo mas completo de implantologia avanzada. ' +
-          'No se trata solo de colocar implantes, sino de planificar digitalmente todo el caso, ' +
-          'realizar cirugia guiada, usar materiales premium y acompanar al paciente antes, durante y despues.',
+          'El equipo revisara tu caso, te explicara las opciones de tratamiento y te acompanara durante todo el proceso.',
         sections: [
-          'Planificacion digital',
-          'Cirugia guiada',
-          'Materiales premium',
-          'Acompanamiento',
+          'Valoracion inicial',
+          'Plan de tratamiento',
+          'Seguimiento',
         ],
       },
       first_visit: {
@@ -880,10 +904,10 @@ function buildDefaultProtocols(mode: 'full' | 'tasks-only'): Record<string, Prot
   }
 
   return {
-    pregnancy_weeks: {
-      name: 'Derivacion por semanas de gestacion',
-      description: 'Protocolo para orientar segun semanas de embarazo',
-      responseTemplate: 'De cuantas semanas estas?',
+    treatment_protocol: {
+      name: 'Protocolo de tratamiento',
+      description: 'Ejemplo generico de protocolo para orientar un tratamiento',
+      responseTemplate: 'El equipo revisara tu caso y te explicara las opciones de tratamiento.',
     },
     sensitive_situations: {
       name: 'Situaciones Sensibles',
@@ -912,9 +936,19 @@ function buildDefaultTreatmentPolicyHints(): TreatmentPolicyHint[] {
 
 function buildDefaultSystemPromptInstructions(): SystemPromptInstructions {
   return {
-    notesForAdvisor: [],
-    knownGaps: [],
-    recommendedNextSteps: [],
+    notesForAdvisor: [
+      'maxVisibleSlots=9 limita a nueve los huecos que se muestran al paciente; el servidor controla el limite efectivo.',
+      'globalSchedulingPolicies usa treatmentId=null para la politica global. Si se añade una politica especifica, debe usar un ID real del tratamiento y prevalece sobre la global.',
+      'Ejemplo no activo: una politica concreta en el JSON, como una politica global con allowedStartMinutes=[0, 30], restringiria los inicios a esos minutos; el default deja globalSchedulingPolicies=[] para que el runtime aplique el grid de plataforma [0, 5, ..., 55].',
+      'treatmentSelectionGuidance orienta al orquestador en la eleccion entre valoracion y tratamiento normal; se inyecta en el prompt del orquestador, no en la llamada interna de resolve_treatment.',
+      'Los claims operativos (disponibilidad mostrada, cita creada, cancelada o reagendada) los deriva el servidor a partir de ejecuciones reales; no se configuran en este JSON.',
+    ],
+    knownGaps: [
+      'El catalogo de servicios de este ejemplo es deliberadamente generico y debe sustituirse por los tratamientos reales de la sede.',
+    ],
+    recommendedNextSteps: [
+      'Sustituir los placeholders de identidad y revisar las plantillas antes de publicar el bot.',
+    ],
   };
 }
 
@@ -937,8 +971,9 @@ function buildDefaultConversationResumption(): ConversationResumptionConfig {
 }
 
 /**
- * Indicaciones por defecto para IDENTIFICAR el tratamiento correcto. Prosa
- * libre: el asesor la reescribe con los nombres de SU catálogo.
+ * Indicaciones por defecto para que el orquestador elija entre valoración y
+ * tratamiento normal. Prosa libre: el asesor la reescribe con los nombres de
+ * SU catálogo. No se inyecta en la llamada interna de resolve_treatment.
  *
  * El caso que motiva el default: el modelo tiende a casar por parecido de
  * nombre, así que un paciente nuevo que pide un tratamiento concreto acaba con
@@ -949,18 +984,23 @@ function buildDefaultConversationResumption(): ConversationResumptionConfig {
  */
 function buildDefaultTreatmentSelectionGuidance(): string {
   return [
-    'Si el paciente parece nuevo en la clínica y pide un tratamiento concreto, lo recomendable',
-    'es una primera cita de valoración: el profesional debe verlo antes de aplicar cualquier',
-    'tratamiento. Elige el tratamiento de valoración o primera consulta que exista en el catálogo.',
-    'Si el paciente ya viene siguiendo un tratamiento y pide continuar con él, respeta el que pida.',
-    'Si el mensaje no permite decidir con confianza, pide aclaración en vez de adivinar.',
+    'Guía del orquestador: si el paciente parece nuevo en la clínica y pide un tratamiento concreto,',
+    'elige una primera cita de valoración si existe en el serviceCatalog, porque el profesional debe',
+    'evaluarlo antes de aplicar el tratamiento. Si el paciente ya sigue un tratamiento y pide continuar',
+    'con él, respeta esa solicitud. Decide paciente nuevo o existente por la conversación y por la salida',
+    'isNew/source de resolve_patient; no asumas que quien escribe es el beneficiario. Si no se puede',
+    'decidir con confianza, pide una sola aclaración. No inventes nombres ni IDs de tratamientos: usa',
+    'únicamente nombres del serviceCatalog. Esta guía se inyecta en el prompt del orquestador, no en la',
+    'llamada interna de resolve_treatment.',
   ].join(' ');
 }
 
 export function buildDefaultStructuredLogicForMode(mode: 'full' | 'tasks-only'): StructuredLogic {
   const base: StructuredLogic = {
     version: '1.0',
+    // Nine slots keeps availability readable; the server enforces the effective limit.
     maxVisibleSlots: 9,
+    // An empty list lets the runtime apply the platform default minute grid.
     globalSchedulingPolicies: [],
     capabilities: buildDefaultCapabilities(mode),
     identity: buildDefaultIdentity(mode),

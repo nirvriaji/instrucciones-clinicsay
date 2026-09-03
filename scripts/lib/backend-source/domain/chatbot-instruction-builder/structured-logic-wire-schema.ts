@@ -100,9 +100,37 @@ export const StructuredLogicWireJsonSchema = {
                     tools: { type: 'array', items: { type: 'string', enum: ALL_CHAT_TOOL_NAMES } },
                     parallel: { type: 'boolean' },
                     required: { type: ['array', 'null'], items: { type: 'string' } },
+                    customState: {
+                      type: ['array', 'null'],
+                      items: {
+                        type: 'object',
+                        properties: {
+                           key: { type: 'string', pattern: '^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$' },
+                          description: { type: 'string' },
+                          enum: { type: ['array', 'null'], minItems: 1, items: { type: 'string' } },
+                        },
+                        required: ['key', 'description', 'enum'],
+                        additionalProperties: false,
+                      },
+                    },
+                    when: {
+                      type: ['array', 'null'],
+                      items: {
+                        type: 'object',
+                        properties: {
+                          key: { type: 'string' },
+                          equals: { type: ['string', 'null'] },
+                           in: { type: ['array', 'null'], minItems: 1, items: { type: 'string' } },
+                           notIn: { type: ['array', 'null'], minItems: 1, items: { type: 'string' } },
+                          exists: { type: ['boolean', 'null'] },
+                        },
+                        required: ['key', 'equals', 'in', 'notIn', 'exists'],
+                        additionalProperties: false,
+                      },
+                    },
                     note: { type: ['string', 'null'] },
                   },
-                  required: ['step', 'tools', 'parallel', 'required', 'note'],
+                  required: ['step', 'tools', 'parallel', 'required', 'customState', 'when', 'note'],
                   additionalProperties: false,
                 },
               },
@@ -280,13 +308,14 @@ export const StructuredLogicWireJsonSchema = {
           items: {
             type: 'object',
             properties: {
+              id: { type: ['string', 'null'] },
               name: { type: 'string' },
               description: { type: ['string', 'null'] },
               priceDescription: { type: ['string', 'null'] },
               requiresConsultation: { type: ['boolean', 'null'] },
               category: { type: ['string', 'null'] },
             },
-            required: ['name', 'description', 'priceDescription', 'requiresConsultation', 'category'],
+            required: ['id', 'name', 'description', 'priceDescription', 'requiresConsultation', 'category'],
             additionalProperties: false,
           },
         },
@@ -295,13 +324,14 @@ export const StructuredLogicWireJsonSchema = {
           items: {
             type: 'object',
             properties: {
+              id: { type: ['string', 'null'] },
               name: { type: 'string' },
               description: { type: ['string', 'null'] },
               priceDescription: { type: ['string', 'null'] },
               requiresConsultation: { type: ['boolean', 'null'] },
               category: { type: ['string', 'null'] },
             },
-            required: ['name', 'description', 'priceDescription', 'requiresConsultation', 'category'],
+            required: ['id', 'name', 'description', 'priceDescription', 'requiresConsultation', 'category'],
             additionalProperties: false,
           },
         },
@@ -342,7 +372,7 @@ export const StructuredLogicWireJsonSchema = {
       type: ['string', 'null'],
       description:
         'Prosa libre con las indicaciones de la clínica para IDENTIFICAR el tratamiento correcto ' +
-        'que corresponde a lo que pide el paciente. Se inyecta en el prompt de resolve_treatment ' +
+        'que corresponde a lo que pide el paciente. Se inyecta en el prompt del orquestador, no en la llamada interna de resolve_treatment. ' +
         'junto al catálogo real. Usa los NOMBRES de los tratamientos tal cual están en el catálogo, ' +
         'nunca IDs. Ejemplo: "si el paciente es nuevo y pide un tratamiento concreto, lo recomendable ' +
         'es una cita de valoración; usa únicamente la opción de valoración que figure en serviceCatalog. ' +
